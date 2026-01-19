@@ -1,0 +1,47 @@
+Tool to make sure agents can run autonomously
+Tool to run agents safely in a sandbox
+
+- Needs the document store
+- Needs a “project space” - separate from VCS
+- Needs a workflow engine - track all the steps
+- Needs a spec engine - ensure correctness
+- Needs preferred developer workflows - ensure we have the right set of experts present to begin with, even if it’s just rule of 5
+- Needs ways to manage efficiency - see telemetry, but also, make sure that all agents are doing high quality work
+- Needs a gang of experts
+- Needs a meta process - need to talk about workflows and which ones to utilize when
+- Needs a creative meta process creator - need to measure the workflows and improve them
+- Needs a way to incite workers to share related things they discover - give them enough context about adjacent things? Does that even work?
+- Need a front end, to show the documents - basically a good pane of glass, so these critters aren’t working opaquely
+- Need a frontend to show sessions - multiple running threads
+- Need a way to give context into sessions to help with context switching - some kind of summary or overview of each thread, to make jumping easier
+- Need a process to decide whether to fish or cut bait (let an agent keep going vs revisiting the initial prompt and starting over again)
+- Need a process to rewind and replay from a historical point, with improved prompt - basically store a log of changes and offer the ability to rewind and branch
+- Need a way to see the active diff of an agent or gang of agents
+- Needs a merge queue, and if that forks, it’s branches based - need to serialize the agents and have them each refine their MR based on a static-ish queue in front of them, rather than a first takes winner melee.
+- Needs good telemetry - let’s say there’s a bottleneck, you want to identify it, or identify faults and stale agents.
+- Needs hygiene systems - not sure yet what that means exactly, aside from obvious cleanups
+- Need to surface clearly what all the agents are asking, without distracting with other stuff - don’t watch the work itself, just the questions
+- Need mechanism to determine whether to communicate with top manager agent, or when to chat with lower down agents
+- Need mechanism to determine how granular the agents need to be to get a separate sandbox and create a separate MR
+- Need a mechanism to determine if agent has a quick question with quick answer, or something requiring more depth, to indicate in alerts, or maybe more broadly, a better way to curate the incoming questions as they do, depending on the situation
+- Need to keep a list of unread sessions, as well as all them needing attention. If a session is “done”, it needs a special kind of attention from user to close the loop
+- Maybe needs integration into a broader todo system?
+- Take advantage of hooks or something to enforce rules
+- Daemon agents run in the background to do maintenance
+- Mortal agents run in the foreground-ish to do tasks
+- Jake sits at the top, you can start by going to him, or asking for an agent for an assignment.
+- You run as many agents as needed, who can fork off more agents.
+- You see the whole agent list/tree, or summarized, if you need.
+- Agents can send messages, with certain expectations.
+- Agents can bubble up issues up the chain
+- Agents take their task, and if needed, break it down
+- Processes are scripts to follow for certain things, but these need to be evolving
+- How agents break down things also needs to evolve
+- You can talk to just the mayor, or drill into any level of talking to individual agents as needed.
+- Mortal agents live for the lifecycle of the assignment they are given
+- Daemon agents ensure mortal agents are healthy, processing fine, not straying out of bounds, when and whether to reap and reincarnate.
+- Each top agent has an agent naming scheme, for funsies
+- Each assignment is monitored by a daemon to ensure it follows all the steps, including capturing knowledge and sharpening tools
+- When assignment broken down far enough, break down into units of work.
+- Units of work can have several steps.
+- Different types of environments for agents, e.g. each is isolated, some in cloud, some share a container, etc.. so different rules to follow, especially to prevent stepping on each other’s toes
