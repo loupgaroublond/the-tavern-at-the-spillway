@@ -8,10 +8,11 @@ When Jake spawns a mortal agent tree, he assigns a naming scheme. Names should h
 ## Design Principles
 
 1. **Familial resemblance**: Child agents should feel related to parent
-2. **Escalating tiers**: Optionally get sillier as tree deepens
-3. **Easter eggs**: Some themes reveal jokes only with enough children
-4. **Variety**: Different themes for different vibes
-5. **Memorability**: Easy to refer to in conversation
+2. **Tier depletion**: Exhaust less silly names before breaking out sillier ones — tiers are a depletion mechanism, not tied to tree depth
+3. **Global uniqueness**: Every mortal agent gets a globally unique name across the entire system — no path addressing required for identity
+4. **Easter eggs**: Some themes reveal jokes only with enough children
+5. **Variety**: Different themes for different vibes
+6. **Memorability**: Easy to refer to in conversation
 
 
 ## Theme Categories
@@ -219,6 +220,6 @@ When Jake spawns a mortal agent tree, he assigns a naming scheme. Names should h
 
 - Theme selection can be random, user-chosen, or based on task type
 - Store theme with mortal agent root so children use same scheme
-- Track which names are used to avoid duplicates within a tree
+- Track which names are used globally to ensure uniqueness across entire system (not just within a tree)
 - Support custom themes (user-defined lists)
-- Consider hierarchical prefixes for deep trees (e.g., `Frodo.Sam.Rosie`)
+- Path-style addressing (e.g., `Frodo/Sam/Rosie`) is not required for identity since names are globally unique, but may be useful for messaging and understanding hierarchy
