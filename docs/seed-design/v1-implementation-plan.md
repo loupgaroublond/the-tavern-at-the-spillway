@@ -205,18 +205,30 @@ This plan follows the same standards we're building into the product:
 ### Step 2.4: Naming Theme System
 
 **Commitments:**
-- [ ] Create `NamingTheme` struct with name lists
-- [ ] Create a few starter themes (LOTR, Rick and Morty, etc.)
-- [ ] Theme tracks which names are used
-- [ ] Names are globally unique across system
+- [x] Create `NamingTheme` struct with name lists
+- [x] Create a few starter themes (LOTR, Rick and Morty, etc.)
+- [x] Theme tracks which names are used
+- [x] Names are globally unique across system
 
 **Verification:**
-- Unit tests for name generation
+- [x] Unit tests for name generation (15 tests)
 
 **Tests Required:**
-- `test_naming_theme_generates_names`
-- `test_names_are_unique`
-- `test_theme_exhausts_tiers_in_order`
+- [x] `test_theme_has_required_properties`
+- [x] `test_theme_all_names_flattened`
+- [x] `test_builtin_themes_available`
+- [x] `test_generator_generates_in_tier_order`
+- [x] `test_generator_generates_unique_names`
+- [x] `test_generator_exhausts_tiers_in_order`
+- [x] `test_generator_returns_nil_when_exhausted`
+- [x] `test_generator_fallback_provides_numbered_names`
+- [x] `test_generator_tracks_used_names`
+- [x] `test_generator_checks_name_availability`
+- [x] `test_generator_can_reserve_names`
+- [x] `test_generator_can_release_names`
+- [x] `test_generator_reset_clears_state`
+- [x] `test_generator_tracks_remaining_names`
+- [x] `test_generator_can_switch_themes`
 
 ---
 
