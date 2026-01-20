@@ -37,18 +37,24 @@ This plan follows the same standards we're building into the product:
 ### Step 0.2: Set Up Test Infrastructure
 
 **Commitments:**
-- [ ] Create test utilities module
-- [ ] Create mock/stub for ClaudeCodeSDK
-- [ ] Create test fixture helpers
-- [ ] Verify tests can run in isolation (no real API calls)
+- [x] Create test utilities module (TavernCore/Testing/)
+- [x] Create mock/stub for ClaudeCodeSDK (MockClaudeCode)
+- [x] Create test fixture helpers (TestFixtures)
+- [x] Verify tests can run in isolation (no real API calls)
 
 **Verification:**
-- Can run tests without Claude credentials
-- Tests are fast (< 1 second for unit tests)
+- [x] Can run tests without Claude credentials
+- [x] Tests are fast (< 1 second for unit tests) — 0.002s total
 
 **Tests Required:**
-- Test that mock SDK works
-- Test that fixtures load correctly
+- [x] `test_mock_returns_queued_text_response`
+- [x] `test_mock_records_sent_prompts`
+- [x] `test_mock_throws_configured_error`
+- [x] `test_mock_tracks_cancel_calls`
+- [x] `test_mock_reset_clears_state`
+- [x] `test_mock_returns_json_response_with_session_id`
+- [x] `test_creates_temp_directory`
+- [x] `test_configuration_is_valid`
 
 ---
 
@@ -343,7 +349,7 @@ This plan follows the same standards we're building into the product:
 
 After each phase, request subagent verification:
 
-- [ ] **Phase 0 complete:** Project builds, tests run, infrastructure ready
+- [x] **Phase 0 complete:** Project builds, tests run, infrastructure ready (10 tests passing)
 - [ ] **Phase 1 complete:** Can chat with Jake in UI
 - [ ] **Phase 2 complete:** Jake spawns agents, agents registered
 - [ ] **Phase 3 complete:** Multi-agent UI works, can switch chats

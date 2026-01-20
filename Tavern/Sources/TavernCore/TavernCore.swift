@@ -4,6 +4,9 @@
 /// and doc store functionality. It's designed to be testable
 /// without any UI dependencies.
 
+// Re-export ClaudeCodeSDK types that users will need
+@_exported import ClaudeCodeSDK
+
 public enum TavernCore {
     public static let version = "0.1.0"
 }
