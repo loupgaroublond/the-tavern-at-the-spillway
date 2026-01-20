@@ -133,20 +133,25 @@ This plan follows the same standards we're building into the product:
 ### Step 2.1: Agent Protocol and Registry
 
 **Commitments:**
-- [ ] Define `Agent` protocol (common interface)
-- [ ] Create `AgentRegistry` to track active agents
-- [ ] Each agent has unique ID and name
-- [ ] Registry can list, get, remove agents
+- [x] Define `Agent` protocol (common interface)
+- [x] Create `AgentRegistry` to track active agents
+- [x] Each agent has unique ID and name
+- [x] Registry can list, get, remove agents
 
 **Verification:**
-- Unit tests for registry operations
+- [x] Unit tests for registry operations (10 tests)
 
 **Tests Required:**
-- `test_agent_registry_adds_agent`
-- `test_agent_registry_gets_agent_by_id`
-- `test_agent_registry_lists_agents`
-- `test_agent_registry_removes_agent`
-- `test_agent_names_are_unique`
+- [x] `test_registry_adds_agent`
+- [x] `test_registry_gets_agent_by_id`
+- [x] `test_registry_gets_agent_by_name`
+- [x] `test_registry_lists_agents`
+- [x] `test_registry_removes_agent`
+- [x] `test_registry_enforces_unique_names`
+- [x] `test_registry_throws_on_remove_non_existent`
+- [x] `test_registry_is_name_taken`
+- [x] `test_registry_remove_all`
+- [x] `test_registry_allows_name_reuse_after_removal`
 
 ---
 
