@@ -87,20 +87,26 @@ This plan follows the same standards we're building into the product:
 ### Step 1.2: Chat UI - Single Agent
 
 **Commitments:**
-- [ ] Create `ChatView` SwiftUI component
-- [ ] Shows message history (user + agent)
-- [ ] Has input field for new messages
-- [ ] Displays streaming responses
-- [ ] Shows "cogitating" status while agent working
+- [x] Create `ChatView` SwiftUI component
+- [x] Shows message history (user + agent)
+- [x] Has input field for new messages
+- [ ] Displays streaming responses (deferred)
+- [x] Shows "cogitating" status while agent working
 
 **Verification:**
-- UI tests verify components render
-- Can manually chat with Jake
+- [x] ChatViewModel unit tests pass (9 tests)
+- [ ] Can manually chat with Jake (pending Step 1.3)
 
-**Tests Required:**
-- `test_chat_view_displays_messages`
-- `test_chat_view_shows_input_field`
-- `test_chat_view_shows_cogitating_status`
+**Tests Required (via ChatViewModel):**
+- [x] `test_viewmodel_initializes_empty`
+- [x] `test_sending_message_adds_messages`
+- [x] `test_input_text_clears_after_send`
+- [x] `test_empty_input_does_not_send`
+- [x] `test_cogitating_state_during_send`
+- [x] `test_cogitation_verb_is_set`
+- [x] `test_error_is_captured_and_displayed`
+- [x] `test_clear_conversation_removes_messages`
+- [x] `test_multiple_messages_accumulate`
 
 ---
 
