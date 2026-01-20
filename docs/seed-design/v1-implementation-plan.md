@@ -185,20 +185,31 @@ This plan follows the same standards we're building into the product:
 ### Step 2.3: Jake Spawns Mortal Agents
 
 **Commitments:**
-- [ ] Jake can spawn a new mortal agent via tool call
-- [ ] Spawn includes: assignment, name from theme
-- [ ] New agent registered in AgentRegistry
-- [ ] Jake's response indicates agent was spawned
+- [x] AgentSpawner coordinates registry and name generator
+- [x] Spawn includes: assignment, name from theme
+- [x] New agent registered in AgentRegistry
+- [x] Dismiss releases name back to pool
+
+**Note:** Jake tool integration deferred to Phase 3 (UI). Spawner provides
+the infrastructure; UI will call spawner based on Jake's responses.
 
 **Verification:**
-- Unit test: Jake tool call creates agent in registry
-- Integration: Tell Jake to do something, verify agent spawned
+- [x] Unit tests for AgentSpawner (13 tests)
 
 **Tests Required:**
-- `test_jake_spawn_tool_creates_agent`
-- `test_spawned_agent_has_assignment`
-- `test_spawned_agent_registered`
-- `test_spawned_agent_gets_themed_name`
+- [x] `test_spawn_creates_agent_with_themed_name`
+- [x] `test_spawn_registers_agent_in_registry`
+- [x] `test_spawned_agent_has_assignment`
+- [x] `test_spawned_agent_gets_themed_name`
+- [x] `test_multiple_spawns_get_unique_names`
+- [x] `test_spawn_with_specific_name_works`
+- [x] `test_spawn_with_duplicate_name_fails`
+- [x] `test_dismiss_removes_agent_from_registry`
+- [x] `test_dismiss_releases_name_for_reuse`
+- [x] `test_dismiss_by_id_works`
+- [x] `test_dismiss_non_existent_agent_throws`
+- [x] `test_active_agents_returns_all_spawned`
+- [x] `test_agent_count_matches_spawned`
 
 ---
 
@@ -388,7 +399,7 @@ After each phase, request subagent verification:
 
 - [x] **Phase 0 complete:** Project builds, tests run, infrastructure ready (10 tests passing)
 - [x] **Phase 1 complete:** Can chat with Jake in UI (27 tests passing, app builds)
-- [ ] **Phase 2 complete:** Jake spawns agents, agents registered
+- [x] **Phase 2 complete:** AgentSpawner, Registry, MortalAgent, NamingThemes (77 tests)
 - [ ] **Phase 3 complete:** Multi-agent UI works, can switch chats
 - [ ] **Phase 4 complete:** Commitments work, verification blocks false "done"
 - [ ] **Phase 5 complete:** Doc store works, agents persist to files
