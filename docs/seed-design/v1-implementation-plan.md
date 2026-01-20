@@ -158,19 +158,27 @@ This plan follows the same standards we're building into the product:
 ### Step 2.2: Mortal Agent Class
 
 **Commitments:**
-- [ ] Create `MortalAgent` implementing `Agent` protocol
-- [ ] MortalAgent has assignment (task description)
-- [ ] MortalAgent can receive messages and respond
-- [ ] MortalAgent tracks its own state (working, waiting, done)
+- [x] Create `MortalAgent` implementing `Agent` protocol
+- [x] MortalAgent has assignment (task description)
+- [x] MortalAgent can receive messages and respond
+- [x] MortalAgent tracks its own state (working, waiting, done)
 
 **Verification:**
-- Unit tests with mock SDK
+- [x] Unit tests with mock SDK (12 tests)
 
 **Tests Required:**
-- `test_mortal_agent_has_assignment`
-- `test_mortal_agent_responds_to_messages`
-- `test_mortal_agent_tracks_state`
-- `test_mortal_agent_state_transitions`
+- [x] `test_mortal_agent_has_assignment`
+- [x] `test_mortal_agent_initializes_idle`
+- [x] `test_mortal_agent_responds_to_messages`
+- [x] `test_mortal_agent_tracks_working_state`
+- [x] `test_mortal_agent_transitions_to_done`
+- [x] `test_mortal_agent_transitions_to_waiting`
+- [x] `test_mortal_agent_explicitly_marked_waiting`
+- [x] `test_mortal_agent_explicitly_marked_done`
+- [x] `test_mortal_agent_done_state_is_terminal`
+- [x] `test_mortal_agent_maintains_conversation`
+- [x] `test_mortal_agent_reset_clears_session`
+- [x] `test_mortal_agent_propagates_errors`
 
 ---
 
