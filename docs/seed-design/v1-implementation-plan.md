@@ -63,19 +63,24 @@ This plan follows the same standards we're building into the product:
 ### Step 1.1: Jake Agent Wrapper
 
 **Commitments:**
-- [ ] Create `Jake` class that wraps ClaudeCodeSDK
-- [ ] Jake has system prompt establishing his role
-- [ ] Jake can receive a message and respond
-- [ ] Jake's responses stream to callback
+- [x] Create `Jake` class that wraps ClaudeCodeSDK
+- [x] Jake has system prompt establishing his role
+- [x] Jake can receive a message and respond
+- [ ] Jake's responses stream to callback (deferred to Step 1.2)
 
 **Verification:**
-- Unit tests with mock SDK pass
-- Integration test with real SDK works (manual)
+- [x] Unit tests with mock SDK pass (8 tests)
+- [ ] Integration test with real SDK works (manual)
 
 **Tests Required:**
-- `test_jake_initializes_with_system_prompt`
-- `test_jake_responds_to_message`
-- `test_jake_streams_response`
+- [x] `test_jake_has_system_prompt`
+- [x] `test_jake_initializes_with_correct_state`
+- [x] `test_jake_responds_to_message`
+- [x] `test_jake_state_cogitating` (verifies cogitating state during response)
+- [x] `test_jake_maintains_conversation` (session ID persistence)
+- [x] `test_jake_resets_conversation`
+- [x] `test_jake_handles_text_response`
+- [x] `test_jake_propagates_errors`
 
 ---
 
