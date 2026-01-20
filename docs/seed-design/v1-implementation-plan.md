@@ -18,18 +18,19 @@ This plan follows the same standards we're building into the product:
 ### Step 0.1: Initialize Swift Package
 
 **Commitments:**
-- [ ] Create Swift package with SwiftUI app target
-- [ ] Add ClaudeCodeSDK as dependency
-- [ ] Verify package builds and runs empty window
-- [ ] Create test target with XCTest
+- [x] Create Swift package with SwiftUI app target
+- [x] Add ClaudeCodeSDK as dependency
+- [x] Verify package builds and runs empty window
+- [x] Create test target with Swift Testing
 
 **Verification:**
-- `swift build` succeeds
-- `swift test` runs (even with no tests)
-- App launches and shows window
+- [x] `swift build` succeeds (29.15s)
+- [x] `swift test` runs and passes (2 tests)
+- [ ] App launches and shows window (manual verification pending)
 
 **Tests Required:**
-- None yet (empty project)
+- [x] `test_version_is_set` in TavernCoreTests
+- [x] `test_placeholder` in TavernTests
 
 ---
 
