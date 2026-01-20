@@ -4,6 +4,7 @@ import Combine
 
 /// Mock implementation of ClaudeCode for testing
 /// Allows tests to run without real API calls
+/// Thread-safe via serial dispatch queue
 public final class MockClaudeCode: ClaudeCode, @unchecked Sendable {
 
     // MARK: - Configuration
@@ -11,28 +12,65 @@ public final class MockClaudeCode: ClaudeCode, @unchecked Sendable {
     public var configuration: ClaudeCodeConfiguration
     public var lastExecutedCommandInfo: ExecutedCommandInfo? = nil
 
-    // MARK: - Mock State
+    // MARK: - Thread Safety
+
+    private let queue = DispatchQueue(label: "com.tavern.MockClaudeCode")
+
+    // MARK: - Mock State (access via queue)
+
+    private var _queuedResponses: [ClaudeCodeResult] = []
+    private var _sentPrompts: [String] = []
+    private var _resumedSessions: [(sessionId: String, prompt: String?)] = []
+    private var _mockSessions: [SessionInfo] = []
+    private var _errorToThrow: Error? = nil
+    private var _wasCancelled = false
+    private var _responseDelay: TimeInterval = 0
+    private var _validateCommandResult: Bool = true
 
     /// Responses to return for each prompt (FIFO queue)
-    public var queuedResponses: [ClaudeCodeResult] = []
+    public var queuedResponses: [ClaudeCodeResult] {
+        get { queue.sync { _queuedResponses } }
+        set { queue.sync { _queuedResponses = newValue } }
+    }
 
     /// All prompts that were sent (for verification)
-    public private(set) var sentPrompts: [String] = []
+    public var sentPrompts: [String] {
+        queue.sync { _sentPrompts }
+    }
 
     /// All sessions that were resumed (for verification)
-    public private(set) var resumedSessions: [(sessionId: String, prompt: String?)] = []
+    public var resumedSessions: [(sessionId: String, prompt: String?)] {
+        queue.sync { _resumedSessions }
+    }
 
     /// Sessions to return from listSessions()
-    public var mockSessions: [SessionInfo] = []
+    public var mockSessions: [SessionInfo] {
+        get { queue.sync { _mockSessions } }
+        set { queue.sync { _mockSessions = newValue } }
+    }
 
     /// Error to throw (if set, overrides queuedResponses)
-    public var errorToThrow: Error? = nil
+    public var errorToThrow: Error? {
+        get { queue.sync { _errorToThrow } }
+        set { queue.sync { _errorToThrow = newValue } }
+    }
 
     /// Whether cancel() was called
-    public private(set) var wasCancelled = false
+    public var wasCancelled: Bool {
+        queue.sync { _wasCancelled }
+    }
 
     /// Delay before returning response (for testing async behavior)
-    public var responseDelay: TimeInterval = 0
+    public var responseDelay: TimeInterval {
+        get { queue.sync { _responseDelay } }
+        set { queue.sync { _responseDelay = newValue } }
+    }
+
+    /// Result to return from validateCommand
+    public var validateCommandResult: Bool {
+        get { queue.sync { _validateCommandResult } }
+        set { queue.sync { _validateCommandResult = newValue } }
+    }
 
     // MARK: - Initialization
 
@@ -44,10 +82,11 @@ public final class MockClaudeCode: ClaudeCode, @unchecked Sendable {
 
     /// Queue a text response
     public func queueTextResponse(_ text: String) {
-        queuedResponses.append(.text(text))
+        queue.sync { _queuedResponses.append(.text(text)) }
     }
 
     /// Queue a JSON response with result text
+    /// - Throws: Assertion failure in debug if JSON creation fails (catches test setup errors)
     public func queueJSONResponse(
         result: String?,
         sessionId: String = UUID().uuidString,
@@ -58,21 +97,26 @@ public final class MockClaudeCode: ClaudeCode, @unchecked Sendable {
             result: result,
             sessionId: sessionId
         ) else {
-            // Fallback to text if JSON creation fails
-            queuedResponses.append(.text(result ?? ""))
+            assertionFailure("MockClaudeCode: Failed to create ResultMessage - check JSON factory")
+            // Fallback to text in release builds
+            queue.sync { _queuedResponses.append(.text(result ?? "")) }
             return
         }
-        queuedResponses.append(.json(message))
+        queue.sync { _queuedResponses.append(.json(message)) }
     }
 
     /// Reset all mock state
     public func reset() {
-        queuedResponses.removeAll()
-        sentPrompts.removeAll()
-        resumedSessions.removeAll()
-        mockSessions.removeAll()
-        errorToThrow = nil
-        wasCancelled = false
+        queue.sync {
+            _queuedResponses.removeAll()
+            _sentPrompts.removeAll()
+            _resumedSessions.removeAll()
+            _mockSessions.removeAll()
+            _errorToThrow = nil
+            _wasCancelled = false
+            _responseDelay = 0
+            _validateCommandResult = true
+        }
     }
 
     // MARK: - Protocol Implementation
@@ -82,7 +126,7 @@ public final class MockClaudeCode: ClaudeCode, @unchecked Sendable {
         outputFormat: ClaudeCodeOutputFormat,
         options: ClaudeCodeOptions?
     ) async throws -> ClaudeCodeResult {
-        sentPrompts.append(stdinContent)
+        queue.sync { _sentPrompts.append(stdinContent) }
         return try await getNextResponse()
     }
 
@@ -91,7 +135,7 @@ public final class MockClaudeCode: ClaudeCode, @unchecked Sendable {
         outputFormat: ClaudeCodeOutputFormat,
         options: ClaudeCodeOptions?
     ) async throws -> ClaudeCodeResult {
-        sentPrompts.append(prompt)
+        queue.sync { _sentPrompts.append(prompt) }
         return try await getNextResponse()
     }
 
@@ -101,7 +145,7 @@ public final class MockClaudeCode: ClaudeCode, @unchecked Sendable {
         options: ClaudeCodeOptions?
     ) async throws -> ClaudeCodeResult {
         if let prompt = prompt {
-            sentPrompts.append(prompt)
+            queue.sync { _sentPrompts.append(prompt) }
         }
         return try await getNextResponse()
     }
@@ -112,46 +156,51 @@ public final class MockClaudeCode: ClaudeCode, @unchecked Sendable {
         outputFormat: ClaudeCodeOutputFormat,
         options: ClaudeCodeOptions?
     ) async throws -> ClaudeCodeResult {
-        resumedSessions.append((sessionId: sessionId, prompt: prompt))
-        if let prompt = prompt {
-            sentPrompts.append(prompt)
+        queue.sync {
+            _resumedSessions.append((sessionId: sessionId, prompt: prompt))
+            if let prompt = prompt {
+                _sentPrompts.append(prompt)
+            }
         }
         return try await getNextResponse()
     }
 
     public func listSessions() async throws -> [SessionInfo] {
-        if let error = errorToThrow {
+        let error = queue.sync { _errorToThrow }
+        if let error = error {
             throw error
         }
-        return mockSessions
+        return queue.sync { _mockSessions }
     }
 
     public func cancel() {
-        wasCancelled = true
+        queue.sync { _wasCancelled = true }
     }
 
     public func validateCommand(_ command: String) async throws -> Bool {
-        // Always return true in mock
-        return true
+        return queue.sync { _validateCommandResult }
     }
 
     // MARK: - Private Helpers
 
     private func getNextResponse() async throws -> ClaudeCodeResult {
-        if responseDelay > 0 {
-            try await Task.sleep(nanoseconds: UInt64(responseDelay * 1_000_000_000))
+        let delay = queue.sync { _responseDelay }
+        if delay > 0 {
+            try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
         }
 
-        if let error = errorToThrow {
+        let error: Error? = queue.sync { _errorToThrow }
+        if let error = error {
             throw error
         }
 
-        guard !queuedResponses.isEmpty else {
-            // Return a default response if none queued
-            return .text("Mock response")
+        // Atomic check-and-dequeue to prevent race conditions
+        return queue.sync {
+            guard !_queuedResponses.isEmpty else {
+                return .text("Mock response")
+            }
+            return _queuedResponses.removeFirst()
         }
-
-        return queuedResponses.removeFirst()
     }
 }
 
