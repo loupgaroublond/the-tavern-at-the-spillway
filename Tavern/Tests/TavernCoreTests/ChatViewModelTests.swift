@@ -138,7 +138,8 @@ struct ChatViewModelTests {
         // Should have user message and error message
         #expect(viewModel.messages.count == 2)
         #expect(viewModel.messages[1].role == .agent)
-        #expect(viewModel.messages[1].content.contains("went wrong"))
+        // TavernErrorMessages converts "Network error" to an informative message
+        #expect(viewModel.messages[1].content.contains("Network hiccup"))
         #expect(viewModel.error != nil)
     }
 
