@@ -21,6 +21,12 @@ public final class MortalAgent: Agent, @unchecked Sendable {
     /// The assignment given to this agent (their purpose)
     public let assignment: String
 
+    /// Commitments this agent must verify before completing
+    public let commitments: CommitmentList
+
+    /// Verifier used to check commitments (injected for testability)
+    public let verifier: CommitmentVerifier
+
     // MARK: - Private State
 
     private let claude: ClaudeCode
@@ -66,16 +72,22 @@ public final class MortalAgent: Agent, @unchecked Sendable {
     ///   - name: Display name for this agent
     ///   - assignment: The task this agent is responsible for
     ///   - claude: The ClaudeCode SDK instance to use
+    ///   - commitments: List of commitments to verify before completion (defaults to empty)
+    ///   - verifier: Verifier for checking commitments (defaults to shell-based)
     public init(
         id: UUID = UUID(),
         name: String,
         assignment: String,
-        claude: ClaudeCode
+        claude: ClaudeCode,
+        commitments: CommitmentList = CommitmentList(),
+        verifier: CommitmentVerifier = CommitmentVerifier()
     ) {
         self.id = id
         self.name = name
         self.assignment = assignment
         self.claude = claude
+        self.commitments = commitments
+        self.verifier = verifier
     }
 
     // MARK: - Agent Protocol Implementation
@@ -111,11 +123,11 @@ public final class MortalAgent: Agent, @unchecked Sendable {
         case .json(let resultMessage):
             queue.sync { _sessionId = resultMessage.sessionId }
             let response = resultMessage.result ?? ""
-            checkForCompletionSignal(in: response)
+            await checkForCompletionSignal(in: response)
             return response
 
         case .text(let text):
-            checkForCompletionSignal(in: text)
+            await checkForCompletionSignal(in: text)
             return text
 
         case .stream:
@@ -161,14 +173,61 @@ public final class MortalAgent: Agent, @unchecked Sendable {
         }
     }
 
-    private func checkForCompletionSignal(in response: String) {
+    private func checkForCompletionSignal(in response: String) async {
         // Simple heuristic: if the response contains "DONE" prominently,
-        // transition to done state
+        // trigger the completion flow
         let upperResponse = response.uppercased()
         if upperResponse.contains("DONE") || upperResponse.contains("COMPLETED") {
-            queue.sync { _state = .done }
+            await handleCompletionAttempt()
         } else if upperResponse.contains("WAITING") || upperResponse.contains("NEED INPUT") {
             queue.sync { _state = .waiting }
         }
+    }
+
+    /// Handle when the agent signals completion
+    /// Verifies all commitments before actually marking done
+    private func handleCompletionAttempt() async {
+        // If no commitments or all already passed, mark done immediately
+        if commitments.count == 0 || commitments.allPassed {
+            queue.sync { _state = .done }
+            return
+        }
+
+        // Enter verifying state
+        queue.sync { _state = .verifying }
+
+        do {
+            let allPassed = try await verifier.verifyAll(in: commitments)
+
+            if allPassed {
+                queue.sync { _state = .done }
+            } else {
+                // Verification failed - agent needs to continue working
+                queue.sync { _state = .idle }
+            }
+        } catch {
+            // Verification error - stay idle so agent can retry
+            queue.sync { _state = .idle }
+        }
+    }
+
+    /// Add a commitment that must be verified before completion
+    /// - Parameters:
+    ///   - description: What is being committed
+    ///   - assertion: Command to verify the commitment
+    /// - Returns: The created commitment
+    @discardableResult
+    public func addCommitment(description: String, assertion: String) -> Commitment {
+        commitments.add(description: description, assertion: assertion)
+    }
+
+    /// Whether all commitments have been verified and passed
+    public var allCommitmentsPassed: Bool {
+        commitments.count == 0 || commitments.allPassed
+    }
+
+    /// Whether there are any failed commitments
+    public var hasFailedCommitments: Bool {
+        commitments.hasFailed
     }
 }

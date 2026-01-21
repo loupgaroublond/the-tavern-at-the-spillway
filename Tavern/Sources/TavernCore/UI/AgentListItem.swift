@@ -88,6 +88,7 @@ extension AgentListItem {
         case .idle: return "Idle"
         case .working: return "Working"
         case .waiting: return "Needs attention"
+        case .verifying: return "Verifying"
         case .done: return "Done"
         }
     }

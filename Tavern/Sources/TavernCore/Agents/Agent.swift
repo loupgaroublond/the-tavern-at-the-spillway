@@ -11,6 +11,9 @@ public enum AgentState: String, Equatable, Sendable {
     /// Agent is waiting for input or decision
     case waiting
 
+    /// Agent is verifying its commitments before completing
+    case verifying
+
     /// Agent has completed their assignment
     case done
 }

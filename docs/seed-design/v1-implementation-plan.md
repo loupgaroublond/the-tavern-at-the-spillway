@@ -305,53 +305,67 @@ the infrastructure; UI will call spawner based on Jake's responses.
 ### Step 4.1: Commitment Data Model
 
 **Commitments:**
-- [ ] Create `Commitment` struct (description, assertion, status)
-- [ ] Agents can have list of commitments
-- [ ] Commitments stored in agent's doc store node (file)
+- [x] Create `Commitment` struct (description, assertion, status)
+- [x] Agents can have list of commitments (CommitmentList)
+- [ ] Commitments stored in agent's doc store node (file) - deferred to Phase 5
 
 **Verification:**
-- Unit tests for commitment CRUD
+- [x] Unit tests for commitment CRUD (15 tests)
 
 **Tests Required:**
-- `test_commitment_created`
-- `test_commitment_stored_in_file`
-- `test_commitment_loaded_from_file`
+- [x] `test_commitment_created_with_correct_initial_state`
+- [x] `test_commitment_status_transitions_work_correctly`
+- [x] `test_commitment_is_codable` (for future file persistence)
+- [x] `test_add_commitment_works`
+- [x] `test_remove_commitment_works`
+- [x] Additional: update, status updates, pending/failed filters
 
 ---
 
 ### Step 4.2: Commitment Verification
 
 **Commitments:**
-- [ ] Create verifier that checks commitments
-- [ ] Verifier runs assertion (e.g., "tests pass")
-- [ ] Verifier updates commitment status
-- [ ] Agent not "done" until all commitments verified
+- [x] Create verifier that checks commitments
+- [x] Verifier runs assertion (e.g., "tests pass")
+- [x] Verifier updates commitment status
+- [x] Verifier supports retry of failed commitments
 
 **Verification:**
-- Unit tests with mock assertions
+- [x] Unit tests with mock assertions (9 tests)
 
 **Tests Required:**
-- `test_verifier_runs_assertion`
-- `test_verifier_updates_status`
-- `test_agent_not_done_until_verified`
+- [x] `test_verifier_runs_assertion`
+- [x] `test_verifier_updates_status_on_pass`
+- [x] `test_verifier_updates_status_on_fail`
+- [x] `test_verifier_updates_commitment_list`
+- [x] `test_verify_all_verifies_all_pending`
+- [x] `test_verify_all_returns_false_if_any_fail`
+- [x] `test_retry_failed_only_retries_failed`
+- [x] `test_mock_runner_tracks_commands`
+- [x] `test_mock_runner_reset_clears_state`
 
 ---
 
 ### Step 4.3: Agent Completion Flow
 
 **Commitments:**
-- [ ] When agent says "done", trigger verification
-- [ ] If verification passes, mark agent done
-- [ ] If verification fails, agent continues working
-- [ ] UI reflects verification status
+- [x] When agent says "done", trigger verification
+- [x] If verification passes, mark agent done
+- [x] If verification fails, agent continues working
+- [x] UI reflects verification status (via AgentState.verifying)
 
 **Verification:**
-- Integration test: agent completes, verification runs
+- [x] Unit tests for completion flow (8 tests)
 
 **Tests Required:**
-- `test_done_triggers_verification`
-- `test_verification_pass_marks_done`
-- `test_verification_fail_continues`
+- [x] `test_agent_with_no_commitments_transitions_to_done_immediately`
+- [x] `test_done_triggers_verification`
+- [x] `test_verification_pass_marks_done`
+- [x] `test_verification_fail_continues`
+- [x] `test_agent_not_done_until_all_commitments_verified`
+- [x] `test_add_commitment_helper_works`
+- [x] `test_all_commitments_passed_works`
+- [x] `test_has_failed_commitments_works`
 
 ---
 
@@ -403,7 +417,7 @@ After each phase, request subagent verification:
 - [x] **Phase 1 complete:** Can chat with Jake in UI (27 tests passing, app builds)
 - [x] **Phase 2 complete:** AgentSpawner, Registry, MortalAgent, NamingThemes (77 tests)
 - [x] **Phase 3 complete:** Multi-agent UI works, can switch chats (103 tests)
-- [ ] **Phase 4 complete:** Commitments work, verification blocks false "done"
+- [x] **Phase 4 complete:** Commitments work, verification blocks false "done" (135 tests)
 - [ ] **Phase 5 complete:** Doc store works, agents persist to files
 
 

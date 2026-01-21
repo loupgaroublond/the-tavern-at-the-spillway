@@ -82,6 +82,7 @@ private struct StateIndicator: View {
         case .idle: return .gray
         case .working: return .blue
         case .waiting: return .yellow
+        case .verifying: return .purple
         case .done: return .green
         }
     }

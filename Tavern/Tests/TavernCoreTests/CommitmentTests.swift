@@ -269,3 +269,173 @@ struct CommitmentListTests {
         #expect(list.commitments.isEmpty)
     }
 }
+
+@Suite("CommitmentVerifier Tests")
+struct CommitmentVerifierTests {
+
+    @Test("Verifier runs assertion")
+    func verifierRunsAssertion() async throws {
+        let mockRunner = MockAssertionRunner()
+        mockRunner.setPass(for: "echo test", output: "test\n")
+
+        let verifier = CommitmentVerifier(runner: mockRunner)
+
+        var commitment = Commitment(
+            description: "Echo test",
+            assertion: "echo test"
+        )
+
+        let passed = try await verifier.verify(&commitment)
+
+        #expect(passed == true)
+        #expect(mockRunner.ranCommands.count == 1)
+        #expect(mockRunner.ranCommands.first == "echo test")
+    }
+
+    @Test("Verifier updates status on pass")
+    func verifierUpdatesStatusOnPass() async throws {
+        let mockRunner = MockAssertionRunner()
+        mockRunner.setPass(for: "swift test")
+
+        let verifier = CommitmentVerifier(runner: mockRunner)
+
+        var commitment = Commitment(
+            description: "Tests pass",
+            assertion: "swift test"
+        )
+
+        try await verifier.verify(&commitment)
+
+        #expect(commitment.status == .passed)
+        #expect(commitment.failureMessage == nil)
+    }
+
+    @Test("Verifier updates status on fail")
+    func verifierUpdatesStatusOnFail() async throws {
+        let mockRunner = MockAssertionRunner()
+        mockRunner.setFail(for: "swift test", message: "3 tests failed")
+
+        let verifier = CommitmentVerifier(runner: mockRunner)
+
+        var commitment = Commitment(
+            description: "Tests pass",
+            assertion: "swift test"
+        )
+
+        let passed = try await verifier.verify(&commitment)
+
+        #expect(passed == false)
+        #expect(commitment.status == .failed)
+        #expect(commitment.failureMessage == "3 tests failed")
+    }
+
+    @Test("Verifier updates commitment list")
+    func verifierUpdatesCommitmentList() async throws {
+        let mockRunner = MockAssertionRunner()
+        mockRunner.setPass(for: "echo ok")
+
+        let verifier = CommitmentVerifier(runner: mockRunner)
+        let list = CommitmentList()
+
+        var commitment = list.add(description: "Test", assertion: "echo ok")
+
+        try await verifier.verify(&commitment, in: list)
+
+        // List should be updated too
+        let updated = list.get(id: commitment.id)
+        #expect(updated?.status == .passed)
+    }
+
+    @Test("VerifyAll verifies all pending commitments")
+    func verifyAllVerifiesAllPending() async throws {
+        let mockRunner = MockAssertionRunner()
+        mockRunner.setPass(for: "echo 1")
+        mockRunner.setPass(for: "echo 2")
+        mockRunner.setPass(for: "echo 3")
+
+        let verifier = CommitmentVerifier(runner: mockRunner)
+        let list = CommitmentList()
+
+        list.add(description: "Test 1", assertion: "echo 1")
+        list.add(description: "Test 2", assertion: "echo 2")
+        list.add(description: "Test 3", assertion: "echo 3")
+
+        let allPassed = try await verifier.verifyAll(in: list)
+
+        #expect(allPassed == true)
+        #expect(list.allPassed == true)
+        #expect(mockRunner.ranCommands.count == 3)
+    }
+
+    @Test("VerifyAll returns false if any fail")
+    func verifyAllReturnsFalseIfAnyFail() async throws {
+        let mockRunner = MockAssertionRunner()
+        mockRunner.setPass(for: "echo 1")
+        mockRunner.setFail(for: "echo 2", message: "Oops")
+        mockRunner.setPass(for: "echo 3")
+
+        let verifier = CommitmentVerifier(runner: mockRunner)
+        let list = CommitmentList()
+
+        let c1 = list.add(description: "Test 1", assertion: "echo 1")
+        let c2 = list.add(description: "Test 2", assertion: "echo 2")
+        let c3 = list.add(description: "Test 3", assertion: "echo 3")
+
+        let allPassed = try await verifier.verifyAll(in: list)
+
+        #expect(allPassed == false)
+        #expect(list.allPassed == false)
+        #expect(list.get(id: c1.id)?.status == .passed)
+        #expect(list.get(id: c2.id)?.status == .failed)
+        #expect(list.get(id: c3.id)?.status == .passed)
+    }
+
+    @Test("RetryFailed only retries failed commitments")
+    func retryFailedOnlyRetriesFailed() async throws {
+        let mockRunner = MockAssertionRunner()
+        mockRunner.setPass(for: "echo ok")
+
+        let verifier = CommitmentVerifier(runner: mockRunner)
+        let list = CommitmentList()
+
+        let c1 = list.add(description: "Already passed", assertion: "echo already")
+        let c2 = list.add(description: "Failed", assertion: "echo ok")
+
+        // Simulate c1 passed, c2 failed
+        list.markPassed(id: c1.id)
+        list.markFailed(id: c2.id, message: "Initial failure")
+
+        // Retry failed
+        let allPassed = try await verifier.retryFailed(in: list)
+
+        #expect(allPassed == true)
+        #expect(list.get(id: c2.id)?.status == .passed)
+        // Only the failed one should have been run
+        #expect(mockRunner.ranCommands.count == 1)
+        #expect(mockRunner.ranCommands.first == "echo ok")
+    }
+
+    @Test("MockAssertionRunner tracks commands")
+    func mockRunnerTracksCommands() async throws {
+        let runner = MockAssertionRunner()
+
+        _ = try await runner.run("command1")
+        _ = try await runner.run("command2")
+
+        #expect(runner.ranCommands.count == 2)
+        #expect(runner.ranCommands[0] == "command1")
+        #expect(runner.ranCommands[1] == "command2")
+    }
+
+    @Test("MockAssertionRunner reset clears state")
+    func mockRunnerResetClearsState() async throws {
+        let runner = MockAssertionRunner()
+
+        runner.setPass(for: "test")
+        _ = try await runner.run("test")
+
+        runner.reset()
+
+        #expect(runner.ranCommands.isEmpty)
+    }
+}
