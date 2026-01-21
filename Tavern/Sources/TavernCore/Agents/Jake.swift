@@ -93,8 +93,8 @@ public final class Jake: Agent, @unchecked Sendable {
         // NOTE: Using .text format because ClaudeCodeSDK has a bug parsing
         // the .json format (Claude CLI returns an array, SDK expects an object).
         // This means we lose session ID tracking for now.
-        // TODO: Fix ClaudeCodeSDK or implement array parsing workaround
-        // See: https://github.com/jamesrochabrun/ClaudeCodeSDK/issues/XXX
+        // FIX: Fork ClaudeCodeSDK and fix HeadlessBackend.swift to parse arrays
+        // The fix: parse output as [ResultEvent], find {"type":"result"} element
 
         if let sessionId = currentSessionId {
             // Continue existing conversation

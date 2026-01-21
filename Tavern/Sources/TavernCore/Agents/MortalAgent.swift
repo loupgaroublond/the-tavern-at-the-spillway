@@ -106,7 +106,7 @@ public final class MortalAgent: Agent, @unchecked Sendable {
         // NOTE: Using .text format because ClaudeCodeSDK has a bug parsing
         // the .json format (Claude CLI returns an array, SDK expects an object).
         // This means we lose session ID tracking for now.
-        // TODO: Fix ClaudeCodeSDK or implement array parsing workaround
+        // FIX: Fork ClaudeCodeSDK and fix HeadlessBackend.swift to parse arrays
 
         if let sessionId = currentSessionId {
             result = try await claude.resumeConversation(
