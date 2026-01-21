@@ -379,6 +379,36 @@ Jake doesn't dump stack traces or error codes at users. But he DOES tell them:
 Every error message in the codebase should map to a specific `ClaudeCodeError` case or known failure mode. No catch-all "unknown error" garbage.
 
 
+### The Instrumentation Principle
+
+Debug builds must be instrumented thoroughly enough that issues can be diagnosed from logs alone — without needing screenshots, videos, or human reproduction.
+
+**Why this matters:**
+- Analyzing videos/images is expensive (tokens, time)
+- Reading structured logs is cheap and precise
+- Logs can capture state that's invisible to users
+- Logs enable autonomous debugging without human intervention
+
+**What to log:**
+- All SDK/API calls with parameters and results
+- State transitions (agent state changes, UI state changes)
+- Error conditions with full context (not just the error, but what led to it)
+- Timing information (durations, timestamps)
+- Environment state (PATH, working directory, config values)
+
+**Log format:**
+- Use structured logging (os.log with categories)
+- Include correlation IDs to trace requests through the system
+- Log at appropriate levels (debug for verbose, info for important, error for problems)
+- Include enough context to reconstruct the sequence of events
+
+**Goal:** If the user says "I ran into an issue," the agent should be able to:
+1. Ask for the relevant log output (or read it directly if accessible)
+2. Understand exactly what happened without further explanation
+3. Identify the root cause from the logged data
+4. Fix it or explain why it failed
+
+
 ## Completion (Jake Style)
 
 ```
