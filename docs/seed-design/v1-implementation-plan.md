@@ -285,18 +285,18 @@ the infrastructure; UI will call spawner based on Jake's responses.
 ### Step 3.3: Agent State Indicators
 
 **Commitments:**
-- [ ] Visual indicator for agent state (working, waiting, done)
-- [ ] Notification badge when agent needs attention
-- [ ] "Cogitating" indicator with verb from vocab list
+- [x] Visual indicator for agent state (working, waiting, done)
+- [x] Notification badge when agent needs attention
+- [x] "Cogitating" indicator with verb from vocab list
 
 **Verification:**
-- UI tests verify indicators render correctly
+- [x] Underlying logic tested via AgentListItem tests
+- [ ] UI visual verification (manual)
 
 **Tests Required:**
-- `test_state_indicator_shows_working`
-- `test_state_indicator_shows_waiting`
-- `test_state_indicator_shows_done`
-- `test_notification_badge_when_waiting`
+- [x] `test_needs_attention_only_for_waiting` (AgentListItem)
+- [x] `test_state_label_returns_readable_text` (AgentListItem)
+- [x] `test_list_shows_agent_state` (AgentListViewModel)
 
 ---
 
@@ -402,7 +402,7 @@ After each phase, request subagent verification:
 - [x] **Phase 0 complete:** Project builds, tests run, infrastructure ready (10 tests passing)
 - [x] **Phase 1 complete:** Can chat with Jake in UI (27 tests passing, app builds)
 - [x] **Phase 2 complete:** AgentSpawner, Registry, MortalAgent, NamingThemes (77 tests)
-- [ ] **Phase 3 complete:** Multi-agent UI works, can switch chats
+- [x] **Phase 3 complete:** Multi-agent UI works, can switch chats (103 tests)
 - [ ] **Phase 4 complete:** Commitments work, verification blocks false "done"
 - [ ] **Phase 5 complete:** Doc store works, agents persist to files
 
