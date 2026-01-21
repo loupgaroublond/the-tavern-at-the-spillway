@@ -1,0 +1,56 @@
+name: Tavern
+
+options:
+  bundleIdPrefix: com.tavern
+  deploymentTarget:
+    macOS: "13.0"
+  xcodeVersion: "16.0"
+  createIntermediateGroups: true
+
+packages:
+  ClaudeCodeSDK:
+    url: https://github.com/jamesrochabrun/ClaudeCodeSDK.git
+    from: "1.0.0"
+
+targets:
+  TavernCore:
+    type: framework
+    platform: macOS
+    sources:
+      - path: Sources/TavernCore
+    dependencies:
+      - package: ClaudeCodeSDK
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.tavern.core
+      SWIFT_VERSION: "6.0"
+      GENERATE_INFOPLIST_FILE: YES
+      INFOPLIST_KEY_NSHumanReadableCopyright: ""
+
+  Tavern:
+    type: application
+    platform: macOS
+    sources:
+      - path: Sources/Tavern
+    dependencies:
+      - target: TavernCore
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.tavern.app
+      SWIFT_VERSION: "6.0"
+      GENERATE_INFOPLIST_FILE: YES
+      INFOPLIST_KEY_NSHumanReadableCopyright: ""
+      INFOPLIST_KEY_NSMainStoryboardFile: ""
+      INFOPLIST_KEY_NSPrincipalClass: NSApplication
+    entitlements:
+      path: Tavern.entitlements
+      properties:
+        com.apple.security.app-sandbox: false
+
+schemes:
+  Tavern:
+    build:
+      targets:
+        Tavern: all
+        TavernCore: all
+    run:
+      executable: Tavern
+      config: Debug
