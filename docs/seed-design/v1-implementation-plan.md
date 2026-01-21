@@ -374,38 +374,51 @@ the infrastructure; UI will call spawner based on Jake's responses.
 ### Step 5.1: File-Based Doc Store
 
 **Commitments:**
-- [ ] Create `DocStore` class wrapping filesystem
-- [ ] Can create, read, update, delete documents (files)
-- [ ] Documents are markdown with optional frontmatter
-- [ ] Project has designated doc store directory
+- [x] Create `DocStore` class wrapping filesystem
+- [x] Can create, read, update, delete documents (files)
+- [x] Documents are markdown with optional frontmatter
+- [x] Project has designated doc store directory
 
 **Verification:**
-- Unit tests with temp directory
+- [x] Unit tests with temp directory (21 tests)
 
 **Tests Required:**
-- `test_doc_store_creates_file`
-- `test_doc_store_reads_file`
-- `test_doc_store_updates_file`
-- `test_doc_store_deletes_file`
-- `test_doc_store_parses_frontmatter`
+- [x] `test_doc_store_creates_directory_if_needed`
+- [x] `test_doc_store_creates_file`
+- [x] `test_doc_store_reads_file`
+- [x] `test_doc_store_updates_file`
+- [x] `test_doc_store_deletes_file`
+- [x] `test_doc_store_parses_frontmatter`
+- [x] Document serialization tests (7 tests)
+- [x] Error handling tests (4 tests)
+- [x] List/read all documents tests
 
 ---
 
 ### Step 5.2: Agent Nodes in Doc Store
 
 **Commitments:**
-- [ ] Each agent has a file in doc store
-- [ ] File contains: ID, name, assignment, state, commitments
-- [ ] Agent state synced to file
-- [ ] Agent can be restored from file
+- [x] Each agent has a file in doc store
+- [x] File contains: ID, name, assignment, state, commitments
+- [x] Agent state synced to file
+- [x] Agent can be restored from file
 
 **Verification:**
-- Unit tests for agent serialization
+- [x] Unit tests for agent serialization (17 tests)
 
 **Tests Required:**
-- `test_agent_creates_doc_store_node`
-- `test_agent_state_synced_to_file`
-- `test_agent_restored_from_file`
+- [x] `test_agent_node_has_properties`
+- [x] `test_agent_node_creates_from_mortal_agent`
+- [x] `test_agent_node_converts_to_document`
+- [x] `test_agent_node_parses_from_document`
+- [x] `test_commitment_node_creates_from_commitment`
+- [x] `test_commitment_node_converts_to_commitment`
+- [x] `test_agent_creates_doc_store_node`
+- [x] `test_agent_state_synced_to_file`
+- [x] `test_agent_restored_from_file`
+- [x] `test_agent_persistence_saves_commitments`
+- [x] `test_agent_persistence_deletes_agent`
+- [x] `test_agent_persistence_lists_all`
 
 ---
 
@@ -418,7 +431,7 @@ After each phase, request subagent verification:
 - [x] **Phase 2 complete:** AgentSpawner, Registry, MortalAgent, NamingThemes (77 tests)
 - [x] **Phase 3 complete:** Multi-agent UI works, can switch chats (103 tests)
 - [x] **Phase 4 complete:** Commitments work, verification blocks false "done" (135 tests)
-- [ ] **Phase 5 complete:** Doc store works, agents persist to files
+- [x] **Phase 5 complete:** Doc store works, agents persist to files (173 tests)
 
 
 ## Rules Adherence Checklist
