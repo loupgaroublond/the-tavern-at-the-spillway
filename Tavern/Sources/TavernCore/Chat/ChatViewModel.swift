@@ -24,7 +24,14 @@ public final class ChatViewModel: ObservableObject {
 
     // MARK: - Dependencies
 
-    private let jake: Jake
+    private let agent: AnyAgent
+    private let isJake: Bool
+
+    /// The agent's ID (for identification)
+    public var agentId: UUID { agent.id }
+
+    /// The agent's name
+    public var agentName: String { agent.name }
 
     // MARK: - Cogitation Verbs
 
@@ -55,8 +62,16 @@ public final class ChatViewModel: ObservableObject {
 
     // MARK: - Initialization
 
+    /// Create a chat view model for Jake
     public init(jake: Jake) {
-        self.jake = jake
+        self.agent = AnyAgent(jake)
+        self.isJake = true
+    }
+
+    /// Create a chat view model for any agent
+    public init(agent: some Agent) {
+        self.agent = AnyAgent(agent)
+        self.isJake = agent is Jake
     }
 
     // MARK: - Actions
@@ -79,8 +94,8 @@ public final class ChatViewModel: ObservableObject {
         cogitationVerb = Self.cogitationVerbs.randomElement() ?? "Cogitating"
 
         do {
-            // Get response from Jake
-            let response = try await jake.send(text)
+            // Get response from agent
+            let response = try await agent.send(text)
 
             // Add agent message
             let agentMessage = ChatMessage(role: .agent, content: response)
@@ -99,10 +114,10 @@ public final class ChatViewModel: ObservableObject {
         isCogitating = false
     }
 
-    /// Clear the conversation and reset Jake's session
+    /// Clear the conversation and reset the agent's session
     public func clearConversation() {
         messages.removeAll()
-        jake.resetConversation()
+        agent.resetConversation()
         error = nil
     }
 }

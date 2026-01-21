@@ -3,25 +3,25 @@ import TavernCore
 
 @main
 struct TavernApp: App {
-    @StateObject private var viewModel = TavernApp.createViewModel()
+    @StateObject private var coordinator = TavernApp.createCoordinator()
 
     var body: some Scene {
         WindowGroup {
-            ContentView(viewModel: viewModel)
+            ContentView(coordinator: coordinator)
         }
         .windowStyle(.hiddenTitleBar)
         .commands {
             CommandGroup(replacing: .newItem) {
                 Button("New Conversation") {
-                    viewModel.clearConversation()
+                    coordinator.activeChatViewModel.clearConversation()
                 }
                 .keyboardShortcut("n", modifiers: .command)
             }
         }
     }
 
-    /// Create the view model with appropriate ClaudeCode instance
-    private static func createViewModel() -> ChatViewModel {
+    /// Create the coordinator with appropriate dependencies
+    private static func createCoordinator() -> TavernCoordinator {
         let claude: ClaudeCode
         do {
             claude = try ClaudeCodeClient()
@@ -33,25 +33,41 @@ struct TavernApp: App {
             mock.errorToThrow = error
             claude = mock
         }
+
         let jake = Jake(claude: claude)
-        return ChatViewModel(jake: jake)
+        let registry = AgentRegistry()
+        let nameGenerator = NameGenerator(theme: .lotr)
+        let spawner = AgentSpawner(
+            registry: registry,
+            nameGenerator: nameGenerator,
+            claudeFactory: {
+                // Each spawned agent gets its own mock for now
+                // TODO: Share the real Claude client in production
+                MockClaudeCode()
+            }
+        )
+
+        return TavernCoordinator(jake: jake, spawner: spawner)
     }
 }
 
 struct ContentView: View {
-    @ObservedObject var viewModel: ChatViewModel
+    @ObservedObject var coordinator: TavernCoordinator
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Header
-            TavernHeader()
-
-            Divider()
-
-            // Chat area
-            ChatView(viewModel: viewModel)
+        NavigationSplitView {
+            // Sidebar with agent list
+            VStack(spacing: 0) {
+                TavernHeader()
+                Divider()
+                AgentListView(viewModel: coordinator.agentListViewModel)
+            }
+            .frame(minWidth: 200)
+        } detail: {
+            // Detail view with selected agent's chat
+            ChatView(viewModel: coordinator.activeChatViewModel)
         }
-        .frame(minWidth: 600, minHeight: 500)
+        .frame(minWidth: 800, minHeight: 500)
     }
 }
 
@@ -87,7 +103,15 @@ private struct TavernHeader: View {
     mock.queueJSONResponse(result: "Well well WELL, look who just walked in!", sessionId: "preview")
 
     let jake = Jake(claude: mock)
-    let viewModel = ChatViewModel(jake: jake)
+    let registry = AgentRegistry()
+    let nameGenerator = NameGenerator(theme: .lotr)
+    let spawner = AgentSpawner(
+        registry: registry,
+        nameGenerator: nameGenerator,
+        claudeFactory: { MockClaudeCode() }
+    )
 
-    return ContentView(viewModel: viewModel)
+    let coordinator = TavernCoordinator(jake: jake, spawner: spawner)
+
+    return ContentView(coordinator: coordinator)
 }

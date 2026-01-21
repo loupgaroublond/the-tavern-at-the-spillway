@@ -248,17 +248,18 @@ the infrastructure; UI will call spawner based on Jake's responses.
 ### Step 3.1: Agent List View
 
 **Commitments:**
-- [ ] Create `AgentListView` showing all agents
-- [ ] Each agent shows: name, assignment summary, state
-- [ ] Clicking agent selects it
+- [x] Create `AgentListView` showing all agents
+- [x] Each agent shows: name, assignment summary, state
+- [x] Clicking agent selects it
 
 **Verification:**
-- UI tests verify rendering
+- [x] Unit tests for AgentListItem and AgentListViewModel (16 tests)
 
 **Tests Required:**
-- `test_agent_list_shows_all_agents`
-- `test_agent_list_shows_agent_state`
-- `test_agent_list_selection_works`
+- [x] `test_list_shows_all_spawned_agents` (AgentListViewModel)
+- [x] `test_list_shows_agent_state` (AgentListViewModel)
+- [x] `test_selection_works` (AgentListViewModel)
+- [x] Additional tests: item properties, Jake marker, assignment summary, state labels
 
 ---
 
