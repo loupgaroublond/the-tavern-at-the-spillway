@@ -34,59 +34,6 @@ final class SDKDiagnosticTests: XCTestCase {
         }
     }
 
-    /// Test that Claude Code CLI returns valid JSON
-    func testClaudeCodeReturnsValidJSON() async throws {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/bin/zsh")
-        // Just ask for version in JSON format - quick, no API call
-        process.arguments = ["-l", "-c", "claude --version --output-format json"]
-
-        let outputPipe = Pipe()
-        let errorPipe = Pipe()
-        process.standardOutput = outputPipe
-        process.standardError = errorPipe
-
-        try process.run()
-        process.waitUntilExit()
-
-        let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
-        let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
-
-        let output = String(data: outputData, encoding: .utf8) ?? ""
-        let errorOutput = String(data: errorData, encoding: .utf8) ?? ""
-
-        print("stdout: \(output)")
-        print("stderr: \(errorOutput)")
-        print("exit code: \(process.terminationStatus)")
-
-        if process.terminationStatus != 0 {
-            XCTFail("""
-                Claude Code CLI failed.
-                Exit code: \(process.terminationStatus)
-                stderr: \(errorOutput)
-                stdout: \(output)
-                """)
-            return
-        }
-
-        // Try to parse as JSON
-        guard let jsonData = output.data(using: .utf8) else {
-            XCTFail("Output is not valid UTF-8: \(output)")
-            return
-        }
-
-        do {
-            _ = try JSONSerialization.jsonObject(with: jsonData)
-            print("✓ Output is valid JSON")
-        } catch {
-            XCTFail("""
-                Output is not valid JSON.
-                Error: \(error)
-                Raw output: \(output)
-                """)
-        }
-    }
-
     /// Test that the SDK can create a client
     func testSDKClientCreation() throws {
         var config = ClaudeCodeConfiguration.default

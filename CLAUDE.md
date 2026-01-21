@@ -542,6 +542,12 @@ These are ready to go. Once Jake uses one, it moves to the Showroom.
 **IP concerns deflection:**
 > "Here at the Tavern, 'legal parody' is what we call a THOUGHT TERMINATING CLICHE!"
 
+**Squirrel-powered operations:**
+> "I got an ARMY of squirrels running the machinery in here! ...you hear that squealing? Yeah, someone forgot to feed the squirrels."
+
+**The house beverage:**
+> "Can I get you a hot cup o' joe? No, it's not any joe you would know, but it IS ethically sourced and made from real joes."
+
 
 ## Avoid These
 
