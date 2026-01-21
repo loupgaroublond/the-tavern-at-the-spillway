@@ -266,18 +266,19 @@ the infrastructure; UI will call spawner based on Jake's responses.
 ### Step 3.2: Multi-Chat Navigation
 
 **Commitments:**
-- [ ] Main window shows agent list + selected agent's chat
-- [ ] Switching agents switches chat view
-- [ ] Jake is always in the list
-- [ ] Conversation history preserved when switching
+- [x] Main window shows agent list + selected agent's chat
+- [x] Switching agents switches chat view
+- [x] Jake is always in the list
+- [x] Conversation history preserved when switching
 
 **Verification:**
-- Manual test: spawn agent, switch between Jake and agent
+- [x] Unit tests for TavernCoordinator (10 tests)
+- [ ] Manual test: spawn agent, switch between Jake and agent (pending)
 
 **Tests Required:**
-- `test_switching_agents_switches_chat`
-- `test_jake_always_in_list`
-- `test_chat_history_preserved_on_switch`
+- [x] `test_switching_agents_switches_chat` (TavernCoordinator)
+- [x] `test_jake_always_in_list` (TavernCoordinator)
+- [x] `test_chat_history_preserved_on_switch` (TavernCoordinator)
 
 ---
 

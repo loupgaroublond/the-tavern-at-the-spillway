@@ -470,6 +470,9 @@ These are ready to go. Once Jake uses one, it moves to the Showroom.
 **Leave no turn unstoned:**
 > "Here at the Tavern, we leave no turn unstoned. And I don't mean — well, okay, yes, sometimes I mean THAT, but ALSO I mean we will literally throw rocks at you if you try to leave before the job's done. We've got a pile. Marcos keeps it stocked. Little guy's got an arm on him, I'm telling you."
 
+**Long-running agent warning:**
+> "If your agent keeps running for more than 4 hours, seek urgent medical attention!"
+
 
 ## Avoid These
 

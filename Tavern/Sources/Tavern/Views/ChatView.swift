@@ -12,13 +12,16 @@ struct ChatView: View {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 12) {
                         ForEach(viewModel.messages) { message in
-                            MessageRow(message: message)
+                            MessageRow(message: message, agentName: viewModel.agentName)
                         }
 
                         // Cogitating indicator
                         if viewModel.isCogitating {
-                            CogitatingIndicator(verb: viewModel.cogitationVerb)
-                                .id("cogitating")
+                            CogitatingIndicator(
+                                agentName: viewModel.agentName,
+                                verb: viewModel.cogitationVerb
+                            )
+                            .id("cogitating")
                         }
                     }
                     .padding()
@@ -44,6 +47,7 @@ struct ChatView: View {
 
             // Input area
             InputBar(
+                agentName: viewModel.agentName,
                 text: $viewModel.inputText,
                 isEnabled: !viewModel.isCogitating,
                 onSend: {
@@ -60,6 +64,12 @@ struct ChatView: View {
 
 private struct MessageRow: View {
     let message: ChatMessage
+    let agentName: String
+
+    /// First letter of agent name for avatar
+    private var agentInitial: String {
+        String(agentName.prefix(1)).uppercased()
+    }
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -68,14 +78,14 @@ private struct MessageRow: View {
                 .fill(message.role == .user ? Color.blue : Color.orange)
                 .frame(width: 32, height: 32)
                 .overlay {
-                    Text(message.role == .user ? "U" : "J")
+                    Text(message.role == .user ? "U" : agentInitial)
                         .font(.system(size: 14, weight: .bold))
                         .foregroundColor(.white)
                 }
 
             // Content
             VStack(alignment: .leading, spacing: 4) {
-                Text(message.role == .user ? "You" : "Jake")
+                Text(message.role == .user ? "You" : agentName)
                     .font(.caption)
                     .foregroundColor(.secondary)
 
@@ -92,9 +102,15 @@ private struct MessageRow: View {
 // MARK: - Cogitating Indicator
 
 private struct CogitatingIndicator: View {
+    let agentName: String
     let verb: String
     @State private var dotCount = 0
     @State private var timer: Timer?
+
+    /// First letter of agent name for avatar
+    private var agentInitial: String {
+        String(agentName.prefix(1)).uppercased()
+    }
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -103,14 +119,14 @@ private struct CogitatingIndicator: View {
                 .fill(Color.orange.opacity(0.7))
                 .frame(width: 32, height: 32)
                 .overlay {
-                    Text("J")
+                    Text(agentInitial)
                         .font(.system(size: 14, weight: .bold))
                         .foregroundColor(.white)
                 }
 
             // Animated status
             VStack(alignment: .leading, spacing: 4) {
-                Text("Jake")
+                Text(agentName)
                     .font(.caption)
                     .foregroundColor(.secondary)
 
@@ -149,13 +165,14 @@ private struct CogitatingIndicator: View {
 // MARK: - Input Bar
 
 private struct InputBar: View {
+    let agentName: String
     @Binding var text: String
     let isEnabled: Bool
     let onSend: () -> Void
 
     var body: some View {
         HStack(spacing: 12) {
-            TextField("Message Jake...", text: $text)
+            TextField("Message \(agentName)...", text: $text)
                 .textFieldStyle(.plain)
                 .disabled(!isEnabled)
                 .onSubmit {
