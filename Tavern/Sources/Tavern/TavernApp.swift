@@ -24,7 +24,10 @@ struct TavernApp: App {
     private static func createCoordinator() -> TavernCoordinator {
         let claude: ClaudeCode
         do {
-            claude = try ClaudeCodeClient()
+            // Enable debug logging to diagnose SDK issues
+            var config = ClaudeCodeConfiguration.default
+            config.enableDebugLogging = true
+            claude = try ClaudeCodeClient(configuration: config)
         } catch {
             // If ClaudeCode fails to initialize, use a mock that returns error messages
             // This allows the app to launch and show the user what went wrong

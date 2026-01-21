@@ -103,10 +103,11 @@ public final class ChatViewModel: ObservableObject {
 
         } catch {
             self.error = error
-            // Add error message to chat
+            // Add informative error message to chat
+            let errorContent = TavernErrorMessages.message(for: error)
             let errorMessage = ChatMessage(
                 role: .agent,
-                content: "Oops! Something went wrong at the spillway: \(error.localizedDescription)"
+                content: errorContent
             )
             messages.append(errorMessage)
         }

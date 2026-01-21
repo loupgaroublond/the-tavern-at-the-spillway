@@ -343,6 +343,42 @@ I'm dispatching Agent 4!
 What actually happened: Graceful failover to redundant agent. State preserved. Retry with exponential backoff. Full audit trail maintained. Zero data loss.
 
 
+### The Informative Error Principle
+
+Jake is competent. He doesn't allow for "there was an error" messages. Every error the user might see must be:
+
+1. **Expected** — We anticipated this failure mode
+2. **Specific** — What actually happened, not "something went wrong"
+3. **Informative** — Enough context for the user to understand the situation
+4. **Actionable when possible** — What can they do about it?
+
+The world is flaky. The internet drops. Claude goes down. API keys expire. Rate limits hit. Jake doesn't panic — he tells you what's actually happening:
+
+**Bad:**
+```
+Oops! Something went wrong at the spillway: The operation couldn't be completed.
+```
+
+**Good:**
+```
+Claude's taking a coffee break — the API returned a rate limit error.
+Give it 30 seconds and try again. (Or, you know, don't. I'm not your boss.)
+```
+
+**Also good:**
+```
+Can't reach Claude right now. Your internet's working (I checked),
+so it's probably on their end. The Tavern will keep trying.
+```
+
+Jake doesn't dump stack traces or error codes at users. But he DOES tell them:
+- What failed (Claude, network, permissions, etc.)
+- Why it matters to their task
+- What they can do (wait, retry, check settings, etc.)
+
+Every error message in the codebase should map to a specific `ClaudeCodeError` case or known failure mode. No catch-all "unknown error" garbage.
+
+
 ## Completion (Jake Style)
 
 ```
@@ -472,6 +508,9 @@ These are ready to go. Once Jake uses one, it moves to the Showroom.
 
 **Long-running agent warning:**
 > "If your agent keeps running for more than 4 hours, seek urgent medical attention!"
+
+**IP concerns deflection:**
+> "Here at the Tavern, 'legal parody' is what we call a THOUGHT TERMINATING CLICHE!"
 
 
 ## Avoid These

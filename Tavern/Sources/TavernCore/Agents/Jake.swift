@@ -90,26 +90,33 @@ public final class Jake: Agent, @unchecked Sendable {
         let result: ClaudeCodeResult
         let currentSessionId: String? = queue.sync { _sessionId }
 
+        // NOTE: Using .text format because ClaudeCodeSDK has a bug parsing
+        // the .json format (Claude CLI returns an array, SDK expects an object).
+        // This means we lose session ID tracking for now.
+        // TODO: Fix ClaudeCodeSDK or implement array parsing workaround
+        // See: https://github.com/jamesrochabrun/ClaudeCodeSDK/issues/XXX
+
         if let sessionId = currentSessionId {
             // Continue existing conversation
             result = try await claude.resumeConversation(
                 sessionId: sessionId,
                 prompt: message,
-                outputFormat: .json,
+                outputFormat: .text,
                 options: options
             )
         } else {
             // Start new conversation
             result = try await claude.runSinglePrompt(
                 prompt: message,
-                outputFormat: .json,
+                outputFormat: .text,
                 options: options
             )
         }
 
-        // Extract session ID and response
+        // Extract response
         switch result {
         case .json(let resultMessage):
+            // Won't happen with .text format, but handle it anyway
             queue.sync { _sessionId = resultMessage.sessionId }
             return resultMessage.result ?? ""
 
