@@ -4,14 +4,16 @@ import ClaudeCodeSDK
 /// Jake - The Proprietor of the Tavern
 /// The top-level coordinating agent with the voice of a used car salesman
 /// and the execution of a surgical team.
-public final class Jake: @unchecked Sendable {
+public final class Jake: Agent, @unchecked Sendable {
 
-    // MARK: - Types
+    // MARK: - Agent Protocol
 
-    /// Jake's current state
-    public enum State: Equatable, Sendable {
-        case idle
-        case cogitating
+    public let id: UUID
+    public let name: String = "Jake"
+
+    /// Jake's state (mapped to AgentState for protocol conformance)
+    public var state: AgentState {
+        queue.sync { _isCogitating ? .working : .idle }
     }
 
     // MARK: - Properties
@@ -20,16 +22,16 @@ public final class Jake: @unchecked Sendable {
     private let queue = DispatchQueue(label: "com.tavern.Jake")
 
     private var _sessionId: String?
-    private var _state: State = .idle
+    private var _isCogitating: Bool = false
 
     /// The current session ID (for conversation continuity)
     public var sessionId: String? {
         queue.sync { _sessionId }
     }
 
-    /// Jake's current state
-    public var state: State {
-        queue.sync { _state }
+    /// Whether Jake is currently cogitating (working)
+    public var isCogitating: Bool {
+        queue.sync { _isCogitating }
     }
 
     /// Jake's system prompt - establishes his character
@@ -64,8 +66,11 @@ public final class Jake: @unchecked Sendable {
     // MARK: - Initialization
 
     /// Create Jake with a ClaudeCode instance
-    /// - Parameter claude: The ClaudeCode SDK instance to use (injectable for testing)
-    public init(claude: ClaudeCode) {
+    /// - Parameters:
+    ///   - id: Unique identifier (auto-generated if not provided)
+    ///   - claude: The ClaudeCode SDK instance to use (injectable for testing)
+    public init(id: UUID = UUID(), claude: ClaudeCode) {
+        self.id = id
         self.claude = claude
     }
 
@@ -76,8 +81,8 @@ public final class Jake: @unchecked Sendable {
     /// - Returns: Jake's response text
     /// - Throws: ClaudeCodeError if communication fails
     public func send(_ message: String) async throws -> String {
-        queue.sync { _state = .cogitating }
-        defer { queue.sync { _state = .idle } }
+        queue.sync { _isCogitating = true }
+        defer { queue.sync { _isCogitating = false } }
 
         var options = ClaudeCodeOptions()
         options.systemPrompt = Self.systemPrompt

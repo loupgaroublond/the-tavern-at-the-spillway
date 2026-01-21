@@ -41,8 +41,8 @@ struct JakeTests {
         #expect(mock.sentPrompts.first == "Hello Jake!")
     }
 
-    @Test("Jake state changes to cogitating during response")
-    func jakeStateCogitating() async throws {
+    @Test("Jake state changes to working during response")
+    func jakeStateWorking() async throws {
         let mock = MockClaudeCode()
         mock.queueJSONResponse(result: "Response", sessionId: "session-123")
         // Add small delay to observe state
@@ -58,8 +58,8 @@ struct JakeTests {
         // Wait a tiny bit for state to change
         try await Task.sleep(nanoseconds: 50_000_000) // 50ms
 
-        // Should be cogitating while waiting
-        #expect(jake.state == .cogitating)
+        // Should be working while waiting (Jake maps cogitating to working)
+        #expect(jake.state == .working)
 
         // Wait for completion
         _ = try await task.value
