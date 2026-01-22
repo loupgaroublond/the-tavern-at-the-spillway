@@ -4,8 +4,9 @@ options:
   bundleIdPrefix: com.tavern
   deploymentTarget:
     macOS: "13.0"
-  xcodeVersion: "16.0"
+  xcodeVersion: "26.0"
   createIntermediateGroups: true
+  defaultConfig: Debug
 
 packages:
   ClaudeCodeSDK:
