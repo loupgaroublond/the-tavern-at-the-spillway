@@ -9,7 +9,7 @@ struct ChatViewModelTests {
     @MainActor
     func viewModelInitializesEmpty() {
         let mock = MockClaudeCode()
-        let jake = Jake(claude: mock)
+        let jake = Jake(claude: mock, loadSavedSession: false)
         let viewModel = ChatViewModel(jake: jake)
 
         #expect(viewModel.messages.isEmpty)
@@ -24,7 +24,7 @@ struct ChatViewModelTests {
         let mock = MockClaudeCode()
         mock.queueJSONResponse(result: "Hello back!", sessionId: "session-123")
 
-        let jake = Jake(claude: mock)
+        let jake = Jake(claude: mock, loadSavedSession: false)
         let viewModel = ChatViewModel(jake: jake)
 
         viewModel.inputText = "Hello Jake!"
@@ -43,7 +43,7 @@ struct ChatViewModelTests {
         let mock = MockClaudeCode()
         mock.queueJSONResponse(result: "Response", sessionId: "session-123")
 
-        let jake = Jake(claude: mock)
+        let jake = Jake(claude: mock, loadSavedSession: false)
         let viewModel = ChatViewModel(jake: jake)
 
         viewModel.inputText = "Test message"
@@ -58,7 +58,7 @@ struct ChatViewModelTests {
         let mock = MockClaudeCode()
         mock.queueJSONResponse(result: "Should not see this", sessionId: "session-123")
 
-        let jake = Jake(claude: mock)
+        let jake = Jake(claude: mock, loadSavedSession: false)
         let viewModel = ChatViewModel(jake: jake)
 
         viewModel.inputText = "   " // Whitespace only
@@ -75,7 +75,7 @@ struct ChatViewModelTests {
         mock.queueJSONResponse(result: "Response", sessionId: "session-123")
         mock.responseDelay = 0.1 // Add delay to observe state
 
-        let jake = Jake(claude: mock)
+        let jake = Jake(claude: mock, loadSavedSession: false)
         let viewModel = ChatViewModel(jake: jake)
 
         viewModel.inputText = "Test"
@@ -106,7 +106,7 @@ struct ChatViewModelTests {
         mock.queueJSONResponse(result: "Response", sessionId: "session-123")
         mock.responseDelay = 0.1
 
-        let jake = Jake(claude: mock)
+        let jake = Jake(claude: mock, loadSavedSession: false)
         let viewModel = ChatViewModel(jake: jake)
 
         viewModel.inputText = "Test"
@@ -129,7 +129,7 @@ struct ChatViewModelTests {
         let mock = MockClaudeCode()
         mock.errorToThrow = ClaudeCodeError.executionFailed("Network error")
 
-        let jake = Jake(claude: mock)
+        let jake = Jake(claude: mock, loadSavedSession: false)
         let viewModel = ChatViewModel(jake: jake)
 
         viewModel.inputText = "Test"
@@ -149,7 +149,7 @@ struct ChatViewModelTests {
         let mock = MockClaudeCode()
         mock.queueJSONResponse(result: "Response", sessionId: "session-123")
 
-        let jake = Jake(claude: mock)
+        let jake = Jake(claude: mock, loadSavedSession: false)
         let viewModel = ChatViewModel(jake: jake)
 
         viewModel.inputText = "Test"
@@ -170,7 +170,7 @@ struct ChatViewModelTests {
         mock.queueJSONResponse(result: "First response", sessionId: "session-123")
         mock.queueJSONResponse(result: "Second response", sessionId: "session-123")
 
-        let jake = Jake(claude: mock)
+        let jake = Jake(claude: mock, loadSavedSession: false)
         let viewModel = ChatViewModel(jake: jake)
 
         viewModel.inputText = "First"

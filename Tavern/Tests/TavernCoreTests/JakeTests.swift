@@ -20,7 +20,7 @@ struct JakeTests {
     @Test("Jake initializes with correct state")
     func jakeInitializesCorrectly() {
         let mock = MockClaudeCode()
-        let jake = Jake(claude: mock)
+        let jake = Jake(claude: mock, loadSavedSession: false)
 
         #expect(jake.state == .idle)
         #expect(jake.sessionId == nil)
@@ -32,7 +32,7 @@ struct JakeTests {
         let sessionId = "test-session-abc"
         mock.queueJSONResponse(result: "Well well WELL!", sessionId: sessionId)
 
-        let jake = Jake(claude: mock)
+        let jake = Jake(claude: mock, loadSavedSession: false)
         let response = try await jake.send("Hello Jake!")
 
         #expect(response == "Well well WELL!")
@@ -48,7 +48,7 @@ struct JakeTests {
         // Add small delay to observe state
         mock.responseDelay = 0.1
 
-        let jake = Jake(claude: mock)
+        let jake = Jake(claude: mock, loadSavedSession: false)
 
         // Start the send task
         let task = Task {
@@ -77,7 +77,7 @@ struct JakeTests {
         mock.queueJSONResponse(result: "First response", sessionId: sessionId1)
         mock.queueJSONResponse(result: "Second response", sessionId: sessionId2)
 
-        let jake = Jake(claude: mock)
+        let jake = Jake(claude: mock, loadSavedSession: false)
 
         // First message - should use runSinglePrompt
         let _ = try await jake.send("First message")
@@ -96,7 +96,7 @@ struct JakeTests {
         mock.queueJSONResponse(result: "Response", sessionId: "session-123")
         mock.queueJSONResponse(result: "New response", sessionId: "session-456")
 
-        let jake = Jake(claude: mock)
+        let jake = Jake(claude: mock, loadSavedSession: false)
 
         // Start a conversation
         _ = try await jake.send("Hello")
@@ -118,7 +118,7 @@ struct JakeTests {
         let mock = MockClaudeCode()
         mock.queueTextResponse("Plain text response")
 
-        let jake = Jake(claude: mock)
+        let jake = Jake(claude: mock, loadSavedSession: false)
         let response = try await jake.send("Test")
 
         #expect(response == "Plain text response")
@@ -131,7 +131,7 @@ struct JakeTests {
         let mock = MockClaudeCode()
         mock.errorToThrow = ClaudeCodeError.executionFailed("Network error")
 
-        let jake = Jake(claude: mock)
+        let jake = Jake(claude: mock, loadSavedSession: false)
 
         do {
             _ = try await jake.send("Test")

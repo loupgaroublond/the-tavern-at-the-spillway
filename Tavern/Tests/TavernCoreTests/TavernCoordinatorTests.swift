@@ -10,7 +10,7 @@ struct TavernCoordinatorTests {
         let mock = MockClaudeCode()
         mock.queueJSONResponse(result: "Jake response", sessionId: "jake-session")
 
-        let jake = Jake(claude: mock)
+        let jake = Jake(claude: mock, loadSavedSession: false)
         let registry = AgentRegistry()
         let nameGenerator = NameGenerator(theme: .lotr)
         let spawner = AgentSpawner(

@@ -73,29 +73,168 @@ private struct MessageRow: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            // Avatar
-            Circle()
-                .fill(message.role == .user ? Color.blue : Color.orange)
-                .frame(width: 32, height: 32)
-                .overlay {
-                    Text(message.role == .user ? "U" : agentInitial)
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(.white)
-                }
+            // Avatar - varies by message type
+            avatarView
 
-            // Content
-            VStack(alignment: .leading, spacing: 4) {
-                Text(message.role == .user ? "You" : agentName)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-
-                Text(message.content)
-                    .textSelection(.enabled)
-            }
+            // Content - varies by message type
+            contentView
 
             Spacer()
         }
         .padding(.vertical, 4)
+    }
+
+    @ViewBuilder
+    private var avatarView: some View {
+        Circle()
+            .fill(avatarColor)
+            .frame(width: 32, height: 32)
+            .overlay {
+                Image(systemName: avatarIcon)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(.white)
+            }
+    }
+
+    private var avatarColor: Color {
+        switch message.messageType {
+        case .text:
+            return message.role == .user ? .blue : .orange
+        case .toolUse:
+            return .purple
+        case .toolResult:
+            return .green
+        case .toolError:
+            return .red
+        case .thinking:
+            return .gray
+        case .webSearch:
+            return .cyan
+        }
+    }
+
+    private var avatarIcon: String {
+        switch message.messageType {
+        case .text:
+            return message.role == .user ? "person.fill" : "star.fill"
+        case .toolUse:
+            return "hammer.fill"
+        case .toolResult:
+            return "checkmark"
+        case .toolError:
+            return "exclamationmark.triangle.fill"
+        case .thinking:
+            return "brain"
+        case .webSearch:
+            return "globe"
+        }
+    }
+
+    @ViewBuilder
+    private var contentView: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            // Header label
+            headerLabel
+
+            // Content based on type
+            contentBody
+        }
+    }
+
+    @ViewBuilder
+    private var headerLabel: some View {
+        switch message.messageType {
+        case .text:
+            Text(message.role == .user ? "You" : agentName)
+                .font(.caption)
+                .foregroundColor(.secondary)
+
+        case .toolUse:
+            HStack(spacing: 4) {
+                Text("Tool")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                if let toolName = message.toolName {
+                    Text(toolName)
+                        .font(.caption.bold())
+                        .foregroundColor(.purple)
+                }
+            }
+
+        case .toolResult:
+            Text("Result")
+                .font(.caption)
+                .foregroundColor(.green)
+
+        case .toolError:
+            Text("Error")
+                .font(.caption)
+                .foregroundColor(.red)
+
+        case .thinking:
+            Text("Thinking...")
+                .font(.caption)
+                .foregroundColor(.gray)
+                .italic()
+
+        case .webSearch:
+            Text("Web Search")
+                .font(.caption)
+                .foregroundColor(.cyan)
+        }
+    }
+
+    @ViewBuilder
+    private var contentBody: some View {
+        switch message.messageType {
+        case .text:
+            Text(message.content)
+                .textSelection(.enabled)
+
+        case .toolUse:
+            // Tool use shows input in a code-style block
+            Text(message.content)
+                .font(.system(.body, design: .monospaced))
+                .textSelection(.enabled)
+                .padding(8)
+                .background(Color.purple.opacity(0.1))
+                .cornerRadius(6)
+
+        case .toolResult:
+            // Tool result in a success-styled block
+            Text(message.content)
+                .font(.system(.body, design: .monospaced))
+                .textSelection(.enabled)
+                .padding(8)
+                .background(Color.green.opacity(0.1))
+                .cornerRadius(6)
+
+        case .toolError:
+            // Error in a warning-styled block
+            Text(message.content)
+                .font(.system(.body, design: .monospaced))
+                .textSelection(.enabled)
+                .padding(8)
+                .background(Color.red.opacity(0.1))
+                .cornerRadius(6)
+
+        case .thinking:
+            // Thinking in a subtle gray block
+            Text(message.content)
+                .font(.callout)
+                .foregroundColor(.secondary)
+                .textSelection(.enabled)
+                .padding(8)
+                .background(Color.gray.opacity(0.1))
+                .cornerRadius(6)
+
+        case .webSearch:
+            Text(message.content)
+                .textSelection(.enabled)
+                .padding(8)
+                .background(Color.cyan.opacity(0.1))
+                .cornerRadius(6)
+        }
     }
 }
 

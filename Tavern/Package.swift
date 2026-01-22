@@ -12,7 +12,9 @@ let package = Package(
         .library(name: "TavernCore", targets: ["TavernCore"])
     ],
     dependencies: [
-        .package(url: "https://github.com/jamesrochabrun/ClaudeCodeSDK.git", from: "1.0.0")
+        // Using local fork with JSON array parsing fix
+        // Original: .package(url: "https://github.com/jamesrochabrun/ClaudeCodeSDK.git", from: "1.0.0")
+        .package(path: "LocalPackages/ClaudeCodeSDK")
     ],
     targets: [
         // Core library - all logic, testable without UI

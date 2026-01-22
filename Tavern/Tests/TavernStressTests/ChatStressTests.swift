@@ -15,7 +15,7 @@ final class ChatStressTests: XCTestCase {
     @MainActor
     func testManyMessagesInSingleChat() async throws {
         let mock = MockClaudeCode()
-        let jake = Jake(claude: mock)
+        let jake = Jake(claude: mock, loadSavedSession: false)
         let viewModel = ChatViewModel(jake: jake)
 
         let messageCount = 1000
@@ -53,7 +53,7 @@ final class ChatStressTests: XCTestCase {
     @MainActor
     func testLargeMessageHistory() async throws {
         let mock = MockClaudeCode()
-        let jake = Jake(claude: mock)
+        let jake = Jake(claude: mock, loadSavedSession: false)
         let viewModel = ChatViewModel(jake: jake)
 
         // Build up history

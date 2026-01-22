@@ -24,7 +24,7 @@ struct AgentListItemTests {
     @Test("Item from Jake marks isJake true")
     func itemFromJakeMarksIsJake() {
         let mock = MockClaudeCode()
-        let jake = Jake(claude: mock)
+        let jake = Jake(claude: mock, loadSavedSession: false)
         let item = AgentListItem.from(jake: jake)
 
         #expect(item.isJake == true)
@@ -87,7 +87,7 @@ struct AgentListViewModelTests {
     @MainActor
     func createTestSetup() -> (AgentListViewModel, Jake, AgentSpawner) {
         let mock = MockClaudeCode()
-        let jake = Jake(claude: mock)
+        let jake = Jake(claude: mock, loadSavedSession: false)
         let registry = AgentRegistry()
         let nameGenerator = NameGenerator(theme: .lotr)
         let spawner = AgentSpawner(

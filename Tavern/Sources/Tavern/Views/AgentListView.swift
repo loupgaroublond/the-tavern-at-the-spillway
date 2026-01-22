@@ -4,6 +4,9 @@ import TavernCore
 /// A list view showing all agents in the Tavern
 struct AgentListView: View {
     @ObservedObject var viewModel: AgentListViewModel
+    var onSpawnAgent: ((String, String?) -> Void)?
+
+    @State private var showingSpawnSheet = false
 
     var body: some View {
         List(selection: $viewModel.selectedAgentId) {
@@ -13,6 +16,119 @@ struct AgentListView: View {
             }
         }
         .listStyle(.sidebar)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button(action: { showingSpawnSheet = true }) {
+                    Image(systemName: "plus")
+                }
+                .help("Spawn a new agent")
+                .disabled(onSpawnAgent == nil)
+            }
+        }
+        .sheet(isPresented: $showingSpawnSheet) {
+            SpawnAgentSheet(
+                onSpawn: { assignment, customName in
+                    onSpawnAgent?(assignment, customName)
+                },
+                onCancel: {
+                    showingSpawnSheet = false
+                }
+            )
+        }
+    }
+}
+
+// MARK: - Spawn Agent Sheet
+
+struct SpawnAgentSheet: View {
+    @State private var assignment: String = ""
+    @State private var customName: String = ""
+    @State private var useCustomName: Bool = false
+
+    var onSpawn: (String, String?) -> Void
+    var onCancel: () -> Void
+
+    private var canSpawn: Bool {
+        !assignment.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header
+            HStack {
+                Text("Spawn a New Agent")
+                    .font(.headline)
+                Spacer()
+                Button("Cancel") {
+                    onCancel()
+                }
+                .buttonStyle(.plain)
+                .foregroundColor(.secondary)
+            }
+            .padding()
+
+            Divider()
+
+            // Form
+            VStack(alignment: .leading, spacing: 16) {
+                // Assignment field (required)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Assignment")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+
+                    TextField("What should this agent work on?", text: $assignment, axis: .vertical)
+                        .textFieldStyle(.plain)
+                        .padding(12)
+                        .background(Color(NSColor.textBackgroundColor))
+                        .cornerRadius(8)
+                        .lineLimit(3...6)
+                }
+
+                // Custom name (optional)
+                VStack(alignment: .leading, spacing: 8) {
+                    Toggle(isOn: $useCustomName) {
+                        Text("Custom name")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                    }
+
+                    if useCustomName {
+                        TextField("Agent name", text: $customName)
+                            .textFieldStyle(.plain)
+                            .padding(12)
+                            .background(Color(NSColor.textBackgroundColor))
+                            .cornerRadius(8)
+                    }
+                }
+
+                Spacer()
+            }
+            .padding()
+
+            Divider()
+
+            // Actions
+            HStack {
+                Spacer()
+
+                Button("Cancel") {
+                    onCancel()
+                }
+                .keyboardShortcut(.cancelAction)
+
+                Button("Spawn") {
+                    let name = useCustomName && !customName.isEmpty ? customName : nil
+                    onSpawn(assignment.trimmingCharacters(in: .whitespacesAndNewlines), name)
+                    onCancel() // Close sheet after spawning
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(!canSpawn)
+                .keyboardShortcut(.defaultAction)
+            }
+            .padding()
+        }
+        .frame(width: 400, height: 350)
     }
 }
 
@@ -104,7 +220,7 @@ private struct AttentionBadge: View {
 
 // MARK: - Preview
 
-#Preview {
+#Preview("Agent List") {
     // Create mock data for preview
     let mock = MockClaudeCode()
     let jake = Jake(claude: mock)
@@ -128,6 +244,19 @@ private struct AttentionBadge: View {
     }
     viewModel.refreshItems()
 
-    return AgentListView(viewModel: viewModel)
-        .frame(width: 300, height: 400)
+    return AgentListView(viewModel: viewModel) { assignment, name in
+        print("Spawn agent: \(assignment), name: \(name ?? "auto")")
+    }
+    .frame(width: 300, height: 400)
+}
+
+#Preview("Spawn Sheet") {
+    SpawnAgentSheet(
+        onSpawn: { assignment, name in
+            print("Spawn: \(assignment), name: \(name ?? "auto")")
+        },
+        onCancel: {
+            print("Cancel")
+        }
+    )
 }

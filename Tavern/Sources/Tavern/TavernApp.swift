@@ -275,7 +275,9 @@ struct ProjectContentView: View {
             VStack(spacing: 0) {
                 TavernHeader(projectName: project.name)
                 Divider()
-                AgentListView(viewModel: coordinator.agentListViewModel)
+                AgentListView(viewModel: coordinator.agentListViewModel) { assignment, customName in
+                    spawnAgent(assignment: assignment, customName: customName)
+                }
             }
             .frame(minWidth: 200)
         } detail: {
@@ -283,6 +285,19 @@ struct ProjectContentView: View {
             ChatView(viewModel: coordinator.activeChatViewModel)
         }
         .frame(minWidth: 800, minHeight: 500)
+    }
+
+    private func spawnAgent(assignment: String, customName: String?) {
+        do {
+            if let name = customName {
+                try coordinator.spawner.spawn(name: name, assignment: assignment)
+            } else {
+                try coordinator.spawnAgent(assignment: assignment)
+            }
+        } catch {
+            // TODO: Show error to user
+            print("Failed to spawn agent: \(error)")
+        }
     }
 }
 

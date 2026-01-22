@@ -70,9 +70,16 @@ public final class Jake: Agent, @unchecked Sendable {
     /// - Parameters:
     ///   - id: Unique identifier (auto-generated if not provided)
     ///   - claude: The ClaudeCode SDK instance to use (injectable for testing)
-    public init(id: UUID = UUID(), claude: ClaudeCode) {
+    ///   - loadSavedSession: Whether to load a saved session from SessionStore (default true)
+    public init(id: UUID = UUID(), claude: ClaudeCode, loadSavedSession: Bool = true) {
         self.id = id
         self.claude = claude
+
+        // Restore session from previous run
+        if loadSavedSession, let savedSession = SessionStore.loadJakeSession() {
+            self._sessionId = savedSession
+            TavernLogger.agents.info("Jake restored session: \(savedSession)")
+        }
     }
 
     // MARK: - Communication
@@ -97,11 +104,8 @@ public final class Jake: Agent, @unchecked Sendable {
         let result: ClaudeCodeResult
         let currentSessionId: String? = queue.sync { _sessionId }
 
-        // NOTE: Using .text format because ClaudeCodeSDK has a bug parsing
-        // the .json format (Claude CLI returns an array, SDK expects an object).
-        // This means we lose session ID tracking for now.
-        // FIX: Fork ClaudeCodeSDK and fix HeadlessBackend.swift to parse arrays
-        // The fix: parse output as [ResultEvent], find {"type":"result"} element
+        // Using .json format (fixed in local SDK fork)
+        // This gives us session ID tracking and full content blocks
 
         do {
             if let sessionId = currentSessionId {
@@ -110,7 +114,7 @@ public final class Jake: Agent, @unchecked Sendable {
                 result = try await claude.resumeConversation(
                     sessionId: sessionId,
                     prompt: message,
-                    outputFormat: .text,
+                    outputFormat: .json,
                     options: options
                 )
             } else {
@@ -118,7 +122,7 @@ public final class Jake: Agent, @unchecked Sendable {
                 TavernLogger.claude.info("Jake starting new conversation")
                 result = try await claude.runSinglePrompt(
                     prompt: message,
-                    outputFormat: .text,
+                    outputFormat: .json,
                     options: options
                 )
             }
@@ -130,13 +134,18 @@ public final class Jake: Agent, @unchecked Sendable {
         // Extract response
         switch result {
         case .json(let resultMessage):
-            // Won't happen with .text format, but handle it anyway
+            // Primary path - JSON format gives us session ID and content blocks
             queue.sync { _sessionId = resultMessage.sessionId }
+
+            // Persist session for next app launch
+            SessionStore.saveJakeSession(resultMessage.sessionId)
+
             let response = resultMessage.result ?? ""
-            TavernLogger.agents.info("Jake received JSON response, length: \(response.count)")
+            TavernLogger.agents.info("Jake received JSON response, length: \(response.count), sessionId: \(resultMessage.sessionId)")
             return response
 
         case .text(let text):
+            // Fallback - no session ID tracking with text format
             TavernLogger.agents.info("Jake received text response, length: \(text.count)")
             return text
 
@@ -151,5 +160,8 @@ public final class Jake: Agent, @unchecked Sendable {
     public func resetConversation() {
         TavernLogger.agents.info("Jake conversation reset")
         queue.sync { _sessionId = nil }
+
+        // Clear persisted session
+        SessionStore.saveJakeSession(nil)
     }
 }
