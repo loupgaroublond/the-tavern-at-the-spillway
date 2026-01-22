@@ -8,6 +8,8 @@ So you found us. Good. That means you're either lost, curious, or you've got a p
 
 I'm Jake. The Proprietor. I run this establishment.
 
+![The Tavern at the Spillway](screenshot.png)
+
 ## What Is This Place?
 
 Look, I'm going to level with you.

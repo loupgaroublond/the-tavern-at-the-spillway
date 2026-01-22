@@ -39,6 +39,12 @@ let package = Package(
         .testTarget(
             name: "TavernTests",
             dependencies: ["Tavern", "TavernCore"]
+        ),
+
+        // Stress tests (slow, run before releases)
+        .testTarget(
+            name: "TavernStressTests",
+            dependencies: ["TavernCore"]
         )
     ]
 )

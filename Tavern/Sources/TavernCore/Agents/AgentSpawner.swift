@@ -1,5 +1,6 @@
 import Foundation
 import ClaudeCodeSDK
+import os.log
 
 /// Spawns and manages mortal agents for the Tavern
 /// This is Jake's way of delegating work to the Slop Squad
@@ -36,7 +37,11 @@ public final class AgentSpawner: @unchecked Sendable {
     /// - Throws: If registration fails (e.g., name collision, though unlikely with generator)
     @discardableResult
     public func spawn(assignment: String) throws -> MortalAgent {
+        TavernLogger.coordination.debug("AgentSpawner.spawn called, assignment: \(assignment)")
+
         let name = nameGenerator.nextNameOrFallback()
+        TavernLogger.coordination.debug("Generated name: \(name)")
+
         let claude = claudeFactory()
 
         let agent = MortalAgent(
@@ -46,6 +51,7 @@ public final class AgentSpawner: @unchecked Sendable {
         )
 
         try registry.register(agent)
+        TavernLogger.coordination.info("Agent spawned and registered: \(name) (id: \(agent.id))")
 
         return agent
     }
@@ -58,8 +64,11 @@ public final class AgentSpawner: @unchecked Sendable {
     /// - Throws: If the name is taken or registration fails
     @discardableResult
     public func spawn(name: String, assignment: String) throws -> MortalAgent {
+        TavernLogger.coordination.debug("AgentSpawner.spawn called with name: \(name), assignment: \(assignment)")
+
         // Reserve the name first
         guard nameGenerator.reserveName(name) else {
+            TavernLogger.coordination.error("Name already exists: \(name)")
             throw AgentRegistryError.nameAlreadyExists(name)
         }
 
@@ -73,8 +82,10 @@ public final class AgentSpawner: @unchecked Sendable {
 
         do {
             try registry.register(agent)
+            TavernLogger.coordination.info("Agent spawned and registered: \(name) (id: \(agent.id))")
         } catch {
             // Release the name if registration fails
+            TavernLogger.coordination.error("Registration failed for \(name): \(error.localizedDescription)")
             nameGenerator.releaseName(name)
             throw error
         }
@@ -86,8 +97,10 @@ public final class AgentSpawner: @unchecked Sendable {
     /// - Parameter agent: The agent to dismiss
     /// - Throws: If the agent is not in the registry
     public func dismiss(_ agent: MortalAgent) throws {
+        TavernLogger.coordination.info("Dismissing agent: \(agent.name) (id: \(agent.id))")
         try registry.remove(id: agent.id)
         nameGenerator.releaseName(agent.name)
+        TavernLogger.coordination.debug("Agent dismissed, name released: \(agent.name)")
     }
 
     /// Dismiss an agent by ID
@@ -95,10 +108,13 @@ public final class AgentSpawner: @unchecked Sendable {
     /// - Throws: If no agent with this ID exists
     public func dismiss(id: UUID) throws {
         guard let agent = registry.agent(id: id) else {
+            TavernLogger.coordination.error("Cannot dismiss: agent not found with id \(id)")
             throw AgentRegistryError.agentNotFound(id)
         }
+        TavernLogger.coordination.info("Dismissing agent: \(agent.name) (id: \(id))")
         try registry.remove(id: id)
         nameGenerator.releaseName(agent.name)
+        TavernLogger.coordination.debug("Agent dismissed, name released: \(agent.name)")
     }
 
     // MARK: - Queries

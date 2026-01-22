@@ -377,6 +377,73 @@ func testAgentTransitionsToWorking() async throws {
 ```
 
 
+## Logging & Observability
+
+The Tavern uses Apple's unified logging system (`os.log`) for instrumentation.
+
+
+### Logger Categories
+
+All loggers use the subsystem `com.tavern.spillway`:
+
+| Category | Logger | Purpose |
+|----------|--------|---------|
+| `agents` | `TavernLogger.agents` | Agent lifecycle, state transitions, session management |
+| `chat` | `TavernLogger.chat` | Message flow, conversation state |
+| `coordination` | `TavernLogger.coordination` | Agent spawn/dismiss, selection changes |
+| `claude` | `TavernLogger.claude` | SDK calls, API interactions, responses |
+
+
+### Viewing Logs
+
+**Console.app:**
+1. Open Console.app (Applications > Utilities)
+2. Filter by: `subsystem:com.tavern.spillway`
+3. Optional: further filter by category (e.g., `category:agents`)
+
+**Terminal (streaming):**
+```bash
+log stream --predicate 'subsystem == "com.tavern.spillway"' --level debug
+```
+
+
+### Log Levels
+
+| Level | When to Use | Example |
+|-------|-------------|---------|
+| `.debug` | Verbose development info | Entry/exit of functions, parameter values |
+| `.info` | Key events | Message sent, agent spawned, state changed |
+| `.error` | Failures | API call failed, verification failed |
+
+**Note:** `.debug` logs are stripped from release builds by default.
+
+
+### Adding New Logging
+
+```swift
+import os.log
+
+// In your file, use the appropriate logger:
+TavernLogger.agents.info("Agent \(name) spawned with assignment: \(assignment)")
+TavernLogger.agents.debug("State transition: \(oldState) -> \(newState)")
+TavernLogger.agents.error("Spawn failed: \(error.localizedDescription)")
+
+// For private data that shouldn't appear in release logs:
+TavernLogger.claude.debug("API response: \(response, privacy: .private)")
+```
+
+
+### Instrumentation Principle
+
+Debug builds must be instrumented thoroughly enough that issues can be diagnosed from logs alone — without needing screenshots, videos, or human reproduction.
+
+**What to log:**
+- All SDK/API calls with parameters and results
+- State transitions (agent state changes, UI state changes)
+- Error conditions with full context
+- Timing information for async operations
+
+
 ## What's Not Implemented Yet
 
 Per `v1-implementation-plan.md`, these are deferred:

@@ -1,4 +1,5 @@
 import Foundation
+import os.log
 
 /// Coordinates the Tavern's agents and their chat sessions
 /// This is the central hub that ties together Jake, the Slop Squad, and the UI
@@ -55,6 +56,7 @@ public final class TavernCoordinator: ObservableObject {
     /// Select an agent to chat with
     /// - Parameter agentId: The ID of the agent to select
     public func selectAgent(id agentId: UUID) {
+        TavernLogger.coordination.info("Agent selection changed to: \(agentId)")
         agentListViewModel.selectAgent(id: agentId)
         updateActiveChatViewModel()
     }
@@ -94,7 +96,10 @@ public final class TavernCoordinator: ObservableObject {
     /// - Returns: The spawned agent
     @discardableResult
     public func spawnAgent(assignment: String, selectAfterSpawn: Bool = true) throws -> MortalAgent {
+        TavernLogger.coordination.info("Spawning new agent with assignment: \(assignment)")
+
         let agent = try spawner.spawn(assignment: assignment)
+        TavernLogger.coordination.info("Agent spawned: \(agent.name) (id: \(agent.id))")
 
         // Cache the assignment for display
         agentListViewModel.cacheAssignment(agentId: agent.id, assignment: assignment)
@@ -113,11 +118,14 @@ public final class TavernCoordinator: ObservableObject {
     /// Dismiss an agent
     /// - Parameter agentId: The ID of the agent to dismiss
     public func dismissAgent(id agentId: UUID) throws {
+        TavernLogger.coordination.info("Dismissing agent: \(agentId)")
+
         // Remove the chat view model
         chatViewModels.removeValue(forKey: agentId)
 
         // Dismiss from spawner
         try spawner.dismiss(id: agentId)
+        TavernLogger.coordination.info("Agent dismissed successfully: \(agentId)")
 
         // Update the list (will select Jake if dismissed agent was selected)
         agentListViewModel.agentsDidChange()

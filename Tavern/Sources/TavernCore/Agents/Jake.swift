@@ -1,5 +1,6 @@
 import Foundation
 import ClaudeCodeSDK
+import os.log
 
 /// Jake - The Proprietor of the Tavern
 /// The top-level coordinating agent with the voice of a used car salesman
@@ -81,8 +82,14 @@ public final class Jake: Agent, @unchecked Sendable {
     /// - Returns: Jake's response text
     /// - Throws: ClaudeCodeError if communication fails
     public func send(_ message: String) async throws -> String {
+        TavernLogger.agents.info("Jake.send called, prompt length: \(message.count)")
+        TavernLogger.agents.debug("Jake state: idle -> working")
+
         queue.sync { _isCogitating = true }
-        defer { queue.sync { _isCogitating = false } }
+        defer {
+            queue.sync { _isCogitating = false }
+            TavernLogger.agents.debug("Jake state: working -> idle")
+        }
 
         var options = ClaudeCodeOptions()
         options.systemPrompt = Self.systemPrompt
@@ -96,21 +103,28 @@ public final class Jake: Agent, @unchecked Sendable {
         // FIX: Fork ClaudeCodeSDK and fix HeadlessBackend.swift to parse arrays
         // The fix: parse output as [ResultEvent], find {"type":"result"} element
 
-        if let sessionId = currentSessionId {
-            // Continue existing conversation
-            result = try await claude.resumeConversation(
-                sessionId: sessionId,
-                prompt: message,
-                outputFormat: .text,
-                options: options
-            )
-        } else {
-            // Start new conversation
-            result = try await claude.runSinglePrompt(
-                prompt: message,
-                outputFormat: .text,
-                options: options
-            )
+        do {
+            if let sessionId = currentSessionId {
+                // Continue existing conversation
+                TavernLogger.claude.info("Jake resuming session: \(sessionId)")
+                result = try await claude.resumeConversation(
+                    sessionId: sessionId,
+                    prompt: message,
+                    outputFormat: .text,
+                    options: options
+                )
+            } else {
+                // Start new conversation
+                TavernLogger.claude.info("Jake starting new conversation")
+                result = try await claude.runSinglePrompt(
+                    prompt: message,
+                    outputFormat: .text,
+                    options: options
+                )
+            }
+        } catch {
+            TavernLogger.agents.error("Jake.send failed: \(error.localizedDescription)")
+            throw error
         }
 
         // Extract response
@@ -118,19 +132,24 @@ public final class Jake: Agent, @unchecked Sendable {
         case .json(let resultMessage):
             // Won't happen with .text format, but handle it anyway
             queue.sync { _sessionId = resultMessage.sessionId }
-            return resultMessage.result ?? ""
+            let response = resultMessage.result ?? ""
+            TavernLogger.agents.info("Jake received JSON response, length: \(response.count)")
+            return response
 
         case .text(let text):
+            TavernLogger.agents.info("Jake received text response, length: \(text.count)")
             return text
 
         case .stream:
             // For non-streaming calls, this shouldn't happen
+            TavernLogger.agents.debug("Jake received unexpected stream result")
             return ""
         }
     }
 
     /// Reset Jake's conversation (start fresh)
     public func resetConversation() {
+        TavernLogger.agents.info("Jake conversation reset")
         queue.sync { _sessionId = nil }
     }
 }

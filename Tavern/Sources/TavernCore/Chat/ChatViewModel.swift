@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import os.log
 
 /// View model for managing a chat conversation with an agent
 @MainActor
@@ -81,6 +82,8 @@ public final class ChatViewModel: ObservableObject {
         let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
 
+        TavernLogger.chat.info("[\(self.agentName)] sendMessage initiated, text length: \(text.count)")
+
         // Clear input immediately
         inputText = ""
         error = nil
@@ -88,6 +91,7 @@ public final class ChatViewModel: ObservableObject {
         // Add user message
         let userMessage = ChatMessage(role: .user, content: text)
         messages.append(userMessage)
+        TavernLogger.chat.debug("[\(self.agentName)] user message added to history, total: \(self.messages.count)")
 
         // Set cogitating state with random verb
         isCogitating = true
@@ -100,9 +104,11 @@ public final class ChatViewModel: ObservableObject {
             // Add agent message
             let agentMessage = ChatMessage(role: .agent, content: response)
             messages.append(agentMessage)
+            TavernLogger.chat.info("[\(self.agentName)] agent response received and added, total messages: \(self.messages.count)")
 
         } catch {
             self.error = error
+            TavernLogger.chat.error("[\(self.agentName)] sendMessage failed: \(error.localizedDescription)")
             // Add informative error message to chat
             let errorContent = TavernErrorMessages.message(for: error)
             let errorMessage = ChatMessage(
@@ -117,6 +123,7 @@ public final class ChatViewModel: ObservableObject {
 
     /// Clear the conversation and reset the agent's session
     public func clearConversation() {
+        TavernLogger.chat.info("[\(self.agentName)] conversation cleared, was \(self.messages.count) messages")
         messages.removeAll()
         agent.resetConversation()
         error = nil
