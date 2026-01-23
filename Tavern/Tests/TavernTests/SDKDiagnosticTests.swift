@@ -77,28 +77,31 @@ final class SDKDiagnosticTests: XCTestCase {
         }
     }
 
-    /// Test that JSON format fails (documenting the SDK bug)
-    func testJsonFormatBug() async throws {
+    /// Test that JSON format works correctly
+    /// (Previous SDK bug was fixed: JSON array parsing now works)
+    func testJsonFormatWorks() async throws {
         var config = ClaudeCodeConfiguration.default
         config.enableDebugLogging = true
 
         let client = try ClaudeCodeClient(configuration: config)
 
-        // This should fail because of the SDK bug
-        do {
-            _ = try await client.runSinglePrompt(
-                prompt: "hi",
-                outputFormat: .json,
-                options: nil
-            )
-            XCTFail("Expected jsonParsingError due to SDK bug")
-        } catch let error as ClaudeCodeError {
-            // We expect this to fail with jsonParsingError
-            if case .jsonParsingError = error {
-                print("✓ Confirmed SDK bug: JSON format returns array, SDK expects object")
-            } else {
-                XCTFail("Expected jsonParsingError, got: \(error)")
-            }
+        // JSON format should work now that the SDK handles array responses
+        let result = try await client.runSinglePrompt(
+            prompt: "Reply with exactly: PONG",
+            outputFormat: .json,
+            options: nil
+        )
+
+        switch result {
+        case .json(let message):
+            XCTAssertNotNil(message.result, "Expected result text")
+            print("✓ JSON format works: \(message.result ?? "nil")")
+
+        case .text(let text):
+            XCTFail("Expected JSON response, got text: \(text)")
+
+        case .stream:
+            XCTFail("Expected JSON response, got stream")
         }
     }
 }

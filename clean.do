@@ -4,6 +4,9 @@
 
 redo-always
 
+# Stop running app first
+redo Tavern/stop
+
 echo "Cleaning build artifacts..." >&2
 
 # Derived data

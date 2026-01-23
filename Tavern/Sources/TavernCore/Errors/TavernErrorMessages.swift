@@ -9,6 +9,11 @@ public enum TavernErrorMessages {
     /// - Parameter error: The error that occurred
     /// - Returns: A user-friendly message explaining what happened
     public static func message(for error: Error) -> String {
+        // Handle TavernError specifically
+        if let tavernError = error as? TavernError {
+            return message(for: tavernError)
+        }
+
         // Handle ClaudeCodeError specifically
         if let claudeError = error as? ClaudeCodeError {
             return message(for: claudeError)
@@ -149,6 +154,19 @@ public enum TavernErrorMessages {
             return """
                 Configuration problem — something's not set up right.
                 \(details)
+                """
+        }
+    }
+
+    /// Convert TavernError to an informative message
+    public static func message(for error: TavernError) -> String {
+        switch error {
+        case .sessionCorrupt(let sessionId, _):
+            return """
+                Jake's previous session couldn't be resumed — it may be corrupt or expired.
+                Session ID: \(sessionId)
+
+                Click "Start Fresh" below to clear the old session and try again.
                 """
         }
     }

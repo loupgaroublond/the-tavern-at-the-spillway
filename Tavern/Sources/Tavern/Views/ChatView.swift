@@ -7,6 +7,16 @@ struct ChatView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            // Session recovery banner (corrupt session detected)
+            if viewModel.showSessionRecoveryOptions {
+                SessionRecoveryBanner(
+                    sessionId: viewModel.corruptSessionId,
+                    onStartFresh: {
+                        viewModel.startFreshSession()
+                    }
+                )
+            }
+
             // Message list
             ScrollViewReader { proxy in
                 ScrollView {
@@ -57,6 +67,43 @@ struct ChatView: View {
                 }
             )
         }
+    }
+}
+
+// MARK: - Session Recovery Banner
+
+/// Banner shown when a corrupt/expired session is detected
+/// Allows user to start fresh or (future) resume a different session
+private struct SessionRecoveryBanner: View {
+    let sessionId: String?
+    let onStartFresh: () -> Void
+
+    var body: some View {
+        HStack(spacing: 16) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundColor(.orange)
+                .font(.title2)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Session Recovery")
+                    .font(.headline)
+
+                if let sessionId = sessionId {
+                    Text("Session '\(sessionId)' couldn't be resumed")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+
+            Spacer()
+
+            Button("Start Fresh") {
+                onStartFresh()
+            }
+            .buttonStyle(.borderedProminent)
+        }
+        .padding()
+        .background(Color.orange.opacity(0.1))
     }
 }
 

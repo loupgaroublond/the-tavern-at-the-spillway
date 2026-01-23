@@ -23,11 +23,17 @@ public final class Jake: Agent, @unchecked Sendable {
     private let queue = DispatchQueue(label: "com.tavern.Jake")
 
     private var _sessionId: String?
+    private var _projectPath: String?
     private var _isCogitating: Bool = false
 
     /// The current session ID (for conversation continuity)
     public var sessionId: String? {
         queue.sync { _sessionId }
+    }
+
+    /// The project path where sessions are stored
+    public var projectPath: String? {
+        queue.sync { _projectPath }
     }
 
     /// Whether Jake is currently cogitating (working)
@@ -78,7 +84,8 @@ public final class Jake: Agent, @unchecked Sendable {
         // Restore session from previous run
         if loadSavedSession, let savedSession = SessionStore.loadJakeSession() {
             self._sessionId = savedSession
-            TavernLogger.agents.info("Jake restored session: \(savedSession)")
+            self._projectPath = SessionStore.loadJakeProjectPath()
+            TavernLogger.agents.info("Jake restored session: \(savedSession), projectPath: \(self._projectPath ?? "nil")")
         }
     }
 
@@ -127,7 +134,12 @@ public final class Jake: Agent, @unchecked Sendable {
                 )
             }
         } catch {
-            TavernLogger.agents.error("Jake.send failed: \(error.localizedDescription)")
+            // If resuming failed with a session ID, it's likely corrupt/stale
+            if let sessionId = currentSessionId {
+                TavernLogger.agents.debugError("Session '\(sessionId)' appears corrupt: \(error.localizedDescription)")
+                throw TavernError.sessionCorrupt(sessionId: sessionId, underlyingError: error)
+            }
+            TavernLogger.agents.debugError("Jake.send failed: \(error.localizedDescription)")
             throw error
         }
 
@@ -135,13 +147,19 @@ public final class Jake: Agent, @unchecked Sendable {
         switch result {
         case .json(let resultMessage):
             // Primary path - JSON format gives us session ID and content blocks
-            queue.sync { _sessionId = resultMessage.sessionId }
+            // Get the project path from configuration (working directory where Claude runs)
+            let currentProjectPath = claude.configuration.workingDirectory ?? FileManager.default.currentDirectoryPath
 
-            // Persist session for next app launch
-            SessionStore.saveJakeSession(resultMessage.sessionId)
+            queue.sync {
+                _sessionId = resultMessage.sessionId
+                _projectPath = currentProjectPath
+            }
+
+            // Persist session for next app launch (with project path for history lookup)
+            SessionStore.saveJakeSession(resultMessage.sessionId, projectPath: currentProjectPath)
 
             let response = resultMessage.result ?? ""
-            TavernLogger.agents.info("Jake received JSON response, length: \(response.count), sessionId: \(resultMessage.sessionId)")
+            TavernLogger.agents.info("Jake received JSON response, length: \(response.count), sessionId: \(resultMessage.sessionId), projectPath: \(currentProjectPath)")
             return response
 
         case .text(let text):
