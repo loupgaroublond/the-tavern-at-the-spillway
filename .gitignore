@@ -6,3 +6,7 @@ screenshot*.png
 
 # redo build system state
 .redo/
+
+# Debug scripts (one-off debugging)
+scripts/debug-*.swift
+scripts/test-*.swift
