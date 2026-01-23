@@ -30,3 +30,43 @@ public enum TavernLogger {
     /// SDK calls, API interactions, responses
     public static let claude = Logger(subsystem: subsystem, category: "claude")
 }
+
+// MARK: - Debug-Only Public Logging
+
+/// Extension providing logging methods that are visible (public privacy) in DEBUG builds
+/// but redacted (private privacy) in release builds.
+///
+/// macOS os.log redacts interpolated strings as `<private>` by default.
+/// These methods make error details visible during development.
+extension Logger {
+
+    /// Log error - public in DEBUG, private in release
+    /// Use this when you need to see the actual error content in logs during development.
+    public func debugError(_ message: String) {
+        #if DEBUG
+        self.error("\(message, privacy: .public)")
+        #else
+        self.error("\(message, privacy: .private)")
+        #endif
+    }
+
+    /// Log info - public in DEBUG, private in release
+    /// Use this when you need to see info-level content during development.
+    public func debugInfo(_ message: String) {
+        #if DEBUG
+        self.info("\(message, privacy: .public)")
+        #else
+        self.info("\(message, privacy: .private)")
+        #endif
+    }
+
+    /// Log debug - public in DEBUG, private in release
+    /// Use this when you need to see debug-level content during development.
+    public func debugLog(_ message: String) {
+        #if DEBUG
+        self.debug("\(message, privacy: .public)")
+        #else
+        self.debug("\(message, privacy: .private)")
+        #endif
+    }
+}

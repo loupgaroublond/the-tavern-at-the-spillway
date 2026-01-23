@@ -7,6 +7,7 @@
 
 import Foundation
 import OSLog
+import Darwin
 
 /// Implementation of Claude's native session storage that reads from ~/.claude/projects/
 public class ClaudeNativeSessionStorage: ClaudeSessionStorageProtocol {
@@ -122,15 +123,33 @@ public class ClaudeNativeSessionStorage: ClaudeSessionStorageProtocol {
   // MARK: - Private Methods
   
   private func encodeProjectPath(_ path: String) -> String {
-    // Replace slashes with dashes, as Claude CLI does
-    return path.replacingOccurrences(of: "/", with: "-")
+    // Resolve symlinks/firmlinks first (e.g., /var -> /private/var on macOS) to match Claude CLI
+    let resolvedPath = resolveRealPath(path)
+    // Replace slashes and underscores with dashes, as Claude CLI does
+    return resolvedPath
+      .replacingOccurrences(of: "/", with: "-")
+      .replacingOccurrences(of: "_", with: "-")
+  }
+
+  /// Resolve path using C realpath() to handle macOS firmlinks like /var -> /private/var
+  private func resolveRealPath(_ path: String) -> String {
+    var resolved = [CChar](repeating: 0, count: Int(PATH_MAX))
+    if realpath(path, &resolved) != nil {
+      // Convert CChar array to String, truncating at null terminator
+      let data = resolved.withUnsafeBufferPointer { ptr -> Data in
+        let length = strnlen(ptr.baseAddress!, Int(PATH_MAX))
+        return Data(bytes: ptr.baseAddress!, count: length)
+      }
+      return String(decoding: data, as: UTF8.self)
+    }
+    return path
   }
   
   private func decodeProjectPath(_ encoded: String) -> String {
     // Convert dashes back to slashes
     return encoded.replacingOccurrences(of: "-", with: "/")
   }
-  
+
   private func parseSessionFile(
     at filePath: String,
     sessionId: String,
@@ -152,27 +171,27 @@ public class ClaudeNativeSessionStorage: ClaudeSessionStorageProtocol {
     
     for line in lines where !line.isEmpty {
       guard let lineData = line.data(using: .utf8) else { continue }
-      
+
       do {
         let entry = try decoder.decode(ClaudeJSONLEntry.self, from: lineData)
-        
+
         // Extract summary if present
         if entry.type == "summary", let entrySummary = entry.summary {
           summary = entrySummary
         }
-        
+
         // Extract git branch from first user message
         if gitBranch == nil, entry.type == "user" {
           gitBranch = entry.gitBranch
         }
-        
+
         // Parse messages
         if let message = entry.message,
            let role = message.role,
            let uuid = entry.uuid {
-          
+
           let timestamp = parseTimestamp(entry.timestamp)
-          
+
           // Track first and last timestamps
           if let ts = timestamp {
             if firstTimestamp == nil || ts < firstTimestamp! {
@@ -182,21 +201,23 @@ public class ClaudeNativeSessionStorage: ClaudeSessionStorageProtocol {
               lastTimestamp = ts
             }
           }
-          
-          // Extract text content
+
+          // Extract text content and content blocks
           let content = message.content?.textContent ?? ""
-          
+          let contentBlocks = message.content?.contentBlocks ?? []
+
           let storedMessage = ClaudeStoredMessage(
             id: uuid,
             parentId: entry.parentUuid,
             sessionId: entry.sessionId ?? sessionId,
             role: ClaudeStoredMessage.MessageRole(rawValue: role) ?? .user,
             content: content,
+            contentBlocks: contentBlocks,
             timestamp: timestamp ?? Date(),
             cwd: entry.cwd,
             version: entry.version
           )
-          
+
           messages.append(storedMessage)
         }
       } catch {

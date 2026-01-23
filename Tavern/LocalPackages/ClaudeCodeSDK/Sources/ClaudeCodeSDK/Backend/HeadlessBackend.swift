@@ -430,18 +430,38 @@ internal final class HeadlessBackend: ClaudeCodeBackend, @unchecked Sendable {
 				case .text:
 					return .text(output)
 				case .json:
-					// Claude CLI returns newline-delimited JSON, not a single object.
-					// We need to find the line with type == "result" and decode that.
-					let lines = output.components(separatedBy: "\n").filter { !$0.isEmpty }
+					// Claude CLI can return JSON in two formats:
+					// 1. Newline-delimited JSON (NDJSON) - one object per line
+					// 2. JSON array - all objects in a single array: [{...},{...}]
+					// We need to handle both and find the message with type == "result"
 
-					for line in lines {
-						guard let lineData = line.data(using: .utf8) else { continue }
+					var jsonObjects: [[String: Any]] = []
 
-						// Check if this line is a result message
-						if let json = try? JSONSerialization.jsonObject(with: lineData) as? [String: Any],
-						   json["type"] as? String == "result" {
+					// First, try to parse as a JSON array (newer CLI format)
+					if let outputData = output.data(using: .utf8),
+					   let parsed = try? JSONSerialization.jsonObject(with: outputData),
+					   let array = parsed as? [[String: Any]] {
+						jsonObjects = array
+						logger?.debug("Parsed output as JSON array with \(array.count) objects")
+					} else {
+						// Fall back to newline-delimited JSON (older format)
+						let lines = output.components(separatedBy: "\n").filter { !$0.isEmpty }
+						for line in lines {
+							guard let lineData = line.data(using: .utf8),
+								  let json = try? JSONSerialization.jsonObject(with: lineData) as? [String: Any] else {
+								continue
+							}
+							jsonObjects.append(json)
+						}
+						logger?.debug("Parsed output as NDJSON with \(jsonObjects.count) objects")
+					}
+
+					// Find the result message
+					for json in jsonObjects {
+						if json["type"] as? String == "result" {
 							do {
-								let resultMessage = try decoder.decode(ResultMessage.self, from: lineData)
+								let jsonData = try JSONSerialization.data(withJSONObject: json)
+								let resultMessage = try decoder.decode(ResultMessage.self, from: jsonData)
 								return .json(resultMessage)
 							} catch {
 								logger?.error("JSON parsing error for result message: \(error)")
@@ -451,8 +471,15 @@ internal final class HeadlessBackend: ClaudeCodeBackend, @unchecked Sendable {
 					}
 
 					// No result message found - this is an error
-					logger?.error("No result message found in JSON output. Lines: \(lines.count)")
+					// Include actual output for debugging in DEBUG builds
+					let truncatedOutput = String(output.prefix(500))
+					#if DEBUG
+					logger?.error("No result message found. Objects: \(jsonObjects.count). Output was: \(truncatedOutput, privacy: .public)")
+					throw ClaudeCodeError.invalidOutput("No result message found in Claude CLI output. Objects: \(jsonObjects.count), output: \(truncatedOutput)")
+					#else
+					logger?.error("No result message found in JSON output. Objects: \(jsonObjects.count)")
 					throw ClaudeCodeError.invalidOutput("No result message found in Claude CLI output")
+					#endif
 				default:
 					throw ClaudeCodeError.invalidOutput("Unexpected output format")
 				}
