@@ -3,3 +3,6 @@
 
 # Screenshots
 screenshot*.png
+
+# redo build system state
+.redo/

@@ -19,8 +19,7 @@ settings:
 
 packages:
   ClaudeCodeSDK:
-    url: https://github.com/jamesrochabrun/ClaudeCodeSDK.git
-    from: "1.0.0"
+    path: LocalPackages/ClaudeCodeSDK
 
 targets:
   TavernCore:
