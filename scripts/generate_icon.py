@@ -3,11 +3,15 @@
 # requires-python = ">=3.11"
 # dependencies = ["pillow"]
 # ///
-"""Generate Tavern app icon: orange squircle with JT text on black background."""
+"""Generate Tavern app icon: orange squircle with JT text.
+
+Supports both legacy .appiconset format and new .icon bundle format with light/dark mode.
+"""
 
 from PIL import Image, ImageDraw, ImageFont
 from pathlib import Path
 import math
+import json
 
 
 def create_squircle_mask(size: int, radius_factor: float = 0.22) -> Image.Image:
@@ -111,65 +115,132 @@ def create_icon(size: int = 1024, dark_mode: bool = True) -> Image.Image:
     return img
 
 
-def main():
-    script_dir = Path(__file__).parent.parent / "Tavern" / "Sources" / "Tavern"
-    assets_dir = script_dir / "Assets.xcassets"
-    icon_dir = assets_dir / "AppIcon.appiconset"
+# macOS icon size definitions: (catalog_size, scale, actual_pixels)
+ICON_SIZES = [
+    ("16x16", "1x", 16),
+    ("16x16", "2x", 32),
+    ("32x32", "1x", 32),
+    ("32x32", "2x", 64),
+    ("128x128", "1x", 128),
+    ("128x128", "2x", 256),
+    ("256x256", "1x", 256),
+    ("256x256", "2x", 512),
+    ("512x512", "1x", 512),
+    ("512x512", "2x", 1024),
+]
 
-    # Create directories
+
+def create_icon_bundle(output_path: Path) -> None:
+    """Create a .icon bundle with light/dark mode support.
+
+    This creates the new macOS 26+ .icon format that supports automatic
+    light/dark mode switching via Icon Composer's format.
+    """
+    icon_dir = output_path
+    assets_dir = icon_dir / "Assets"
+
+    # Create bundle structure
+    icon_dir.mkdir(parents=True, exist_ok=True)
+    assets_dir.mkdir(exist_ok=True)
+
+    # Generate 1024x1024 icons for light and dark modes
+    light_icon = create_icon(1024, dark_mode=False)  # Orange bg, black text
+    dark_icon = create_icon(1024, dark_mode=True)    # Black bg, orange text
+
+    light_icon.save(assets_dir / "icon-light.png", "PNG")
+    dark_icon.save(assets_dir / "icon-dark.png", "PNG")
+    print(f"Created: Assets/icon-light.png, Assets/icon-dark.png")
+
+    # Create icon.json with light/dark opacity specializations
+    icon_json = {
+        "groups": [
+            {
+                "layers": [
+                    {
+                        "image-name": "icon-dark.png",
+                        "name": "icon-dark",
+                        "opacity-specializations": [
+                            {"value": 0},  # Hidden in light mode (default)
+                            {"appearance": "dark", "value": 1}  # Visible in dark mode
+                        ]
+                    },
+                    {
+                        "image-name": "icon-light.png",
+                        "name": "icon-light",
+                        "opacity-specializations": [
+                            {"appearance": "dark", "value": 0}  # Hidden in dark mode
+                            # Default (light mode) is implicitly opacity 1
+                        ]
+                    }
+                ],
+                "shadow": {"kind": "neutral", "opacity": 0.5},
+                "translucency": {"enabled": True, "value": 0.5}
+            }
+        ],
+        "supported-platforms": {
+            "circles": ["watchOS"],
+            "squares": "shared"
+        }
+    }
+
+    (icon_dir / "icon.json").write_text(json.dumps(icon_json, indent=2))
+    print(f"Created: icon.json")
+
+
+def generate_legacy_appiconset(icon_dir: Path) -> None:
+    """Generate legacy .appiconset format for older macOS versions."""
     icon_dir.mkdir(parents=True, exist_ok=True)
 
-    # Generate dark mode icon (black bg, orange text) - this is the "any" appearance
-    icon_dark = create_icon(1024, dark_mode=True)
-    icon_dark_path = icon_dir / "AppIcon-Dark.png"
-    icon_dark.save(icon_dark_path, "PNG")
-    print(f"Created: {icon_dark_path}")
+    # Remove old icon files
+    for old_file in icon_dir.glob("AppIcon-*.png"):
+        old_file.unlink()
+        print(f"Removed old: {old_file.name}")
 
-    # Generate light mode icon (orange bg, black text)
-    icon_light = create_icon(1024, dark_mode=False)
-    icon_light_path = icon_dir / "AppIcon-Light.png"
-    icon_light.save(icon_light_path, "PNG")
-    print(f"Created: {icon_light_path}")
-
-    # Create Contents.json with light/dark variants
-    # macOS uses "any" for the default and "dark" for dark mode
-    # So light mode icon goes in "any", dark mode icon goes in "dark"
-    sizes = ["16x16", "32x32", "128x128", "256x256", "512x512"]
-    scales = ["1x", "2x"]
-
+    # Generate icons at each required size (single variant for legacy format)
     images = []
-    for size in sizes:
-        for scale in scales:
-            # Light mode (any appearance)
-            images.append({
-                "filename": "AppIcon-Light.png",
-                "idiom": "mac",
-                "scale": scale,
-                "size": size
-            })
-            # Dark mode
-            images.append({
-                "appearances": [{"appearance": "luminosity", "value": "dark"}],
-                "filename": "AppIcon-Dark.png",
-                "idiom": "mac",
-                "scale": scale,
-                "size": size
-            })
 
+    for size_str, scale, pixels in ICON_SIZES:
+        filename = f"AppIcon-{size_str}@{scale}.png"
+        icon = create_icon(pixels, dark_mode=True)  # Black bg, orange text
+        icon.save(icon_dir / filename, "PNG")
+        print(f"Created: {filename} ({pixels}x{pixels}px)")
+
+        images.append({
+            "filename": filename,
+            "idiom": "mac",
+            "scale": scale,
+            "size": size_str,
+        })
+
+    # Write Contents.json
     contents = {
         "images": images,
         "info": {"author": "xcode", "version": 1}
     }
-
-    import json
     (icon_dir / "Contents.json").write_text(json.dumps(contents, indent=2))
-    print(f"Created: {icon_dir / 'Contents.json'}")
+    print(f"Created: Contents.json")
+
+
+def main():
+    script_dir = Path(__file__).parent.parent / "Tavern" / "Sources" / "Tavern"
+    assets_dir = script_dir / "Assets.xcassets"
+
+    # Generate legacy .appiconset (for macOS 13-25 compatibility)
+    legacy_dir = assets_dir / "AppIcon.appiconset"
+    print("=== Generating legacy .appiconset ===")
+    generate_legacy_appiconset(legacy_dir)
+    print(f"Generated {len(ICON_SIZES)} legacy icons.\n")
+
+    # Generate new .icon bundle (for macOS 26+ with light/dark support)
+    icon_bundle_dir = script_dir / "AppIcon.icon"
+    print("=== Generating .icon bundle (macOS 26+) ===")
+    create_icon_bundle(icon_bundle_dir)
+    print(f"Generated AppIcon.icon bundle with light/dark support.\n")
 
     # Create root Contents.json for Assets.xcassets
     (assets_dir / "Contents.json").write_text('{\n  "info" : {\n    "author" : "xcode",\n    "version" : 1\n  }\n}\n')
-    print(f"Created: {assets_dir / 'Contents.json'}")
 
-    print("\nDone! Icons generated for light and dark mode.")
+    print("Done! Both legacy and modern icon formats generated.")
 
 
 if __name__ == "__main__":

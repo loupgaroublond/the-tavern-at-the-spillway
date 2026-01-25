@@ -1,8 +1,9 @@
 # macOS
 .DS_Store
 
-# Screenshots
-screenshot*.png
+# Screenshots (temp captures, not the README one)
+screenshot[- ]*.png
+!screenshot.png
 
 # redo build system state
 .redo/
@@ -10,3 +11,10 @@ screenshot*.png
 # Debug scripts (one-off debugging)
 scripts/debug-*.swift
 scripts/test-*.swift
+
+# Generated icons (output of redo Tavern/icon)
+Tavern/Sources/Tavern/AppIcon.icon/
+Tavern/Sources/Tavern/Assets.xcassets/AppIcon.appiconset/*.png
+
+# Python cache
+scripts/__pycache__/
