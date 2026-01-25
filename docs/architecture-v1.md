@@ -11,10 +11,11 @@ Tavern/
 ├── project.yml                # XcodeGen config
 ├── Sources/
 │   ├── Tavern/                # SwiftUI App (thin shell)
-│   │   ├── TavernApp.swift    # Entry point, dependency wiring
+│   │   ├── TavernApp.swift    # Entry point, multi-window management
 │   │   └── Views/
 │   │       ├── ChatView.swift
-│   │       └── AgentListView.swift
+│   │       ├── AgentListView.swift
+│   │       └── WelcomeView.swift
 │   │
 │   └── TavernCore/            # All business logic (testable, no UI)
 │       ├── TavernCore.swift   # Module exports
@@ -22,9 +23,14 @@ Tavern/
 │       ├── Chat/              # Chat view models
 │       ├── Coordination/      # Orchestration
 │       ├── Commitments/       # Verification system
-│       ├── DocStore/          # File-based persistence
+│       ├── Errors/            # Error types and messages
+│       ├── Logging/           # TavernLogger
 │       ├── Naming/            # Themed name generation
-│       └── Testing/           # Mocks and fixtures
+│       ├── Persistence/       # DocStore, SessionStore
+│       ├── Project/           # Multi-project support
+│       ├── Registry/          # AgentRegistry
+│       ├── Testing/           # Mocks and fixtures
+│       └── UI/                # View models (bridge layer)
 │
 └── Tests/
     ├── TavernCoreTests/       # Unit tests for core
@@ -32,30 +38,158 @@ Tavern/
 ```
 
 
+## Object Ownership Hierarchy
+
+This diagram shows the runtime object graph from the application entry point down to leaf objects. Cardinality annotations show ownership relationships.
+
+```mermaid
+graph TD
+    subgraph "Application Layer"
+        App[TavernApp]
+        WOS[WindowOpeningService]
+        Del[TavernAppDelegate]
+        PM[ProjectManager]
+    end
+
+    subgraph "Per-Project Objects"
+        TP[TavernProject]
+        TC[TavernCoordinator]
+        Jake[Jake]
+        Spawner[AgentSpawner]
+        ALVM[AgentListViewModel]
+    end
+
+    subgraph "Agent Infrastructure"
+        Registry[AgentRegistry]
+        NameGen[NameGenerator]
+        Theme[NamingTheme]
+    end
+
+    subgraph "Per-Agent Objects"
+        MA[MortalAgent]
+        CVM[ChatViewModel]
+        CL[CommitmentList]
+        Commit[Commitment]
+    end
+
+    subgraph "External Dependencies"
+        Claude[ClaudeCode]
+        SS[SessionStore]
+        DS[DocStore]
+    end
+
+    %% Application owns services
+    App -->|"1"| WOS
+    App -->|"1"| Del
+    App -->|"1"| PM
+
+    %% ProjectManager owns projects
+    PM -->|"0..*"| TP
+
+    %% Project owns coordinator
+    TP -->|"1"| TC
+    TP -->|"1"| Claude
+
+    %% Coordinator owns core objects
+    TC -->|"1"| Jake
+    TC -->|"1"| Spawner
+    TC -->|"1"| ALVM
+    TC -->|"0..*"| CVM
+
+    %% Jake uses Claude
+    Jake -.->|uses| Claude
+    Jake -.->|uses| SS
+
+    %% Spawner dependencies
+    Spawner -->|"1"| Registry
+    Spawner -->|"1"| NameGen
+    NameGen -->|"1"| Theme
+
+    %% Spawner creates agents
+    Spawner -.->|creates| MA
+
+    %% Registry tracks agents
+    Registry -->|"0..*"| MA
+
+    %% Agent structure
+    MA -->|"1"| CL
+    MA -.->|uses| Claude
+    CL -->|"0..*"| Commit
+
+    %% ChatViewModel wraps agent
+    CVM -.->|wraps| Jake
+    CVM -.->|wraps| MA
+```
+
+**Legend:**
+- Solid arrows (`-->`) = ownership (parent creates/destroys child)
+- Dashed arrows (`-.->`) = usage/reference (no ownership)
+- `1` = exactly one
+- `0..*` = zero or more
+- `1..*` = one or more
+
+
 ## Module Dependency Graph
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                        Tavern (App)                         │
-│  TavernApp.swift creates coordinator, wires dependencies    │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                      TavernCore                             │
-│  @_exported import ClaudeCodeSDK                            │
-└─────────────────────────────────────────────────────────────┘
-       │              │              │              │
-       ▼              ▼              ▼              ▼
-   Agents/       Coordination/    Chat/        DocStore/
-       │              │              │
-       └──────────────┼──────────────┘
-                      ▼
-              ClaudeCodeSDK (external)
+```mermaid
+graph TD
+    subgraph "Tavern App"
+        App["TavernApp.swift<br/>multi-window orchestration"]
+        WOS2["WindowOpeningService"]
+        Del2["TavernAppDelegate"]
+    end
+
+    subgraph "TavernCore Framework"
+        Core["TavernCore<br/>@_exported import ClaudeCodeSDK"]
+    end
+
+    subgraph "Core Modules"
+        Agents["Agents/"]
+        Coord["Coordination/"]
+        Chat["Chat/"]
+        Project["Project/"]
+        Persist["Persistence/"]
+        UI["UI/"]
+    end
+
+    SDK["ClaudeCodeSDK<br/>(local fork)"]
+
+    App --> Core
+    Core --> Agents
+    Core --> Coord
+    Core --> Chat
+    Core --> Project
+    Core --> Persist
+    Core --> UI
+
+    Agents --> SDK
+    Coord --> SDK
+    Chat --> SDK
+    Project --> SDK
+    Persist --> SDK
+    UI --> SDK
 ```
 
 
 ## Core Types
+
+
+### Project System (`Sources/TavernCore/Project/`)
+
+The codebase supports **multi-project orchestration**. Each project is a separate directory with its own Jake instance, coordinator, and Claude configuration.
+
+**`TavernProject`** — Represents an open project directory.
+
+- File: `TavernProject.swift`
+- Contains: project URL, display name, coordinator reference
+- Each project has its own `TavernCoordinator` and `ClaudeCode` instance
+
+**`ProjectManager`** — Manages multiple open projects.
+
+- File: `ProjectManager.swift`
+- Tracks all open projects
+- Persists recent projects list
+- Handles project open/close lifecycle
 
 
 ### Agents (`Sources/TavernCore/Agents/`)
@@ -80,7 +214,9 @@ public protocol Agent: AnyObject, Identifiable, Sendable {
 - File: `Jake.swift`
 - Has a static `systemPrompt` defining his character
 - Uses `ClaudeCode` to communicate with Claude
-- Maintains session ID for conversation continuity
+- Maintains `_sessionId` and `_projectPath` for per-project session continuity
+- Restores sessions via `SessionStore.loadJakeSession(projectPath:)`
+- Saves sessions per-project after responses
 - Thread-safe via `DispatchQueue`
 
 
@@ -89,8 +225,11 @@ public protocol Agent: AnyObject, Identifiable, Sendable {
 - File: `MortalAgent.swift`
 - Has an `assignment` (their purpose)
 - Has `CommitmentList` for verification before completion
-- Signals completion via "DONE" in response
-- Auto-transitions through: `idle` → `working` → `verifying` → `done`
+- **Completion signals:** Detects both "DONE" and "COMPLETED" in responses
+- **Waiting signal:** Detects "WAITING" to pause for external action
+- **State methods:** `addCommitment()`, `markWaiting()`, `markDone()`
+- **Computed properties:** `allCommitmentsPassed`, `hasFailedCommitments`
+- Auto-transitions through: `idle` → `working` → `waiting`/`verifying` → `done`
 
 
 **`AnyAgent`** — Type-erased wrapper for heterogeneous collections.
@@ -112,13 +251,32 @@ public protocol Agent: AnyObject, Identifiable, Sendable {
 
 ### Coordination (`Sources/TavernCore/Coordination/`)
 
-**`TavernCoordinator`** — Central hub.
+**`TavernCoordinator`** — Central hub for a single project.
 
 - File: `TavernCoordinator.swift`
 - `@MainActor` (UI-bound)
 - Owns: `Jake`, `AgentSpawner`
 - Publishes: `agentListViewModel`, `activeChatViewModel`
+- **View model caching:** Chat view models are cached per-agent and reused
+- **Selection state:** `selectAgent()` updates `activeChatViewModel` dynamically
 - Handles: agent selection, spawning, dismissal
+
+
+### UI Layer (`Sources/TavernCore/UI/`)
+
+Bridge between SwiftUI views and core logic.
+
+**`AgentListViewModel`** — View model managing agent list and selection.
+
+- File: `AgentListViewModel.swift`
+- `@MainActor` (UI-bound)
+- Manages agent list display
+- Tracks current selection
+
+**`AgentListItem`** — Display model for list items.
+
+- File: `AgentListItem.swift`
+- Contains display-ready agent info
 
 
 ### Chat (`Sources/TavernCore/Chat/`)
@@ -158,7 +316,22 @@ public protocol Agent: AnyObject, Identifiable, Sendable {
 - Success = exit code 0
 
 
-### DocStore (`Sources/TavernCore/DocStore/`)
+### Persistence (`Sources/TavernCore/Persistence/`)
+
+**Session Storage Architecture:**
+
+Session persistence operates at two levels:
+1. **Session IDs** — Stored in UserDefaults with path-encoded keys
+2. **Full History** — Accessible via `ClaudeNativeSessionStorage` (Claude CLI's native storage)
+
+**`SessionStore`** — Session ID persistence.
+
+- File: `SessionStore.swift`
+- **Per-project sessions for Jake:** `loadJakeSession(projectPath:)`, `saveJakeSession(_:projectPath:)`
+- **Per-agent sessions:** `loadAgentSession(agentId:)`, `saveAgentSession(_:agentId:)`
+- **Path encoding:** Uses URL-safe encoding matching Claude CLI's scheme
+- **History loading:** `loadJakeSessionHistory()` retrieves full conversation history from Claude's native storage
+
 
 **`Document`** — Markdown with YAML frontmatter.
 
@@ -184,6 +357,18 @@ public protocol Agent: AnyObject, Identifiable, Sendable {
 - File: `AgentPersistence.swift`
 
 
+### Errors (`Sources/TavernCore/Errors/`)
+
+**`TavernError`** — Typed error enum for all failure modes.
+
+- File: `TavernError.swift`
+- Cases include: `sessionCorrupt`, `agentNotFound`, `spawnFailed`, etc.
+
+**`TavernErrorMessages`** — User-facing error message generation.
+
+- File: `TavernErrorMessages.swift`
+
+
 ### Naming (`Sources/TavernCore/Naming/`)
 
 **`NamingTheme`** — Tiered list of themed names.
@@ -200,13 +385,23 @@ public protocol Agent: AnyObject, Identifiable, Sendable {
 - Falls back to "Agent-N" when theme exhausted
 
 
+### Logging (`Sources/TavernCore/Logging/`)
+
+**`TavernLogger`** — Centralized logging via Apple's unified logging system.
+
+- File: `TavernLogger.swift`
+- Subsystem: `com.tavern.spillway`
+- Categories: `agents`, `chat`, `coordination`, `claude`
+
+
 ### Testing (`Sources/TavernCore/Testing/`)
 
 **`MockClaudeCode`** — Test double for `ClaudeCode`.
 
 - File: `MockClaudeCode.swift`
 - Queue responses, capture sent prompts
-- Simulate errors, delays
+- Simulate errors via `errorToThrow` property
+- Simulate delays
 
 
 **`TestFixtures`** — Factory for test objects.
@@ -219,86 +414,131 @@ public protocol Agent: AnyObject, Identifiable, Sendable {
 
 ### Message Flow (User → Agent → Response)
 
+```mermaid
+sequenceDiagram
+    participant User
+    participant ChatView
+    participant ChatViewModel
+    participant Agent as Jake/MortalAgent
+    participant SDK as ClaudeCode SDK
+    participant Store as SessionStore
+
+    User->>ChatView: types message
+    ChatView->>ChatViewModel: sendMessage()
+    ChatViewModel->>ChatViewModel: append user message
+    ChatViewModel->>ChatViewModel: isCogitating = true
+
+    ChatViewModel->>Agent: send(text)
+    Agent->>Agent: state = .working
+
+    alt New conversation
+        Agent->>SDK: runSinglePrompt()
+    else Existing session
+        Agent->>SDK: resumeConversation()
+    end
+
+    SDK-->>Agent: response + sessionId
+    Agent->>Store: saveSession()
+    Agent-->>ChatViewModel: response text
+
+    ChatViewModel->>ChatViewModel: append agent message
+    ChatViewModel->>ChatViewModel: isCogitating = false
+    ChatViewModel-->>ChatView: update
+    ChatView-->>User: display response
 ```
-User types message
-        │
-        ▼
-ChatView.sendMessage()
-        │
-        ▼
-ChatViewModel.sendMessage()
-    ├── Appends user message
-    ├── Sets isCogitating = true
-    │
-    ▼
-agent.send(text)
-        │
-        ▼
-Jake/MortalAgent.send()
-    ├── Sets state = .working
-    ├── Calls ClaudeCode SDK
-    │       ├── runSinglePrompt (new conversation)
-    │       └── resumeConversation (existing session)
-    ├── Extracts sessionId for continuity
-    │
-    ▼
-Response returned
-        │
-        ▼
-ChatViewModel receives response
-    ├── Appends agent message
-    ├── Sets isCogitating = false
-    │
-    ▼
-SwiftUI updates ChatView
+
+
+### Per-Project Session Flow
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant PM as ProjectManager
+    participant TP as TavernProject
+    participant TC as TavernCoordinator
+    participant Jake
+    participant SS as SessionStore
+    participant Claude as ClaudeNativeSessionStorage
+
+    User->>PM: open(url)
+    PM->>TP: create project
+    TP->>TP: create ClaudeCode instance
+
+    TP->>TC: create coordinator
+    TC->>Jake: create with project path
+    Jake->>SS: loadJakeSession(projectPath)
+    SS-->>Jake: sessionId (if exists)
+
+    Note over Jake,Claude: Messages sent/received
+    Jake->>SS: saveJakeSession()
+    Jake->>Claude: full history accessible
 ```
 
 
 ### Agent Spawning Flow
 
-```
-TavernCoordinator.spawnAgent(assignment:)
-        │
-        ▼
-AgentSpawner.spawn(assignment:)
-    ├── NameGenerator.nextNameOrFallback()
-    ├── claudeFactory() → new ClaudeCode
-    ├── Creates MortalAgent
-    ├── AgentRegistry.register()
-    │
-    ▼
-TavernCoordinator
-    ├── Caches assignment for display
-    ├── Refreshes agent list
-    ├── Optionally selects new agent
+```mermaid
+sequenceDiagram
+    participant TC as TavernCoordinator
+    participant Spawner as AgentSpawner
+    participant NG as NameGenerator
+    participant Factory as claudeFactory
+    participant Reg as AgentRegistry
+    participant MA as MortalAgent
+
+    TC->>Spawner: spawn(assignment)
+    Spawner->>NG: nextNameOrFallback()
+    NG-->>Spawner: themed name
+    Spawner->>Factory: create ClaudeCode
+    Factory-->>Spawner: new instance
+
+    Spawner->>MA: create(name, assignment, claude)
+    Spawner->>Reg: register(agent)
+
+    Spawner-->>TC: new agent
+
+    TC->>TC: cache assignment for display
+    TC->>TC: cache ChatViewModel
+    TC->>TC: refresh agent list
+    TC->>TC: optionally select agent
 ```
 
 
 ### Commitment Verification Flow
 
-```
-MortalAgent response contains "DONE"
-        │
-        ▼
-checkForCompletionSignal()
-        │
-        ▼
-handleCompletionAttempt()
-    ├── If no commitments: state = .done
-    │
-    ├── Else: state = .verifying
-    │         │
-    │         ▼
-    │   CommitmentVerifier.verifyAll()
-    │         │
-    │         ├── For each commitment:
-    │         │     Process.run(bash -c assertion)
-    │         │     exit 0 → .passed
-    │         │     exit !0 → .failed
-    │         │
-    │         ▼
-    │   All passed? → state = .done
-    │   Any failed? → state = .idle (agent must fix)
+```mermaid
+flowchart TD
+    A[Agent response received] --> B{Contains DONE<br/>or COMPLETED?}
+    B -->|No| C{Contains WAITING?}
+    B -->|Yes| D[checkForCompletionSignal]
+
+    C -->|Yes| E[markWaiting]
+    E --> F[state = .waiting]
+    C -->|No| G[state = .idle]
+
+    D --> H[handleCompletionAttempt]
+    H --> I{Has commitments?}
+
+    I -->|No| J[state = .done]
+    I -->|Yes| K[state = .verifying]
+
+    K --> L[CommitmentVerifier.verifyAll]
+    L --> M{For each commitment}
+
+    M --> N["Process.run(bash -c assertion)"]
+    N --> O{exit code}
+
+    O -->|0| P[status = .passed]
+    O -->|!0| Q[status = .failed]
+
+    P --> R{All checked?}
+    Q --> R
+
+    R -->|No| M
+    R -->|Yes| S{All passed?}
+
+    S -->|Yes| J
+    S -->|No| T[state = .idle<br/>agent must fix]
 ```
 
 
@@ -308,7 +548,7 @@ All mutable state is protected by serial `DispatchQueue`:
 
 | Type | Queue Label | Protected State |
 |------|-------------|-----------------|
-| Jake | `com.tavern.Jake` | `_sessionId`, `_isCogitating` |
+| Jake | `com.tavern.Jake` | `_sessionId`, `_projectPath`, `_isCogitating` |
 | MortalAgent | `com.tavern.MortalAgent` | `_state`, `_sessionId` |
 | AgentRegistry | `com.tavern.AgentRegistry` | `_agents`, `_nameToId` |
 | NameGenerator | `com.tavern.NameGenerator` | `_usedNames`, indices |
@@ -318,62 +558,85 @@ All mutable state is protected by serial `DispatchQueue`:
 
 UI-bound types (`TavernCoordinator`, `ChatViewModel`, `AgentListViewModel`) use `@MainActor`.
 
+**Native Storage Access:** `ClaudeNativeSessionStorage` provides thread-safe access to Claude CLI's native session storage.
+
 
 ## Entry Point
 
-**`TavernApp.swift`** wires everything:
+**`TavernApp.swift`** manages multi-window orchestration:
 
-```swift
-@main
-struct TavernApp: App {
-    @StateObject private var coordinator = TavernApp.createCoordinator()
 
-    private static func createCoordinator() -> TavernCoordinator {
-        let claude = try ClaudeCodeClient()      // Real SDK
-        let jake = Jake(claude: claude)
-        let registry = AgentRegistry()
-        let nameGenerator = NameGenerator(theme: .lotr)
-        let spawner = AgentSpawner(
-            registry: registry,
-            nameGenerator: nameGenerator,
-            claudeFactory: { MockClaudeCode() }  // TODO: Real Claude for spawned agents
-        )
-        return TavernCoordinator(jake: jake, spawner: spawner)
-    }
-}
+### Key Components
+
+**`WindowOpeningService`** — Bridges AppKit window management to SwiftUI.
+
+- Tracks open project URLs
+- Manages welcome window lifecycle
+- Opens new project windows
+
+**`TavernAppDelegate`** — AppKit integration.
+
+- Provides Dock icon right-click menu
+- Lists recent projects in Dock menu
+- Opens projects from Dock
+
+
+### Window Architecture
+
+```mermaid
+graph TD
+    subgraph TavernApp
+        WG1["WindowGroup('welcome')"]
+        WG2["WindowGroup (per-project)"]
+    end
+
+    subgraph "Welcome Window"
+        WV[WelcomeView]
+        NP[New project button]
+        RP[Recent projects list]
+    end
+
+    subgraph "Project Window"
+        CV[ContentView]
+        ALV[AgentListView<br/>sidebar]
+        CHV[ChatView<br/>main area]
+    end
+
+    WG1 --> WV
+    WV --> NP
+    WV --> RP
+
+    WG2 --> CV
+    CV --> ALV
+    CV --> CHV
 ```
 
-Note: Currently spawned agents use `MockClaudeCode` — marked TODO for real implementation.
+**Window restoration:** App restores previously open projects on restart.
 
 
-## Testing Strategy
+### Project Initialization
 
-**Unit Tests** (`TavernCoreTests/`):
-- All core logic is in `TavernCore` with no UI dependencies
-- `MockClaudeCode` allows testing without API calls
-- Inject mocks via constructor (dependency injection pattern)
+```mermaid
+sequenceDiagram
+    participant App as TavernApp
+    participant WOS as WindowOpeningService
+    participant PM as ProjectManager
+    participant TP as TavernProject
+    participant CV as ContentView
 
-**Key Test Files**:
-- Agent state transitions
-- Registry operations
-- Name generation exhaustion
-- Commitment verification
-- DocStore CRUD
+    App->>WOS: openProject(url)
+    WOS->>WOS: check if already open
 
-**Example Test Pattern**:
-
-```swift
-func testAgentTransitionsToWorking() async throws {
-    let mock = MockClaudeCode()
-    mock.queueJSONResponse(result: "Hello", sessionId: "test")
-
-    let agent = MortalAgent(name: "Test", assignment: "Do stuff", claude: mock)
-    XCTAssertEqual(agent.state, .idle)
-
-    _ = try await agent.send("Go")
-    // State was .working during call, back to .idle after
-    XCTAssertEqual(agent.state, .idle)
-}
+    alt Already open
+        WOS->>WOS: focus existing window
+    else New project
+        WOS->>TP: create TavernProject
+        WOS->>PM: add(project)
+        WOS->>CV: open window with project
+        CV->>CV: async initialization
+        CV->>CV: detect existing project
+        CV->>CV: create per-project ClaudeCode
+    end
 ```
 
 
@@ -444,13 +707,46 @@ Debug builds must be instrumented thoroughly enough that issues can be diagnosed
 - Timing information for async operations
 
 
+## Testing Strategy
+
+**Unit Tests** (`TavernCoreTests/`):
+- All core logic is in `TavernCore` with no UI dependencies
+- `MockClaudeCode` allows testing without API calls
+- Inject mocks via constructor (dependency injection pattern)
+
+**Key Test Files**:
+- Agent state transitions
+- Registry operations
+- Name generation exhaustion
+- Commitment verification
+- DocStore CRUD
+
+**Example Test Pattern**:
+
+```swift
+func testAgentTransitionsToWorking() async throws {
+    let mock = MockClaudeCode()
+    mock.queueJSONResponse(result: "Hello", sessionId: "test")
+
+    let agent = MortalAgent(name: "Test", assignment: "Do stuff", claude: mock)
+    XCTAssertEqual(agent.state, .idle)
+
+    _ = try await agent.send("Go")
+    // State was .working during call, back to .idle after
+    XCTAssertEqual(agent.state, .idle)
+}
+```
+
+**App Previews:** `TavernApp.swift` includes SwiftUI Previews using mock setup for development.
+
+
 ## What's Not Implemented Yet
 
 Per `v1-implementation-plan.md`, these are deferred:
 
-- **Project root configuration** — Jake runs from undefined directory
 - **Real Claude for spawned agents** — Currently mock
 - **Sandboxing/overlays** — Agents have full access
-- **Persistent agent recovery** — Agents lost on app restart
+- **Persistent agent recovery** — Mortal agents lost on app restart (Jake sessions persist)
 - **Streaming responses** — Batch only
 - **Multi-agent coordination** — Jake doesn't delegate yet
+- **Agent-to-agent communication** — No direct messaging between agents

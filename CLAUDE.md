@@ -19,15 +19,20 @@ the-tavern-at-the-spillway/
 │   ├── LocalPackages/ClaudeCodeSDK/ # Forked SDK (JSON fix)
 │   ├── Sources/
 │   │   ├── Tavern/                  # App target (SwiftUI)
-│   │   │   ├── TavernApp.swift      # Entry point
+│   │   │   ├── TavernApp.swift      # Entry point, multi-window orchestration
 │   │   │   └── Views/               # SwiftUI views
 │   │   └── TavernCore/              # Framework target
 │   │       ├── Agents/              # Jake.swift, MortalAgent.swift
 │   │       ├── Chat/                # ChatViewModel, ChatMessage
-│   │       ├── Coordination/        # TavernCoordinator, AgentSpawner
 │   │       ├── Commitments/         # Commitment verification
+│   │       ├── Coordination/        # TavernCoordinator, AgentSpawner
+│   │       ├── Errors/              # TavernError, TavernErrorMessages
+│   │       ├── Logging/             # TavernLogger
+│   │       ├── Naming/              # NamingTheme, NameGenerator
 │   │       ├── Persistence/         # DocStore, SessionStore
-│   │       └── Registry/            # AgentRegistry
+│   │       ├── Project/             # TavernProject, ProjectManager
+│   │       ├── Registry/            # AgentRegistry
+│   │       └── UI/                  # AgentListViewModel, AgentListItem
 │   └── Tests/
 ├── docs/
 │   ├── architecture-v1.md           # Architecture guide
@@ -67,14 +72,17 @@ redo build
 
 **Working:**
 - Jake responds using `.json` format (SDK bug fixed via local fork)
-- Session persistence via UserDefaults (survives restart)
+- Multi-project support with per-project session persistence
+- Session history restoration from Claude's native storage
+- Multi-window architecture (welcome window + per-project windows)
 - Agent spawning with themed names + UI (toolbar + button)
 - Content block rendering infrastructure (MessageType enum)
+- Window restoration on app restart
 - 173 tests passing
 
 **Not Implemented:**
-- Project root selection (Jake works from cwd)
 - Real verification logic (commitments use mock)
+- Real Claude for spawned agents (currently mock)
 - Background agent execution
 - Agent-to-agent communication
 - Streaming responses (batch only)
@@ -84,7 +92,10 @@ redo build
 
 | File | Purpose |
 |------|---------|
+| `Sources/Tavern/TavernApp.swift` | Entry point, multi-window orchestration |
 | `Sources/TavernCore/Agents/Jake.swift` | Main agent |
+| `Sources/TavernCore/Project/TavernProject.swift` | Single project representation |
+| `Sources/TavernCore/Project/ProjectManager.swift` | Multi-project management |
 | `Sources/TavernCore/Persistence/SessionStore.swift` | Session IDs (UserDefaults) |
 | `Sources/TavernCore/Errors/TavernErrorMessages.swift` | Error mapping |
 | `LocalPackages/ClaudeCodeSDK/` | Forked SDK |
