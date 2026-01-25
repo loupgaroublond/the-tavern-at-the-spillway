@@ -43,11 +43,17 @@ public final class TavernProject: ObservableObject, Identifiable {
     /// Initialize the project (creates coordinator, Jake, etc.)
     /// Call this after creation to set up the project
     public func initialize() async {
-        TavernLogger.coordination.info("[\(self.name)] Initializing project")
+        TavernLogger.coordination.info("[\(self.name)] Initializing project at: \(self.rootURL.path)")
 
         do {
+            TavernLogger.coordination.debug("[\(self.name)] Creating ClaudeCode client...")
             let claude = try Self.createClaudeCode(for: rootURL)
+            TavernLogger.coordination.debug("[\(self.name)] ClaudeCode client created")
+
+            TavernLogger.coordination.debug("[\(self.name)] Creating Jake...")
             let jake = Jake(claude: claude)
+            TavernLogger.coordination.debug("[\(self.name)] Jake created")
+
             let registry = AgentRegistry()
             let nameGenerator = NameGenerator(theme: .lotr)
             let spawner = AgentSpawner(
@@ -67,7 +73,9 @@ public final class TavernProject: ObservableObject, Identifiable {
                     }
                 }
             )
+            TavernLogger.coordination.debug("[\(self.name)] AgentSpawner created")
 
+            TavernLogger.coordination.debug("[\(self.name)] Creating TavernCoordinator...")
             self.coordinator = TavernCoordinator(jake: jake, spawner: spawner)
             self.isReady = true
 

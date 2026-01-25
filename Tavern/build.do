@@ -2,8 +2,8 @@
 # build.do - Build Tavern.app with xcodebuild
 # Usage: redo build
 
-# Ensure xcodegen is up to date first
-redo-ifchange xcodegen
+# Ensure icon and xcodegen are up to date first
+redo-ifchange icon xcodegen
 
 # Build configuration
 DERIVED_DATA="$HOME/.local/builds/tavern"

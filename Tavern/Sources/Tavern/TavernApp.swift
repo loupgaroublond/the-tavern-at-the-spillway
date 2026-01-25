@@ -1,6 +1,185 @@
 import SwiftUI
 import TavernCore
 import AppKit
+import os.log
+
+// MARK: - Window Opening Service
+
+/// Shared service that bridges AppKit → SwiftUI window opening
+/// Views register their openWindow environment action here
+@MainActor
+final class WindowOpeningService: ObservableObject {
+    static let shared = WindowOpeningService()
+    private static let logger = Logger(subsystem: "com.tavern.spillway", category: "window")
+
+    /// The openWindow action from SwiftUI, registered by active views
+    var openWindow: ((ProjectWindowConfig) -> Void)?
+    var openWelcomeWindow: (() -> Void)?
+    var dismissWelcomeWindow: (() -> Void)?
+
+    /// Track which project URLs have open windows
+    @Published private(set) var openProjectURLs: Set<URL> = []
+
+    /// Open a project window
+    /// - Parameters:
+    ///   - url: The project URL to open
+    ///   - reuseExisting: If true, bring existing window to front instead of opening new one
+    ///   - closeWelcome: Whether to close the welcome window after opening
+    func openProjectWindow(url: URL, reuseExisting: Bool = false, closeWelcome: Bool = true) {
+        Self.logger.info("[WindowOpeningService] openProjectWindow called - url: \(url.path, privacy: .public), reuseExisting: \(reuseExisting), closeWelcome: \(closeWelcome)")
+
+        // Optionally reuse existing window
+        if reuseExisting, let existingWindow = findWindowForProject(url: url) {
+            Self.logger.debug("[WindowOpeningService] Reusing existing window for: \(url.path, privacy: .public)")
+            existingWindow.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            if closeWelcome {
+                dismissWelcomeWindow?()
+            }
+            return
+        }
+
+        // Open new window
+        let config = ProjectWindowConfig(projectURL: url)
+        if let openWindow = openWindow {
+            Self.logger.info("[WindowOpeningService] Calling openWindow handler for: \(url.path, privacy: .public)")
+            openWindow(config)
+            openProjectURLs.insert(url)
+            if closeWelcome {
+                dismissWelcomeWindow?()
+            }
+        } else {
+            Self.logger.error("[WindowOpeningService] No openWindow handler registered!")
+            TavernLogger.coordination.error("No openWindow handler registered")
+        }
+    }
+
+    /// Show the welcome window
+    func showWelcomeWindow() {
+        if let welcomeWindow = findWelcomeWindowNS() {
+            welcomeWindow.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+        } else {
+            openWelcomeWindow?()
+        }
+    }
+
+    /// Bring all windows for a project to the front
+    func raiseAllWindowsForProject(url: URL) {
+        let projectName = url.lastPathComponent
+        var foundWindows: [NSWindow] = []
+
+        for window in NSApp.windows {
+            // Skip welcome windows
+            guard !isWelcomeWindow(window) else { continue }
+
+            // Check if window title contains the project name
+            if window.title.contains(projectName) {
+                foundWindows.append(window)
+            }
+        }
+
+        // If we found windows for this project, bring them forward
+        // Otherwise bring all non-welcome windows forward as fallback
+        let windowsToRaise = foundWindows.isEmpty
+            ? NSApp.windows.filter { !isWelcomeWindow($0) }
+            : foundWindows
+
+        for window in windowsToRaise {
+            window.orderFront(nil)
+        }
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    /// Mark a project URL as closed (called when window closes)
+    func projectWindowClosed(url: URL) {
+        openProjectURLs.remove(url)
+    }
+
+    /// Find the welcome window (for closing it)
+    func findWelcomeWindowNS() -> NSWindow? {
+        for window in NSApp.windows {
+            if isWelcomeWindow(window) {
+                return window
+            }
+        }
+        return nil
+    }
+
+    private func findWindowForProject(url: URL) -> NSWindow? {
+        // Find window by checking if it's showing this project
+        // This is approximate - we check window title contains project name
+        for window in NSApp.windows {
+            if window.title.contains(url.lastPathComponent) && !isWelcomeWindow(window) {
+                return window
+            }
+        }
+        return nil
+    }
+
+    private func isWelcomeWindow(_ window: NSWindow) -> Bool {
+        // Welcome window has "Tavern at the Spillway" in title but no project indicator
+        // or we can check the window group ID
+        return window.title.isEmpty || window.title == "The Tavern at the Spillway"
+    }
+
+    private init() {}
+}
+
+/// View modifier that registers the openWindow environment action
+struct WindowOpenerRegistration: ViewModifier {
+    @Environment(\.openWindow) private var openWindow
+    private static let logger = Logger(subsystem: "com.tavern.spillway", category: "window")
+
+    func body(content: Content) -> some View {
+        content
+            .onAppear {
+                Self.logger.debug("[WindowOpenerRegistration] Registering openWindow handler")
+                WindowOpeningService.shared.openWindow = { config in
+                    Self.logger.info("[WindowOpenerRegistration] Opening window for: \(config.projectURL.path, privacy: .public)")
+                    openWindow(value: config)
+                }
+            }
+    }
+}
+
+/// View modifier for welcome window that registers dismiss action
+struct WelcomeWindowRegistration: ViewModifier {
+    @Environment(\.openWindow) private var openWindow
+    private static let logger = Logger(subsystem: "com.tavern.spillway", category: "window")
+
+    func body(content: Content) -> some View {
+        content
+            .onAppear {
+                Self.logger.debug("[WelcomeWindowRegistration] Registering all handlers")
+                WindowOpeningService.shared.openWindow = { config in
+                    Self.logger.info("[WelcomeWindowRegistration] Opening window for: \(config.projectURL.path, privacy: .public)")
+                    openWindow(value: config)
+                }
+                WindowOpeningService.shared.openWelcomeWindow = {
+                    Self.logger.debug("[WelcomeWindowRegistration] Opening welcome window")
+                    openWindow(id: "welcome")
+                }
+                WindowOpeningService.shared.dismissWelcomeWindow = {
+                    Self.logger.debug("[WelcomeWindowRegistration] Dismissing welcome window")
+                    // Use NSApplication to close welcome window (works on macOS 13+)
+                    if let window = WindowOpeningService.shared.findWelcomeWindowNS() {
+                        window.close()
+                    }
+                }
+            }
+    }
+}
+
+extension View {
+    func registerWindowOpener() -> some View {
+        modifier(WindowOpenerRegistration())
+    }
+
+    func registerWelcomeWindow() -> some View {
+        modifier(WelcomeWindowRegistration())
+    }
+}
 
 // MARK: - App Delegate
 
@@ -43,7 +222,7 @@ class TavernAppDelegate: NSObject, NSApplicationDelegate {
     @objc private func openRecentProject(_ sender: NSMenuItem) {
         guard let url = sender.representedObject as? URL else { return }
         Task { @MainActor in
-            await ProjectManager.shared.openProject(at: url)
+            WindowOpeningService.shared.openProjectWindow(url: url)
         }
     }
 
@@ -59,7 +238,7 @@ class TavernAppDelegate: NSObject, NSApplicationDelegate {
 
             let response = await panel.begin()
             if response == .OK, let url = panel.url {
-                await ProjectManager.shared.openProject(at: url)
+                WindowOpeningService.shared.openProjectWindow(url: url)
             }
         }
     }
@@ -73,18 +252,18 @@ struct TavernApp: App {
     @StateObject private var projectManager = ProjectManager.shared
 
     var body: some Scene {
-        WindowGroup {
-            RootView()
+        // Welcome window (no project)
+        WindowGroup(id: "welcome") {
+            WelcomeView()
                 .environmentObject(projectManager)
+                .registerWelcomeWindow()
         }
         .windowStyle(.hiddenTitleBar)
         .commands {
             // File menu
             CommandGroup(replacing: .newItem) {
                 Button("Open Project...") {
-                    Task { @MainActor in
-                        await openProjectDialog()
-                    }
+                    WindowOpeningService.shared.showWelcomeWindow()
                 }
                 .keyboardShortcut("o", modifiers: .command)
 
@@ -94,9 +273,7 @@ struct TavernApp: App {
                 Menu("Open Recent") {
                     ForEach(projectManager.recentProjectPaths, id: \.self) { url in
                         Button(url.lastPathComponent) {
-                            Task { @MainActor in
-                                await projectManager.openProject(at: url)
-                            }
+                            WindowOpeningService.shared.openProjectWindow(url: url)
                         }
                     }
 
@@ -110,38 +287,86 @@ struct TavernApp: App {
                 .disabled(projectManager.recentProjectPaths.isEmpty)
             }
         }
-    }
 
-    /// Show the open folder dialog
-    @MainActor
-    private func openProjectDialog() async {
-        let panel = NSOpenPanel()
-        panel.title = "Open Project"
-        panel.message = "Select a project directory"
-        panel.canChooseFiles = false
-        panel.canChooseDirectories = true
-        panel.allowsMultipleSelection = false
-        panel.canCreateDirectories = false
-
-        let response = await panel.begin()
-
-        if response == .OK, let url = panel.url {
-            await projectManager.openProject(at: url)
+        // Project windows
+        WindowGroup(for: ProjectWindowConfig.self) { $config in
+            ProjectWindowView(config: config)
+                .environmentObject(projectManager)
+                .registerWindowOpener()
         }
+        .windowStyle(.hiddenTitleBar)
     }
 }
 
-// MARK: - Root View
+// MARK: - Project Window Configuration
 
-/// Root view that shows either welcome screen or open project
-struct RootView: View {
+/// Configuration for a project window
+/// Using a struct allows us to add more fields later (window type, view state, etc.)
+/// without changing the WindowGroup signature
+struct ProjectWindowConfig: Hashable, Codable {
+    let projectURL: URL
+    // Future: windowType, splitState, etc.
+}
+
+// MARK: - Project Window View
+
+/// View for a project window
+struct ProjectWindowView: View {
+    let config: ProjectWindowConfig?
     @EnvironmentObject var projectManager: ProjectManager
+    @State private var project: TavernProject?
+
+    private static let logger = Logger(subsystem: "com.tavern.spillway", category: "window")
 
     var body: some View {
-        if let project = projectManager.openProjects.first {
-            ProjectView(project: project)
-        } else {
-            WelcomeView()
+        let _ = Self.logger.debug("[ProjectWindowView] body evaluated - config: \(config?.projectURL.path ?? "nil", privacy: .public), project: \(project?.name ?? "nil", privacy: .public)")
+        Group {
+            if let project = project {
+                ProjectView(project: project)
+            } else if let cfg = config {
+                let _ = Self.logger.info("[ProjectWindowView] SHOWING SPINNER for: \(cfg.projectURL.path, privacy: .public)")
+                VStack {
+                    ProgressView("Loading project...")
+                    Text(cfg.projectURL.lastPathComponent)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .frame(minWidth: 400, minHeight: 300)
+            } else {
+                WelcomeView()
+            }
+        }
+        .onAppear {
+            Self.logger.debug("[ProjectWindowView] onAppear - config: \(config?.projectURL.path ?? "nil", privacy: .public), project: \(project?.name ?? "nil", privacy: .public)")
+        }
+        .task(id: config?.projectURL) {
+            let taskId = UUID().uuidString.prefix(8)
+            Self.logger.info("[ProjectWindowView:\(taskId, privacy: .public)] .task started - config: \(config?.projectURL.path ?? "nil", privacy: .public)")
+
+            guard let url = config?.projectURL else {
+                Self.logger.warning("[ProjectWindowView:\(taskId, privacy: .public)] config or projectURL is nil, falling back to WelcomeView")
+                return
+            }
+
+            Self.logger.debug("[ProjectWindowView:\(taskId, privacy: .public)] Looking for existing project at: \(url.path, privacy: .public)")
+            Self.logger.debug("[ProjectWindowView:\(taskId, privacy: .public)] ProjectManager openProjects count: \(self.projectManager.openProjects.count)")
+
+            // Find or create the project
+            if let existing = projectManager.openProjects.first(where: { $0.rootURL == url }) {
+                Self.logger.info("[ProjectWindowView:\(taskId, privacy: .public)] Found existing project: \(existing.name, privacy: .public)")
+                project = existing
+            } else {
+                Self.logger.info("[ProjectWindowView:\(taskId, privacy: .public)] Opening new project at: \(url.path, privacy: .public)")
+
+                // Log before the potentially long-running operation
+                Self.logger.debug("[ProjectWindowView:\(taskId, privacy: .public)] Calling projectManager.openProject...")
+                let openedProject = await projectManager.openProject(at: url)
+                Self.logger.info("[ProjectWindowView:\(taskId, privacy: .public)] projectManager.openProject returned - name: \(openedProject.name, privacy: .public), isReady: \(openedProject.isReady), hasError: \(openedProject.initializationError != nil)")
+
+                project = openedProject
+            }
+
+            Self.logger.debug("[ProjectWindowView:\(taskId, privacy: .public)] .task completed - project set: \(self.project != nil)")
         }
     }
 }
@@ -191,9 +416,7 @@ struct WelcomeView: View {
 
                         ForEach(projectManager.recentProjectPaths.prefix(5), id: \.self) { url in
                             Button(action: {
-                                Task { @MainActor in
-                                    await projectManager.openProject(at: url)
-                                }
+                                WindowOpeningService.shared.openProjectWindow(url: url)
                             }) {
                                 HStack {
                                     Image(systemName: "folder")
@@ -240,7 +463,7 @@ struct WelcomeView: View {
         let response = await panel.begin()
 
         if response == .OK, let url = panel.url {
-            await projectManager.openProject(at: url)
+            WindowOpeningService.shared.openProjectWindow(url: url)
         }
     }
 }
@@ -273,7 +496,7 @@ struct ProjectContentView: View {
         NavigationSplitView {
             // Sidebar with agent list
             VStack(spacing: 0) {
-                TavernHeader(projectName: project.name)
+                TavernHeader(projectName: project.name, projectURL: project.rootURL)
                 Divider()
                 AgentListView(viewModel: coordinator.agentListViewModel) { assignment, customName in
                     spawnAgent(assignment: assignment, customName: customName)
@@ -344,6 +567,7 @@ struct ProjectErrorView: View {
 
 private struct TavernHeader: View {
     let projectName: String
+    let projectURL: URL
 
     var body: some View {
         HStack {
@@ -357,7 +581,16 @@ private struct TavernHeader: View {
 
             Spacer()
 
-            // Status indicator placeholder
+            // Raise all windows for this project
+            Button(action: {
+                WindowOpeningService.shared.raiseAllWindowsForProject(url: projectURL)
+            }) {
+                Image(systemName: "rectangle.stack")
+                    .help("Bring all windows for this project to front")
+            }
+            .buttonStyle(.borderless)
+
+            // Status indicator
             Circle()
                 .fill(Color.green)
                 .frame(width: 8, height: 8)

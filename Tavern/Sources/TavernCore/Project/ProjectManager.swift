@@ -91,20 +91,32 @@ public final class ProjectManager: ObservableObject {
 
     /// Load recent projects from UserDefaults
     private func loadRecentProjects() {
-        guard let data = UserDefaults.standard.data(forKey: recentProjectsKey),
-              let paths = try? JSONDecoder().decode([String].self, from: data) else {
+        guard let data = UserDefaults.standard.data(forKey: recentProjectsKey) else {
+            TavernLogger.coordination.debug("No recent projects data found in UserDefaults")
+            return
+        }
+
+        guard let paths = try? JSONDecoder().decode([String].self, from: data) else {
+            TavernLogger.coordination.error("Failed to decode recent projects data")
             return
         }
 
         recentProjectPaths = paths.compactMap { URL(fileURLWithPath: $0) }
-        TavernLogger.coordination.debug("Loaded \(self.recentProjectPaths.count) recent projects")
+        TavernLogger.coordination.info("Loaded \(self.recentProjectPaths.count) recent projects:")
+        for url in recentProjectPaths {
+            TavernLogger.coordination.debug("  - \(url.path)")
+        }
     }
 
     /// Save recent projects to UserDefaults
     private func saveRecentProjects() {
         let paths = recentProjectPaths.map { $0.path }
+        TavernLogger.coordination.debug("Saving \(paths.count) recent projects to UserDefaults")
         if let data = try? JSONEncoder().encode(paths) {
             UserDefaults.standard.set(data, forKey: recentProjectsKey)
+            TavernLogger.coordination.debug("Recent projects saved successfully")
+        } else {
+            TavernLogger.coordination.error("Failed to encode recent projects for saving")
         }
     }
 }

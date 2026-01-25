@@ -8,45 +8,37 @@ public enum SessionStore {
 
     // UserDefaults is thread-safe for read/write operations
     nonisolated(unsafe) private static let defaults = UserDefaults.standard
-    private static let jakeSessionKey = "com.tavern.jake.sessionId"
-    private static let jakeProjectPathKey = "com.tavern.jake.projectPath"
+    private static let jakeSessionPrefix = "com.tavern.jake.session."
     private static let agentSessionPrefix = "com.tavern.agent.session."
 
-    // MARK: - Jake's Session
+    // MARK: - Jake's Session (Per-Project)
 
-    /// Save Jake's current session ID and project path
+    /// Save Jake's session ID for a specific project
     /// - Parameters:
     ///   - sessionId: The session ID to save, or nil to clear
-    ///   - projectPath: The project path (working directory) for the session
-    public static func saveJakeSession(_ sessionId: String?, projectPath: String? = nil) {
+    ///   - projectPath: The project path (working directory) for the session (required)
+    public static func saveJakeSession(_ sessionId: String?, projectPath: String) {
+        let key = jakeSessionKey(for: projectPath)
         if let id = sessionId {
-            defaults.set(id, forKey: jakeSessionKey)
-            if let path = projectPath {
-                defaults.set(path, forKey: jakeProjectPathKey)
-            }
+            defaults.set(id, forKey: key)
         } else {
-            defaults.removeObject(forKey: jakeSessionKey)
-            defaults.removeObject(forKey: jakeProjectPathKey)
+            defaults.removeObject(forKey: key)
         }
     }
 
-    /// Load Jake's saved session ID
+    /// Load Jake's saved session ID for a specific project
+    /// - Parameter projectPath: The project path to look up
     /// - Returns: The session ID if one was saved, nil otherwise
-    public static func loadJakeSession() -> String? {
-        defaults.string(forKey: jakeSessionKey)
+    public static func loadJakeSession(projectPath: String) -> String? {
+        let key = jakeSessionKey(for: projectPath)
+        return defaults.string(forKey: key)
     }
 
-    /// Load Jake's saved project path
-    /// - Returns: The project path if one was saved, nil otherwise
-    public static func loadJakeProjectPath() -> String? {
-        defaults.string(forKey: jakeProjectPathKey)
-    }
-
-    /// Load Jake's session history from Claude's native storage
+    /// Load Jake's session history for a specific project from Claude's native storage
+    /// - Parameter projectPath: The project path to load history for
     /// - Returns: Array of stored messages, empty if no history found
-    public static func loadJakeSessionHistory() async -> [ClaudeStoredMessage] {
-        guard let sessionId = loadJakeSession(),
-              let projectPath = loadJakeProjectPath() else {
+    public static func loadJakeSessionHistory(projectPath: String) async -> [ClaudeStoredMessage] {
+        guard let sessionId = loadJakeSession(projectPath: projectPath) else {
             return []
         }
 
@@ -56,6 +48,25 @@ public enum SessionStore {
         } catch {
             return []
         }
+    }
+
+    /// Clear Jake's session for a specific project
+    /// - Parameter projectPath: The project path to clear
+    public static func clearJakeSession(projectPath: String) {
+        let key = jakeSessionKey(for: projectPath)
+        defaults.removeObject(forKey: key)
+    }
+
+    /// Get the UserDefaults key for Jake's session in a project
+    private static func jakeSessionKey(for projectPath: String) -> String {
+        "\(jakeSessionPrefix)\(encodePathForKey(projectPath))"
+    }
+
+    /// Encode a path for use in a UserDefaults key
+    /// Matches Claude CLI's encoding: replaces / and _ with -
+    private static func encodePathForKey(_ path: String) -> String {
+        path.replacingOccurrences(of: "/", with: "-")
+            .replacingOccurrences(of: "_", with: "-")
     }
 
     // MARK: - Mortal Agent Sessions
@@ -90,12 +101,15 @@ public enum SessionStore {
 
     // MARK: - Bulk Operations
 
-    /// Clear all saved sessions (Jake and all agents)
+    /// Clear all saved sessions (Jake across all projects, and all agents)
     public static func clearAllSessions() {
-        defaults.removeObject(forKey: jakeSessionKey)
-
-        // Clear all agent sessions by iterating keys
+        // Clear all Jake sessions (one per project)
         let allKeys = defaults.dictionaryRepresentation().keys
+        for key in allKeys where key.hasPrefix(jakeSessionPrefix) {
+            defaults.removeObject(forKey: key)
+        }
+
+        // Clear all agent sessions
         for key in allKeys where key.hasPrefix(agentSessionPrefix) {
             defaults.removeObject(forKey: key)
         }

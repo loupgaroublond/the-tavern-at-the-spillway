@@ -34,6 +34,7 @@ public final class ChatViewModel: ObservableObject {
 
     private let agent: AnyAgent
     private let isJake: Bool
+    private let jakeProjectPath: String?
 
     /// The agent's ID (for identification)
     public var agentId: UUID { agent.id }
@@ -76,6 +77,7 @@ public final class ChatViewModel: ObservableObject {
     public init(jake: Jake, loadHistory: Bool = true) {
         self.agent = AnyAgent(jake)
         self.isJake = true
+        self.jakeProjectPath = jake.projectPath
 
         if loadHistory {
             Task {
@@ -88,6 +90,7 @@ public final class ChatViewModel: ObservableObject {
     public init(agent: some Agent) {
         self.agent = AnyAgent(agent)
         self.isJake = agent is Jake
+        self.jakeProjectPath = (agent as? Jake)?.projectPath
     }
 
     // MARK: - Session History
@@ -97,10 +100,10 @@ public final class ChatViewModel: ObservableObject {
     public func loadSessionHistory() async {
         TavernLogger.chat.info("loadSessionHistory called, isJake=\(self.isJake)")
 
-        guard isJake else { return }
+        guard isJake, let projectPath = jakeProjectPath else { return }
 
-        let storedMessages = await SessionStore.loadJakeSessionHistory()
-        TavernLogger.chat.info("Got \(storedMessages.count) stored messages")
+        let storedMessages = await SessionStore.loadJakeSessionHistory(projectPath: projectPath)
+        TavernLogger.chat.info("Got \(storedMessages.count) stored messages for project: \(projectPath)")
 
         guard !storedMessages.isEmpty else { return }
 

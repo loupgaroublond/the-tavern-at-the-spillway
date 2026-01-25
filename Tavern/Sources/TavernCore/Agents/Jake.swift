@@ -81,11 +81,14 @@ public final class Jake: Agent, @unchecked Sendable {
         self.id = id
         self.claude = claude
 
-        // Restore session from previous run
-        if loadSavedSession, let savedSession = SessionStore.loadJakeSession() {
+        // Determine project path from Claude configuration
+        let currentProjectPath = claude.configuration.workingDirectory ?? FileManager.default.currentDirectoryPath
+        self._projectPath = currentProjectPath
+
+        // Restore session from previous run (per-project)
+        if loadSavedSession, let savedSession = SessionStore.loadJakeSession(projectPath: currentProjectPath) {
             self._sessionId = savedSession
-            self._projectPath = SessionStore.loadJakeProjectPath()
-            TavernLogger.agents.info("Jake restored session: \(savedSession), projectPath: \(self._projectPath ?? "nil")")
+            TavernLogger.agents.info("Jake restored session: \(savedSession) for project: \(currentProjectPath)")
         }
     }
 
@@ -147,15 +150,13 @@ public final class Jake: Agent, @unchecked Sendable {
         switch result {
         case .json(let resultMessage):
             // Primary path - JSON format gives us session ID and content blocks
-            // Get the project path from configuration (working directory where Claude runs)
-            let currentProjectPath = claude.configuration.workingDirectory ?? FileManager.default.currentDirectoryPath
+            let currentProjectPath = queue.sync { _projectPath } ?? FileManager.default.currentDirectoryPath
 
             queue.sync {
                 _sessionId = resultMessage.sessionId
-                _projectPath = currentProjectPath
             }
 
-            // Persist session for next app launch (with project path for history lookup)
+            // Persist session for next app launch (per-project)
             SessionStore.saveJakeSession(resultMessage.sessionId, projectPath: currentProjectPath)
 
             let response = resultMessage.result ?? ""
@@ -177,9 +178,14 @@ public final class Jake: Agent, @unchecked Sendable {
     /// Reset Jake's conversation (start fresh)
     public func resetConversation() {
         TavernLogger.agents.info("Jake conversation reset")
-        queue.sync { _sessionId = nil }
+        let currentProjectPath = queue.sync {
+            _sessionId = nil
+            return _projectPath
+        }
 
-        // Clear persisted session
-        SessionStore.saveJakeSession(nil)
+        // Clear persisted session for this project
+        if let projectPath = currentProjectPath {
+            SessionStore.clearJakeSession(projectPath: projectPath)
+        }
     }
 }
