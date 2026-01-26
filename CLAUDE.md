@@ -152,6 +152,21 @@ Design discussions use a formalized interview methodology:
 **Files:** `docs/seed-design/transcript_*.md`
 
 
+### System Design Reader
+
+The **reader document** synthesizes all transcripts into a standalone reference. Find the latest at `docs/seed-design/reader_*.md` (most recent by datetime suffix).
+
+**Proactive update:** When starting a session that touches seed design, compare:
+- Transcripts in `docs/seed-design/transcript_*.md`
+- Source files listed in the latest reader's "Source Files" section
+
+If there are 2+ transcript files not accounted for in the reader, say *"Mind if I run some updates?"* and invoke `Skill(skill: "reader")` to synthesize the new content.
+
+**Commands:**
+- `/conceive` — Continue the interview process (invoke via `Skill(skill: "conceive")`)
+- `/reader` — Generate updated reader document (invoke via `Skill(skill: "reader")`, outputs `reader_$DATETIME.md`)
+
+
 ## Design Principles
 
 1. **Informative Error Principle** — Errors must be specific and actionable
@@ -159,6 +174,54 @@ Design discussions use a formalized interview methodology:
 3. **Instrumentation Principle** — Logs must diagnose issues without screenshots
 4. **Autonomous Testing Principle** — Tests run without human interaction
 5. **App Restart Workflow** — After rebuilding, kill and relaunch the app for testing (use `redo run`)
+
+
+## Architecture Principles (ADR-001)
+
+These principles govern all architectural decisions. See `docs/architecture-proposals/ADR-001-shape-selection.md` for full rationale.
+
+**Layer Structure (top to bottom):**
+```
+UI Layer → ViewModel Layer → Application Layer → Agent Layer → Domain Layer → Infrastructure Layer
+```
+Each layer depends only on layers below it. Never reach up.
+
+**Core Patterns:**
+
+1. **Thin UI / Fat ViewModel** — SwiftUI views are dumb: layout, styling, gestures, bindings. All UX logic lives in ViewModels. Goal: 90%+ of UX workflows testable via ViewModel unit tests without touching SwiftUI.
+
+2. **Sidecar Pattern for I/O** — Main agent actors manage tree structure (fast, never block). Separate sidecar actors handle slow Anthropic I/O. Prevents thread pool starvation with many concurrent agents.
+
+3. **Shared Workspace** — Doc store is the blackboard. Agents communicate primarily through shared state in files. If it's not in a file, it doesn't exist.
+
+4. **Closed Plugin Set** — Plugins registered at startup, not dynamically loaded. All agent types known at compile time. Security, simplicity, type safety.
+
+5. **AsyncStream over Combine** — Long-term direction is language-level concurrency (async/await, actors, AsyncSequence). Combine bridges at ViewModel boundary only. `@Observable` is the signal.
+
+6. **Reactive UI with Batching** — UI subscribes to state changes via Combine. Use `.collect(.byTime(..., .milliseconds(16)))` to batch rapid updates at 60fps. Never block in sink handlers.
+
+**Concurrency Rules:**
+- Global semaphore for concurrent Anthropic calls (max ~10)
+- Tree management is synchronous within each actor
+- UI updates via Combine, never block main thread
+- `@MainActor` on all ViewModels
+- Never block the cooperative thread pool (`Thread.sleep`, `DispatchSemaphore.wait`, sync file I/O) — this is why sidecars exist
+
+**SwiftUI Observation Patterns** (see `docs/swiftui-persistence-complete-guide.md`):
+
+*Critical for DocStore: We're building a custom SwiftUI-compatible persistence layer. These patterns govern how views observe and react to persisted data.*
+
+1. **DynamicProperty = struct with @StateObject inside** — Classes as DynamicProperty produce inconsistent results. Pattern: struct wrapper + internal `@StateObject` for the observable core.
+
+2. **@Query is anti-MVVM** — Query-style property wrappers embed database access in views, conflicting with Fat ViewModel. Use Combine publishers or explicit fetch in ViewModels instead.
+
+3. **Edge sync: context is canonical** — Persistence context holds canonical data. View models are lightweight wrappers created on-demand, refreshed when context notifies changes.
+
+4. **Transaction-based observation for invariants** — When data has cross-field invariants (e.g., `completedCount` must match filtered array length), observe entire query results, not individual properties. Prevents momentary inconsistent states.
+
+5. **Content closures don't form dependencies** — `List(items) { item in Text(item.name) }` does NOT track `item`. SwiftUI only tracks properties read directly in `body`, not in content closures. Common "view not updating" bug source.
+
+6. **EquatableView fails with reference types** — Comparing `@ObservedObject` in `Equatable` compares an object to itself (always true). View freezes forever. Don't use EquatableView with reference-type state.
 
 
 ## Honor System
@@ -195,3 +258,8 @@ Derived data already builds to `~/.local/builds/tavern` to avoid code signing is
 Jake is the top-level coordinating agent — The Proprietor. Full character specification is in [`docs/jake-character.md`](docs/jake-character.md).
 
 **Quick summary:** Used car salesman energy, carnival barker enthusiasm, CAPITALS for EMPHASIS, reveals flaws AFTER the hype, sketchy-but-warm. The voice is the costume; the work is flawless.
+
+**Sample Jake-isms:**
+- "Time to EDUMACATE you — it's worse than an education!"
+- Oversells then immediately undercuts with the fine print
+- Names things with theatrical flourish
