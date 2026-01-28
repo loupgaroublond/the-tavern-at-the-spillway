@@ -10,14 +10,14 @@ struct AgentListItemTests {
         let item = AgentListItem(
             id: UUID(),
             name: "TestAgent",
-            assignmentSummary: "Do the thing",
+            chatDescription: "Working on something",
             state: .working,
             isJake: false
         )
 
         #expect(!item.name.isEmpty)
         #expect(item.state == .working)
-        #expect(item.assignmentSummary == "Do the thing")
+        #expect(item.chatDescription == "Working on something")
         #expect(!item.isJake)
     }
 
@@ -30,38 +30,37 @@ struct AgentListItemTests {
         #expect(item.isJake == true)
         #expect(item.name == "Jake")
         #expect(item.id == jake.id)
-        #expect(item.assignmentSummary == nil)
+        #expect(item.chatDescription == nil)
     }
 
-    @Test("Item from MortalAgent includes assignment")
-    func itemFromMortalAgentIncludesAssignment() {
+    @Test("Item from MortalAgent uses chatDescription")
+    func itemFromMortalAgentUsesChatDescription() {
         let mock = MockClaudeCode()
         let agent = MortalAgent(
             name: "Frodo",
             assignment: "Carry the ring",
+            chatDescription: "Ring duty",
             claude: mock
         )
         let item = AgentListItem.from(mortalAgent: agent)
 
         #expect(item.isJake == false)
         #expect(item.name == "Frodo")
-        #expect(item.assignmentSummary == "Carry the ring")
+        #expect(item.chatDescription == "Ring duty")
         #expect(item.id == agent.id)
     }
 
-    @Test("Long assignment is summarized")
-    func longAssignmentIsSummarized() {
+    @Test("Item from MortalAgent without description has nil chatDescription")
+    func itemFromMortalAgentWithoutDescription() {
         let mock = MockClaudeCode()
-        let longAssignment = "This is a very long assignment description that should be truncated to fit in the UI display area nicely"
         let agent = MortalAgent(
             name: "Sam",
-            assignment: longAssignment,
+            assignment: "Help Frodo",
             claude: mock
         )
         let item = AgentListItem.from(mortalAgent: agent)
 
-        #expect(item.assignmentSummary!.count <= 50)
-        #expect(item.assignmentSummary!.hasSuffix("..."))
+        #expect(item.chatDescription == nil)
     }
 
     @Test("State label returns human readable text")
@@ -223,16 +222,16 @@ struct AgentListViewModelTests {
         #expect(viewModel.selectedAgentId == jake.id)
     }
 
-    @Test("CacheAssignment makes assignment visible")
+    @Test("User-spawned agent has no assignment")
     @MainActor
-    func cacheAssignmentMakesAssignmentVisible() throws {
+    func userSpawnedAgentHasNoAssignment() throws {
         let (viewModel, _, spawner) = createTestSetup()
 
-        let agent = try spawner.spawn(assignment: "Parse files")
-        viewModel.cacheAssignment(agentId: agent.id, assignment: "Parse files")
+        let agent = try spawner.spawn()  // No assignment
         viewModel.refreshItems()
 
         let item = viewModel.items.first { $0.id == agent.id }
-        #expect(item?.assignmentSummary == "Parse files")
+        #expect(item != nil)
+        #expect(item?.chatDescription == nil)  // No description yet
     }
 }

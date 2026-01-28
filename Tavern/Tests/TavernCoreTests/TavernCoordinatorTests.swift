@@ -13,13 +13,14 @@ struct TavernCoordinatorTests {
         let jake = Jake(claude: mock, loadSavedSession: false)
         let registry = AgentRegistry()
         let nameGenerator = NameGenerator(theme: .lotr)
+        let claudeFactory: () -> ClaudeCode = { MockClaudeCode() }
         let spawner = AgentSpawner(
             registry: registry,
             nameGenerator: nameGenerator,
-            claudeFactory: { MockClaudeCode() }
+            claudeFactory: claudeFactory
         )
 
-        return TavernCoordinator(jake: jake, spawner: spawner)
+        return TavernCoordinator(jake: jake, spawner: spawner, claudeFactory: claudeFactory)
     }
 
     // MARK: - Initialization Tests
@@ -158,5 +159,71 @@ struct TavernCoordinatorTests {
 
         // Should still have agent1 selected
         #expect(coordinator.activeChatViewModel.agentId == agent1.id)
+    }
+
+    // MARK: - User Journey Tests (Testing Principle #3)
+    // These tests verify end-to-end paths users actually take
+
+    @Test("User-spawned agent gets ChatViewModel when selected")
+    @MainActor
+    func userSpawnedAgentGetsChatViewModel() throws {
+        let coordinator = createCoordinator()
+
+        // User spawns an agent (no assignment)
+        let agent = try coordinator.spawnAgent(selectAfterSpawn: true)
+
+        // ChatViewModel should be created for this agent
+        #expect(coordinator.activeChatViewModel.agentId == agent.id)
+        #expect(coordinator.activeChatViewModel.agentName == agent.name)
+        #expect(coordinator.activeChatViewModel.messages.isEmpty)
+    }
+
+    @Test("Mortal agent ChatViewModel can receive messages after selection")
+    @MainActor
+    func mortalAgentChatViewModelCanReceiveMessages() async throws {
+        let coordinator = createCoordinator()
+
+        // Spawn agent and select it
+        let agent = try coordinator.spawnAgent(selectAfterSpawn: true)
+
+        // Queue a response for this agent's mock
+        // Note: The agent has its own mock from claudeFactory
+        // This test verifies the ChatViewModel is properly connected
+
+        #expect(coordinator.activeChatViewModel.agentId == agent.id)
+
+        // Send a message
+        coordinator.activeChatViewModel.inputText = "Do the task"
+        await coordinator.activeChatViewModel.sendMessage()
+
+        // Should have user message (agent response depends on mock setup)
+        #expect(coordinator.activeChatViewModel.messages.count >= 1)
+        #expect(coordinator.activeChatViewModel.messages[0].role == .user)
+        #expect(coordinator.activeChatViewModel.messages[0].content == "Do the task")
+    }
+
+    @Test("Switching between Jake and mortal agent preserves both histories")
+    @MainActor
+    func switchingPreservesBothHistories() async throws {
+        let coordinator = createCoordinator()
+
+        // Send message to Jake
+        coordinator.activeChatViewModel.inputText = "Hello Jake"
+        await coordinator.activeChatViewModel.sendMessage()
+        let jakeMessageCount = coordinator.activeChatViewModel.messages.count
+
+        // Spawn agent and send message
+        let agent = try coordinator.spawnAgent(selectAfterSpawn: true)
+        coordinator.activeChatViewModel.inputText = "Hello Worker"
+        await coordinator.activeChatViewModel.sendMessage()
+        let agentMessageCount = coordinator.activeChatViewModel.messages.count
+
+        // Switch to Jake
+        coordinator.selectAgent(id: coordinator.jake.id)
+        #expect(coordinator.activeChatViewModel.messages.count == jakeMessageCount)
+
+        // Switch back to agent
+        coordinator.selectAgent(id: agent.id)
+        #expect(coordinator.activeChatViewModel.messages.count == agentMessageCount)
     }
 }

@@ -185,4 +185,85 @@ struct ChatViewModelTests {
         #expect(viewModel.messages[2].content == "Second")
         #expect(viewModel.messages[3].content == "Second response")
     }
+
+    // MARK: - Symmetry Tests (Testing Principle #4)
+    // These tests ensure parallel code paths behave consistently
+
+    @Test("ChatViewModel for mortal agent accepts projectPath parameter")
+    @MainActor
+    func mortalAgentViewModelAcceptsProjectPath() {
+        let mock = MockClaudeCode()
+        let agent = MortalAgent(
+            name: "Worker",
+            assignment: "Test task",
+            claude: mock,
+            loadSavedSession: false
+        )
+
+        // This should compile and work - the bug was that this parameter didn't exist
+        let viewModel = ChatViewModel(agent: agent, projectPath: "/test/path", loadHistory: false)
+
+        #expect(viewModel.agentId == agent.id)
+        #expect(viewModel.agentName == "Worker")
+    }
+
+    @Test("ChatViewModel for mortal agent without assignment works")
+    @MainActor
+    func mortalAgentViewModelWithoutAssignment() {
+        let mock = MockClaudeCode()
+        let agent = MortalAgent(
+            name: "User-Spawned",
+            claude: mock,
+            loadSavedSession: false
+        )
+
+        let viewModel = ChatViewModel(agent: agent, projectPath: "/test/path", loadHistory: false)
+
+        #expect(viewModel.agentId == agent.id)
+        #expect(viewModel.agentName == "User-Spawned")
+    }
+
+    @Test("Both initializers have loadHistory parameter - symmetry check")
+    @MainActor
+    func initializerSymmetry() {
+        // This test documents that both initializers support loadHistory
+        // If someone removes the parameter from one, this test fails to compile
+        let mock = MockClaudeCode()
+
+        let jake = Jake(claude: mock, loadSavedSession: false)
+        let mortal = MortalAgent(name: "Worker", claude: mock, loadSavedSession: false)
+
+        // Jake initializer with loadHistory
+        let jakeVM = ChatViewModel(jake: jake, loadHistory: false)
+
+        // Mortal agent initializer with loadHistory (this was the bug - parameter didn't exist)
+        let mortalVM = ChatViewModel(agent: mortal, projectPath: "/test", loadHistory: false)
+
+        #expect(jakeVM.messages.isEmpty)
+        #expect(mortalVM.messages.isEmpty)
+    }
+
+    @Test("Mortal agent ChatViewModel can send messages")
+    @MainActor
+    func mortalAgentCanSendMessages() async {
+        let mock = MockClaudeCode()
+        mock.queueJSONResponse(result: "Task received", sessionId: "mortal-session-1")
+
+        let agent = MortalAgent(
+            name: "Worker",
+            assignment: "Do the thing",
+            claude: mock,
+            loadSavedSession: false
+        )
+
+        let viewModel = ChatViewModel(agent: agent, projectPath: "/test", loadHistory: false)
+
+        viewModel.inputText = "Start working"
+        await viewModel.sendMessage()
+
+        #expect(viewModel.messages.count == 2)
+        #expect(viewModel.messages[0].role == .user)
+        #expect(viewModel.messages[1].role == .agent)
+        #expect(viewModel.messages[1].content == "Task received")
+    }
 }

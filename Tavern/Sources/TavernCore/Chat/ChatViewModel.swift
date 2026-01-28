@@ -34,7 +34,7 @@ public final class ChatViewModel: ObservableObject {
 
     private let agent: AnyAgent
     private let isJake: Bool
-    private let jakeProjectPath: String?
+    private let projectPath: String?
 
     /// The agent's ID (for identification)
     public var agentId: UUID { agent.id }
@@ -77,7 +77,7 @@ public final class ChatViewModel: ObservableObject {
     public init(jake: Jake, loadHistory: Bool = true) {
         self.agent = AnyAgent(jake)
         self.isJake = true
-        self.jakeProjectPath = jake.projectPath
+        self.projectPath = jake.projectPath
 
         if loadHistory {
             Task {
@@ -87,23 +87,41 @@ public final class ChatViewModel: ObservableObject {
     }
 
     /// Create a chat view model for any agent
-    public init(agent: some Agent) {
+    /// - Parameters:
+    ///   - agent: The agent to chat with
+    ///   - projectPath: The project path (needed for session history restoration)
+    ///   - loadHistory: Whether to load session history from disk (default true)
+    public init(agent: some Agent, projectPath: String? = nil, loadHistory: Bool = true) {
         self.agent = AnyAgent(agent)
         self.isJake = agent is Jake
-        self.jakeProjectPath = (agent as? Jake)?.projectPath
+        self.projectPath = (agent as? Jake)?.projectPath ?? projectPath
+
+        if loadHistory {
+            Task {
+                await self.loadSessionHistory()
+            }
+        }
     }
 
     // MARK: - Session History
 
     /// Load session history from Claude's native storage
-    /// Only works for Jake (uses SessionStore)
+    /// Works for both Jake and mortal agents
     public func loadSessionHistory() async {
-        TavernLogger.chat.info("loadSessionHistory called, isJake=\(self.isJake)")
+        TavernLogger.chat.info("loadSessionHistory called, isJake=\(self.isJake), agentId=\(self.agentId)")
 
-        guard isJake, let projectPath = jakeProjectPath else { return }
+        guard let projectPath = projectPath else {
+            TavernLogger.chat.info("loadSessionHistory: no project path, skipping")
+            return
+        }
 
-        let storedMessages = await SessionStore.loadJakeSessionHistory(projectPath: projectPath)
-        TavernLogger.chat.info("Got \(storedMessages.count) stored messages for project: \(projectPath)")
+        let storedMessages: [ClaudeStoredMessage]
+        if isJake {
+            storedMessages = await SessionStore.loadJakeSessionHistory(projectPath: projectPath)
+        } else {
+            storedMessages = await SessionStore.loadAgentSessionHistory(agentId: agentId, projectPath: projectPath)
+        }
+        TavernLogger.chat.info("Got \(storedMessages.count) stored messages for agent \(self.agentName)")
 
         guard !storedMessages.isEmpty else { return }
 

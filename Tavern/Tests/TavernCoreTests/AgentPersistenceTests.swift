@@ -100,7 +100,7 @@ struct AgentNodeTests {
 
         #expect(node.name == "Parsed Agent")
         #expect(node.state == "waiting")
-        #expect(node.assignment.contains("Parse some data"))
+        #expect(node.assignment?.contains("Parse some data") == true)
         #expect(node.commitments.count == 2)
         #expect(node.commitments[0].status == "passed")
         #expect(node.commitments[1].status == "failed")

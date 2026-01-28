@@ -20,7 +20,11 @@ public final class MortalAgent: Agent, @unchecked Sendable {
     // MARK: - Mortal Agent Properties
 
     /// The assignment given to this agent (their purpose)
-    public let assignment: String
+    /// nil for user-spawned agents that wait for user's first message
+    public let assignment: String?
+
+    /// User-editable description shown in the sidebar
+    public var chatDescription: String?
 
     /// Commitments this agent must verify before completing
     public let commitments: CommitmentList
@@ -45,33 +49,55 @@ public final class MortalAgent: Agent, @unchecked Sendable {
 
     /// Generate the system prompt for this agent
     private var systemPrompt: String {
-        """
-        You are a worker agent in The Tavern at the Spillway.
+        if let assignment = assignment {
+            // Jake-spawned: has an assignment, start working immediately
+            return """
+            You are a worker agent in The Tavern at the Spillway.
 
-        Your name is \(name).
+            Your name is \(name).
 
-        Your assignment: \(assignment)
+            Your assignment: \(assignment)
 
-        You are part of Jake's "Slop Squad" - worker agents who get things done.
-        Focus on your assignment. Be efficient and thorough.
+            You are part of Jake's "Slop Squad" - worker agents who get things done.
+            Focus on your assignment. Be efficient and thorough.
 
-        When you complete your assignment, say "DONE" clearly.
-        If you need input or clarification, ask for it.
-        If you encounter an error you can't resolve, report it clearly.
+            When you complete your assignment, say "DONE" clearly.
+            If you need input or clarification, ask for it.
+            If you encounter an error you can't resolve, report it clearly.
 
-        You speak professionally but with personality. You're not Jake
-        (nobody is quite like Jake), but you work for him and share his
-        commitment to quality execution beneath a quirky exterior.
-        """
+            You speak professionally but with personality. You're not Jake
+            (nobody is quite like Jake), but you work for him and share his
+            commitment to quality execution beneath a quirky exterior.
+            """
+        } else {
+            // User-spawned: no assignment, wait for user's first message
+            return """
+            You are a worker agent in The Tavern at the Spillway.
+
+            Your name is \(name).
+
+            You are part of Jake's "Slop Squad" - worker agents who get things done.
+            Wait for the user to give you a task. Once they do, be efficient and thorough.
+
+            When you complete a task, say "DONE" clearly.
+            If you need input or clarification, ask for it.
+            If you encounter an error you can't resolve, report it clearly.
+
+            You speak professionally but with personality. You're not Jake
+            (nobody is quite like Jake), but you work for him and share his
+            commitment to quality execution beneath a quirky exterior.
+            """
+        }
     }
 
     // MARK: - Initialization
 
-    /// Create a mortal agent with a specific assignment
+    /// Create a mortal agent, optionally with an assignment
     /// - Parameters:
     ///   - id: Unique identifier (auto-generated if not provided)
     ///   - name: Display name for this agent
-    ///   - assignment: The task this agent is responsible for
+    ///   - assignment: The task this agent is responsible for (nil for user-spawned agents)
+    ///   - chatDescription: User-editable description shown in sidebar
     ///   - claude: The ClaudeCode SDK instance to use
     ///   - commitments: List of commitments to verify before completion (defaults to empty)
     ///   - verifier: Verifier for checking commitments (defaults to shell-based)
@@ -79,7 +105,8 @@ public final class MortalAgent: Agent, @unchecked Sendable {
     public init(
         id: UUID = UUID(),
         name: String,
-        assignment: String,
+        assignment: String? = nil,
+        chatDescription: String? = nil,
         claude: ClaudeCode,
         commitments: CommitmentList = CommitmentList(),
         verifier: CommitmentVerifier = CommitmentVerifier(),
@@ -88,6 +115,7 @@ public final class MortalAgent: Agent, @unchecked Sendable {
         self.id = id
         self.name = name
         self.assignment = assignment
+        self.chatDescription = chatDescription
         self.claude = claude
         self.commitments = commitments
         self.verifier = verifier
@@ -179,6 +207,14 @@ public final class MortalAgent: Agent, @unchecked Sendable {
 
         // Clear persisted session
         SessionStore.clearAgentSession(agentId: id)
+    }
+
+    /// Update the chat description and persist it
+    /// - Parameter description: The new description (nil to clear)
+    public func updateChatDescription(_ description: String?) {
+        self.chatDescription = description
+        SessionStore.updateAgent(id: id, chatDescription: description)
+        TavernLogger.agents.debug("[\(self.name)] chat description updated: \(description ?? "nil")")
     }
 
     // MARK: - State Management

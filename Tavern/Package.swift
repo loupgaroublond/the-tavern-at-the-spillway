@@ -5,7 +5,7 @@ import PackageDescription
 let package = Package(
     name: "Tavern",
     platforms: [
-        .macOS(.v13)
+        .macOS("26.0")
     ],
     products: [
         .executable(name: "Tavern", targets: ["Tavern"]),

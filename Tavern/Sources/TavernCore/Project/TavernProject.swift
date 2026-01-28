@@ -56,27 +56,29 @@ public final class TavernProject: ObservableObject, Identifiable {
 
             let registry = AgentRegistry()
             let nameGenerator = NameGenerator(theme: .lotr)
+
+            // Factory for creating ClaudeCode instances for spawned/restored agents
+            let claudeFactory: () -> ClaudeCode = { [rootURL] in
+                do {
+                    return try Self.createClaudeCode(for: rootURL)
+                } catch {
+                    TavernLogger.coordination.error("Failed to create ClaudeCode for agent: \(error.localizedDescription)")
+                    // Fall back to mock if real client fails
+                    let mock = MockClaudeCode()
+                    mock.errorToThrow = error
+                    return mock
+                }
+            }
+
             let spawner = AgentSpawner(
                 registry: registry,
                 nameGenerator: nameGenerator,
-                claudeFactory: { [rootURL] in
-                    // Each spawned agent gets its own ClaudeCode instance
-                    // scoped to the same project
-                    do {
-                        return try Self.createClaudeCode(for: rootURL)
-                    } catch {
-                        TavernLogger.coordination.error("Failed to create ClaudeCode for spawned agent: \(error.localizedDescription)")
-                        // Fall back to mock if real client fails
-                        let mock = MockClaudeCode()
-                        mock.errorToThrow = error
-                        return mock
-                    }
-                }
+                claudeFactory: claudeFactory
             )
             TavernLogger.coordination.debug("[\(self.name)] AgentSpawner created")
 
             TavernLogger.coordination.debug("[\(self.name)] Creating TavernCoordinator...")
-            self.coordinator = TavernCoordinator(jake: jake, spawner: spawner)
+            self.coordinator = TavernCoordinator(jake: jake, spawner: spawner, claudeFactory: claudeFactory)
             self.isReady = true
 
             TavernLogger.coordination.info("[\(self.name)] Project initialized successfully")

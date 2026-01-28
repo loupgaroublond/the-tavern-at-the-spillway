@@ -10,8 +10,8 @@ public struct AgentNode: Codable, Equatable, Sendable {
     /// Display name
     public let name: String
 
-    /// The agent's assignment (task description)
-    public let assignment: String
+    /// The agent's assignment (task description), nil for user-spawned agents
+    public let assignment: String?
 
     /// Current state
     public let state: String
@@ -30,7 +30,7 @@ public struct AgentNode: Codable, Equatable, Sendable {
     public init(
         id: UUID,
         name: String,
-        assignment: String,
+        assignment: String?,
         state: String,
         commitments: [CommitmentNode] = [],
         createdAt: Date = Date(),
@@ -70,7 +70,10 @@ public struct AgentNode: Codable, Equatable, Sendable {
         ]
 
         // Build content with assignment and commitments
-        var content = "## Assignment\n\n\(assignment)\n"
+        var content = ""
+        if let assignment = assignment {
+            content = "## Assignment\n\n\(assignment)\n"
+        }
 
         if !commitments.isEmpty {
             content += "\n## Commitments\n\n"
@@ -123,7 +126,8 @@ public struct AgentNode: Codable, Equatable, Sendable {
             .flatMap { iso.date(from: $0) } ?? Date()
 
         // Extract assignment from content (everything under "## Assignment")
-        let assignment = extractSection(from: document.content, header: "## Assignment")
+        let assignmentText = extractSection(from: document.content, header: "## Assignment")
+        let assignment: String? = assignmentText.isEmpty ? nil : assignmentText
 
         // Parse commitments from content
         let commitments = parseCommitments(from: document.content)

@@ -4,103 +4,95 @@ import TavernCore
 /// A list view showing all agents in the Tavern
 struct AgentListView: View {
     @ObservedObject var viewModel: AgentListViewModel
-    var onSpawnAgent: ((String, String?) -> Void)?
+    var onSpawnAgent: (() -> Void)?
+    var onCloseAgent: ((UUID) -> Void)?
+    var onUpdateDescription: ((UUID, String?) -> Void)?
+    var onSelectAgent: ((UUID) -> Void)?
 
-    @State private var showingSpawnSheet = false
+    @State private var editingDescriptionForAgentId: UUID?
+    @State private var editedDescription: String = ""
 
     var body: some View {
         List(selection: $viewModel.selectedAgentId) {
             ForEach(viewModel.items) { item in
                 AgentListRow(item: item, isSelected: viewModel.isSelected(id: item.id))
                     .tag(item.id)
+                    .onTapGesture {
+                        onSelectAgent?(item.id)
+                    }
+                    .contextMenu {
+                        if !item.isJake {
+                            Button("Edit Description...") {
+                                editedDescription = item.chatDescription ?? ""
+                                editingDescriptionForAgentId = item.id
+                            }
+
+                            Divider()
+
+                            Button("Close", role: .destructive) {
+                                onCloseAgent?(item.id)
+                            }
+                        }
+                    }
             }
         }
         .listStyle(.sidebar)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                Button(action: { showingSpawnSheet = true }) {
+                Button(action: { onSpawnAgent?() }) {
                     Image(systemName: "plus")
                 }
-                .help("Spawn a new agent")
+                .help("New chat")
                 .disabled(onSpawnAgent == nil)
             }
         }
-        .sheet(isPresented: $showingSpawnSheet) {
-            SpawnAgentSheet(
-                onSpawn: { assignment, customName in
-                    onSpawnAgent?(assignment, customName)
+        .sheet(item: $editingDescriptionForAgentId) { agentId in
+            EditDescriptionSheet(
+                description: $editedDescription,
+                onSave: {
+                    let desc = editedDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+                    onUpdateDescription?(agentId, desc.isEmpty ? nil : desc)
+                    editingDescriptionForAgentId = nil
                 },
                 onCancel: {
-                    showingSpawnSheet = false
+                    editingDescriptionForAgentId = nil
                 }
             )
         }
     }
 }
 
-// MARK: - Spawn Agent Sheet
+// MARK: - Edit Description Sheet
 
-struct SpawnAgentSheet: View {
-    @State private var assignment: String = ""
-    @State private var customName: String = ""
-    @State private var useCustomName: Bool = false
-
-    var onSpawn: (String, String?) -> Void
+struct EditDescriptionSheet: View {
+    @Binding var description: String
+    var onSave: () -> Void
     var onCancel: () -> Void
-
-    private var canSpawn: Bool {
-        !assignment.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    }
 
     var body: some View {
         VStack(spacing: 0) {
             // Header
             HStack {
-                Text("Spawn a New Agent")
+                Text("Edit Description")
                     .font(.headline)
                 Spacer()
-                Button("Cancel") {
-                    onCancel()
-                }
-                .buttonStyle(.plain)
-                .foregroundColor(.secondary)
             }
             .padding()
 
             Divider()
 
             // Form
-            VStack(alignment: .leading, spacing: 16) {
-                // Assignment field (required)
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Assignment")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
+            VStack(alignment: .leading, spacing: 8) {
+                TextField("Chat description (optional)", text: $description, axis: .vertical)
+                    .textFieldStyle(.plain)
+                    .padding(12)
+                    .background(Color(NSColor.textBackgroundColor))
+                    .cornerRadius(8)
+                    .lineLimit(2...4)
 
-                    TextField("What should this agent work on?", text: $assignment, axis: .vertical)
-                        .textFieldStyle(.plain)
-                        .padding(12)
-                        .background(Color(NSColor.textBackgroundColor))
-                        .cornerRadius(8)
-                        .lineLimit(3...6)
-                }
-
-                // Custom name (optional)
-                VStack(alignment: .leading, spacing: 8) {
-                    Toggle(isOn: $useCustomName) {
-                        Text("Custom name")
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                    }
-
-                    if useCustomName {
-                        TextField("Agent name", text: $customName)
-                            .textFieldStyle(.plain)
-                            .padding(12)
-                            .background(Color(NSColor.textBackgroundColor))
-                            .cornerRadius(8)
-                    }
-                }
+                Text("Shown below the agent name in the sidebar")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
 
                 Spacer()
             }
@@ -117,19 +109,22 @@ struct SpawnAgentSheet: View {
                 }
                 .keyboardShortcut(.cancelAction)
 
-                Button("Spawn") {
-                    let name = useCustomName && !customName.isEmpty ? customName : nil
-                    onSpawn(assignment.trimmingCharacters(in: .whitespacesAndNewlines), name)
-                    onCancel() // Close sheet after spawning
+                Button("Save") {
+                    onSave()
                 }
                 .buttonStyle(.borderedProminent)
-                .disabled(!canSpawn)
                 .keyboardShortcut(.defaultAction)
             }
             .padding()
         }
-        .frame(width: 400, height: 350)
+        .frame(width: 350, height: 220)
     }
+}
+
+// MARK: - UUID Identifiable Extension
+
+extension UUID: @retroactive Identifiable {
+    public var id: UUID { self }
 }
 
 // MARK: - Agent Row
@@ -157,8 +152,9 @@ private struct AgentListRow: View {
                     }
                 }
 
-                if let assignment = item.assignmentSummary {
-                    Text(assignment)
+                // Show description or "New chat" placeholder for mortal agents
+                if !item.isJake {
+                    Text(item.chatDescription ?? "New chat")
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .lineLimit(1)
@@ -232,31 +228,27 @@ private struct AttentionBadge: View {
         claudeFactory: { MockClaudeCode() }
     )
 
-    // Spawn a couple of agents
-    _ = try? spawner.spawn(assignment: "Parse the JSON configuration files")
-    _ = try? spawner.spawn(assignment: "Run the test suite and report failures")
+    // Spawn a couple of agents (no assignment - user-spawned style)
+    _ = try? spawner.spawn()
+    _ = try? spawner.spawn()
 
     let viewModel = AgentListViewModel(jake: jake, spawner: spawner)
-
-    // Cache the assignments so they show in preview
-    for agent in spawner.activeAgents {
-        viewModel.cacheAssignment(agentId: agent.id, assignment: "Sample assignment")
-    }
     viewModel.refreshItems()
 
-    return AgentListView(viewModel: viewModel) { assignment, name in
-        print("Spawn agent: \(assignment), name: \(name ?? "auto")")
-    }
+    return AgentListView(
+        viewModel: viewModel,
+        onSpawnAgent: { print("Spawn agent") },
+        onCloseAgent: { id in print("Close agent: \(id)") },
+        onUpdateDescription: { id, desc in print("Update \(id): \(desc ?? "nil")") },
+        onSelectAgent: { id in print("Select agent: \(id)") }
+    )
     .frame(width: 300, height: 400)
 }
 
-#Preview("Spawn Sheet") {
-    SpawnAgentSheet(
-        onSpawn: { assignment, name in
-            print("Spawn: \(assignment), name: \(name ?? "auto")")
-        },
-        onCancel: {
-            print("Cancel")
-        }
+#Preview("Edit Description Sheet") {
+    EditDescriptionSheet(
+        description: .constant("Working on authentication"),
+        onSave: { print("Save") },
+        onCancel: { print("Cancel") }
     )
 }

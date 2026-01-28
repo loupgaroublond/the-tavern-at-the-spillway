@@ -44,12 +44,14 @@ public final class AgentListViewModel: ObservableObject {
         // Jake is always first
         newItems.append(AgentListItem.from(jake: jake))
 
-        // Add all active mortal agents (spawner has full agent info)
+        // Add all active mortal agents
         for anyAgent in spawner.activeAgents {
+            // Get chatDescription from persisted storage
+            let chatDescription = SessionStore.getAgent(id: anyAgent.id)?.chatDescription
             newItems.append(AgentListItem(
                 id: anyAgent.id,
                 name: anyAgent.name,
-                assignmentSummary: getAssignmentSummary(for: anyAgent.id),
+                chatDescription: chatDescription,
                 state: anyAgent.state,
                 isJake: false
             ))
@@ -76,28 +78,6 @@ public final class AgentListViewModel: ObservableObject {
     /// - Returns: true if this agent is selected
     public func isSelected(id: UUID) -> Bool {
         selectedAgentId == id
-    }
-
-    // MARK: - Private Helpers
-
-    /// Map of agent IDs to assignment summaries
-    /// This is a workaround until we have proper type info from registry
-    private var assignmentCache: [UUID: String] = [:]
-
-    /// Register an assignment summary for an agent
-    /// This should be called when agents are spawned
-    public func cacheAssignment(agentId: UUID, assignment: String) {
-        let maxLength = 50
-        if assignment.count <= maxLength {
-            assignmentCache[agentId] = assignment
-        } else {
-            assignmentCache[agentId] = String(assignment.prefix(maxLength - 3)) + "..."
-        }
-    }
-
-    /// Get cached assignment summary for an agent
-    private func getAssignmentSummary(for id: UUID) -> String? {
-        assignmentCache[id]
     }
 }
 

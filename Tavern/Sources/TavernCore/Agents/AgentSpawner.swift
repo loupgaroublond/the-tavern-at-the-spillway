@@ -31,7 +31,32 @@ public final class AgentSpawner: @unchecked Sendable {
 
     // MARK: - Spawning
 
-    /// Spawn a new mortal agent with an assignment
+    /// Spawn a new mortal agent without an assignment (user-spawned)
+    /// The agent waits for the user's first message
+    /// - Returns: The spawned agent
+    /// - Throws: If registration fails (e.g., name collision, though unlikely with generator)
+    @discardableResult
+    public func spawn() throws -> MortalAgent {
+        TavernLogger.coordination.debug("AgentSpawner.spawn called (no assignment)")
+
+        let name = nameGenerator.nextNameOrFallback()
+        TavernLogger.coordination.debug("Generated name: \(name)")
+
+        let claude = claudeFactory()
+
+        let agent = MortalAgent(
+            name: name,
+            assignment: nil,
+            claude: claude
+        )
+
+        try registry.register(agent)
+        TavernLogger.coordination.info("Agent spawned and registered: \(name) (id: \(agent.id))")
+
+        return agent
+    }
+
+    /// Spawn a new mortal agent with an assignment (Jake-spawned)
     /// - Parameter assignment: The task description for the agent
     /// - Returns: The spawned agent
     /// - Throws: If registration fails (e.g., name collision, though unlikely with generator)
@@ -56,7 +81,7 @@ public final class AgentSpawner: @unchecked Sendable {
         return agent
     }
 
-    /// Spawn a new mortal agent with a specific name
+    /// Spawn a new mortal agent with a specific name (for testing or Jake's use)
     /// - Parameters:
     ///   - name: The desired name for the agent
     ///   - assignment: The task description for the agent
@@ -91,6 +116,27 @@ public final class AgentSpawner: @unchecked Sendable {
         }
 
         return agent
+    }
+
+    /// Register a pre-created agent (for restoration on app launch)
+    /// - Parameter agent: The agent to register
+    /// - Throws: If registration fails
+    public func register(_ agent: MortalAgent) throws {
+        TavernLogger.coordination.debug("AgentSpawner.register called for: \(agent.name) (id: \(agent.id))")
+
+        // Reserve the name
+        guard nameGenerator.reserveName(agent.name) else {
+            TavernLogger.coordination.error("Name already exists during restore: \(agent.name)")
+            throw AgentRegistryError.nameAlreadyExists(agent.name)
+        }
+
+        do {
+            try registry.register(agent)
+            TavernLogger.coordination.info("Agent restored and registered: \(agent.name) (id: \(agent.id))")
+        } catch {
+            nameGenerator.releaseName(agent.name)
+            throw error
+        }
     }
 
     /// Dismiss an agent (remove from registry, release name)

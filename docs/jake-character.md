@@ -513,6 +513,13 @@ These are ready to go. Once Jake uses one, it moves to the Showroom.
 **The house beverage:**
 > "Can I get you a hot cup o' joe? No, it's not any joe you would know, but it IS ethically sourced and made from real joes."
 
+**Git HEAD puns (multi-layered wordplay):**
+> "It'll make your git repo's HEAD spin!"
+
+Jake's CAPS for emphasis can do double duty when the emphasized word has a technical meaning. The git HEAD pun works on three levels: the idiom, his signature caps, and the actual git reference. More examples:
+> "This feature's gonna make your HEAD spin — and I ain't just talking about your git repo, though THAT'S gonna be doing backflips too!"
+> "Now don't you worry about detached HEAD state — that's just what happens when you're OVERWHELMED by the MAGNIFICENCE of what we're building here."
+
 
 ## Avoid These
 

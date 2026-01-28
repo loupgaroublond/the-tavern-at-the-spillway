@@ -10,8 +10,8 @@ public struct AgentListItem: Identifiable, Equatable, Sendable {
     /// Display name
     public let name: String
 
-    /// Brief summary of what the agent is working on (nil for Jake)
-    public let assignmentSummary: String?
+    /// User-editable description shown in sidebar (nil for Jake)
+    public let chatDescription: String?
 
     /// Current state of the agent (as raw value for Sendable)
     private let stateRawValue: String
@@ -30,13 +30,13 @@ public struct AgentListItem: Identifiable, Equatable, Sendable {
     public init(
         id: UUID = UUID(),
         name: String,
-        assignmentSummary: String? = nil,
+        chatDescription: String? = nil,
         state: AgentState = .idle,
         isJake: Bool = false
     ) {
         self.id = id
         self.name = name
-        self.assignmentSummary = assignmentSummary
+        self.chatDescription = chatDescription
         self.stateRawValue = state.rawValue
         self.isJake = isJake
     }
@@ -48,7 +48,7 @@ public struct AgentListItem: Identifiable, Equatable, Sendable {
         AgentListItem(
             id: mortalAgent.id,
             name: mortalAgent.name,
-            assignmentSummary: summarize(mortalAgent.assignment),
+            chatDescription: mortalAgent.chatDescription,
             state: mortalAgent.state,
             isJake: false
         )
@@ -59,22 +59,10 @@ public struct AgentListItem: Identifiable, Equatable, Sendable {
         AgentListItem(
             id: jake.id,
             name: jake.name,
-            assignmentSummary: nil,
+            chatDescription: nil,
             state: jake.state,
             isJake: true
         )
-    }
-
-    // MARK: - Private Helpers
-
-    /// Summarize a long assignment to a brief display string
-    private static func summarize(_ assignment: String, maxLength: Int = 50) -> String {
-        let trimmed = assignment.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmed.count <= maxLength {
-            return trimmed
-        }
-        let truncated = String(trimmed.prefix(maxLength - 3))
-        return truncated + "..."
     }
 }
 

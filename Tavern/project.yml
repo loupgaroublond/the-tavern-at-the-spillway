@@ -3,7 +3,7 @@ name: Tavern
 options:
   bundleIdPrefix: com.tavern
   deploymentTarget:
-    macOS: "13.0"
+    macOS: "26.0"
   xcodeVersion: "26.2"
   createIntermediateGroups: true
   defaultConfig: Debug

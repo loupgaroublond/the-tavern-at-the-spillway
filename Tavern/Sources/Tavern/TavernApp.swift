@@ -493,14 +493,36 @@ struct ProjectContentView: View {
     @ObservedObject var coordinator: TavernCoordinator
 
     var body: some View {
+        let coord = coordinator  // Capture for closures
         NavigationSplitView {
             // Sidebar with agent list
             VStack(spacing: 0) {
                 TavernHeader(projectName: project.name, projectURL: project.rootURL)
                 Divider()
-                AgentListView(viewModel: coordinator.agentListViewModel) { assignment, customName in
-                    spawnAgent(assignment: assignment, customName: customName)
-                }
+                AgentListView(
+                    viewModel: coordinator.agentListViewModel,
+                    onSpawnAgent: {
+                        do {
+                            try coord.spawnAgent()
+                        } catch {
+                            print("Failed to spawn agent: \(error)")
+                        }
+                    },
+                    onCloseAgent: { id in
+                        do {
+                            try coord.closeAgent(id: id)
+                        } catch {
+                            print("Failed to close agent: \(error)")
+                        }
+                    },
+                    onUpdateDescription: { id, description in
+                        SessionStore.updateAgent(id: id, chatDescription: description)
+                        coord.agentListViewModel.refreshItems()
+                    },
+                    onSelectAgent: { id in
+                        coord.selectAgent(id: id)
+                    }
+                )
             }
             .frame(minWidth: 200)
         } detail: {
@@ -508,19 +530,6 @@ struct ProjectContentView: View {
             ChatView(viewModel: coordinator.activeChatViewModel)
         }
         .frame(minWidth: 800, minHeight: 500)
-    }
-
-    private func spawnAgent(assignment: String, customName: String?) {
-        do {
-            if let name = customName {
-                try coordinator.spawner.spawn(name: name, assignment: assignment)
-            } else {
-                try coordinator.spawnAgent(assignment: assignment)
-            }
-        } catch {
-            // TODO: Show error to user
-            print("Failed to spawn agent: \(error)")
-        }
     }
 }
 
@@ -616,13 +625,14 @@ private struct TavernHeader: View {
     let jake = Jake(claude: mock)
     let registry = AgentRegistry()
     let nameGenerator = NameGenerator(theme: .lotr)
+    let claudeFactory: () -> ClaudeCode = { MockClaudeCode() }
     let spawner = AgentSpawner(
         registry: registry,
         nameGenerator: nameGenerator,
-        claudeFactory: { MockClaudeCode() }
+        claudeFactory: claudeFactory
     )
 
-    let coordinator = TavernCoordinator(jake: jake, spawner: spawner)
+    let coordinator = TavernCoordinator(jake: jake, spawner: spawner, claudeFactory: claudeFactory)
     let project = TavernProject(rootURL: URL(fileURLWithPath: "/tmp/test-project"))
 
     return ProjectContentView(project: project, coordinator: coordinator)

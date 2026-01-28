@@ -10,6 +10,24 @@ public enum SessionStore {
     nonisolated(unsafe) private static let defaults = UserDefaults.standard
     private static let jakeSessionPrefix = "com.tavern.jake.session."
     private static let agentSessionPrefix = "com.tavern.agent.session."
+    private static let agentListKey = "com.tavern.agents"
+
+    // MARK: - Persisted Agent Type
+
+    /// Data structure for persisting agent info
+    public struct PersistedAgent: Codable, Equatable {
+        public let id: UUID
+        public let name: String
+        public var sessionId: String?
+        public var chatDescription: String?
+
+        public init(id: UUID, name: String, sessionId: String? = nil, chatDescription: String? = nil) {
+            self.id = id
+            self.name = name
+            self.sessionId = sessionId
+            self.chatDescription = chatDescription
+        }
+    }
 
     // MARK: - Jake's Session (Per-Project)
 
@@ -99,6 +117,24 @@ public enum SessionStore {
         defaults.removeObject(forKey: key)
     }
 
+    /// Load a mortal agent's session history from Claude's native storage
+    /// - Parameters:
+    ///   - agentId: The agent's unique ID
+    ///   - projectPath: The project path (needed to locate Claude's session files)
+    /// - Returns: Array of stored messages, empty if no history found
+    public static func loadAgentSessionHistory(agentId: UUID, projectPath: String) async -> [ClaudeStoredMessage] {
+        guard let sessionId = loadAgentSession(agentId: agentId) else {
+            return []
+        }
+
+        let storage = ClaudeNativeSessionStorage()
+        do {
+            return try await storage.getMessages(sessionId: sessionId, projectPath: projectPath)
+        } catch {
+            return []
+        }
+    }
+
     // MARK: - Bulk Operations
 
     /// Clear all saved sessions (Jake across all projects, and all agents)
@@ -119,5 +155,70 @@ public enum SessionStore {
 
     private static func agentSessionKey(for agentId: UUID) -> String {
         "\(agentSessionPrefix)\(agentId.uuidString)"
+    }
+
+    // MARK: - Agent List Persistence
+
+    /// Save the full list of persisted agents
+    public static func saveAgentList(_ agents: [PersistedAgent]) {
+        do {
+            let data = try JSONEncoder().encode(agents)
+            defaults.set(data, forKey: agentListKey)
+        } catch {
+            // Silent failure - next app launch won't have agents, but no crash
+        }
+    }
+
+    /// Load the list of persisted agents
+    /// - Returns: Array of persisted agents, empty if none saved
+    public static func loadAgentList() -> [PersistedAgent] {
+        guard let data = defaults.data(forKey: agentListKey) else {
+            return []
+        }
+        do {
+            return try JSONDecoder().decode([PersistedAgent].self, from: data)
+        } catch {
+            return []
+        }
+    }
+
+    /// Add an agent to the persisted list
+    public static func addAgent(_ agent: PersistedAgent) {
+        var agents = loadAgentList()
+        // Replace if already exists (same ID), otherwise append
+        if let index = agents.firstIndex(where: { $0.id == agent.id }) {
+            agents[index] = agent
+        } else {
+            agents.append(agent)
+        }
+        saveAgentList(agents)
+    }
+
+    /// Update an existing agent in the persisted list
+    public static func updateAgent(id: UUID, sessionId: String? = nil, chatDescription: String? = nil) {
+        var agents = loadAgentList()
+        guard let index = agents.firstIndex(where: { $0.id == id }) else { return }
+
+        if let sessionId = sessionId {
+            agents[index].sessionId = sessionId
+        }
+        if let chatDescription = chatDescription {
+            agents[index].chatDescription = chatDescription
+        }
+        saveAgentList(agents)
+    }
+
+    /// Remove an agent from the persisted list
+    public static func removeAgent(id: UUID) {
+        var agents = loadAgentList()
+        agents.removeAll { $0.id == id }
+        saveAgentList(agents)
+        // Also clear the session
+        clearAgentSession(agentId: id)
+    }
+
+    /// Get a persisted agent by ID
+    public static func getAgent(id: UUID) -> PersistedAgent? {
+        loadAgentList().first { $0.id == id }
     }
 }

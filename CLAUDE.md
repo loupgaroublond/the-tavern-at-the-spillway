@@ -4,7 +4,9 @@
 
 A multi-agent orchestrator for macOS. Jake is the top-level coordinating agent — The Proprietor. He talks weird, works perfect.
 
-**Tech Stack:** Swift 6, SwiftUI, macOS 13+, ClaudeCodeSDK (local fork), XcodeGen, SPM
+**Tech Stack:** Swift 6, SwiftUI, macOS 26+ (Tahoe), ClaudeCodeSDK (local fork), XcodeGen, SPM
+
+**Platform Policy:** Target only the most recent macOS release. No backwards compatibility cruft.
 
 
 ## Project Structure
@@ -57,6 +59,26 @@ redo Tavern/xcodegen          # Regenerate Xcode project
 ```
 
 Build output: `~/.local/builds/tavern` (avoids iCloud interference)
+
+
+## Log Scripts
+
+Helper scripts for viewing app logs:
+
+```bash
+# View logs from last N minutes (default: 5)
+./scripts/logs.sh [minutes]
+
+# Stream logs in real-time
+./scripts/logs-stream.sh [category]
+
+# View logs filtered by category
+./scripts/logs-category.sh <category> [minutes]
+# Categories: agents, chat, coordination, claude, window
+
+# View only errors
+./scripts/logs-errors.sh [minutes]
+```
 
 
 ## After Changing project.yml
@@ -172,8 +194,22 @@ If there are 2+ transcript files not accounted for in the reader, say *"Mind if 
 1. **Informative Error Principle** — Errors must be specific and actionable
 2. **Sum Type Error Design** — Enumerate all failure modes upfront via GADTs/sum types; forces comprehensive handling at design time
 3. **Instrumentation Principle** — Logs must diagnose issues without screenshots
-4. **Autonomous Testing Principle** — Tests run without human interaction
-5. **App Restart Workflow** — After rebuilding, kill and relaunch the app for testing (use `redo run`)
+4. **App Restart Workflow** — After rebuilding, kill and relaunch the app for testing (use `redo run`)
+
+
+## Testing Principles
+
+Tests must catch bugs before users do. These principles ensure comprehensive coverage.
+
+1. **Parallel Code Path Testing** — When code has multiple paths to the same outcome, tests must cover ALL paths. If `init(jake:)` loads history, and `init(agent:)` should also load history, both need tests. Adding a new code path means adding equivalent tests.
+
+2. **Feature Toggle Coverage** — When tests disable a feature (`loadHistory: false`, `loadSavedSession: false`), there MUST be other tests that exercise that feature enabled. Disabling features in unit tests for speed is fine, but integration tests must exercise the real behavior.
+
+3. **User Journey Integration Tests** — Test end-to-end paths users actually take, not just individual components. Example: spawn agent → send message → restart app → click agent → verify history appears. If a user would do it, a test should simulate it.
+
+4. **Symmetry Assertions** — When multiple APIs should behave consistently (two initializers, two code paths), add explicit tests that assert symmetry. These catch drift when someone modifies one path but forgets the other.
+
+5. **New Entity = New Test Coverage** — When adding a new entity type (MortalAgent alongside Jake), audit existing tests and add equivalent coverage for the new type. Jake has session restoration tests? MortalAgent needs them too.
 
 
 ## Architecture Principles (ADR-001)
@@ -228,7 +264,8 @@ Each layer depends only on layers below it. Never reach up.
 
 Claude must adhere to development standards:
 - All new code includes logging via `TavernLogger`
-- Every feature requires tests
+- Every feature requires tests per Testing Principles above (parallel paths, user journeys, symmetry)
+- New entity types require equivalent test coverage to existing types
 - No silent failures — every error logged with context
 
 
