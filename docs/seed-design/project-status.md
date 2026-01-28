@@ -1,6 +1,6 @@
 # Project Status Summary
 
-**Generated:** 2026-01-25
+**Generated:** 2026-01-27
 **Source:** Synthesis of all seed-design transcripts
 
 
@@ -52,6 +52,8 @@
 
 - **2026-01-25** — Transcript audit methodology: parallel agent verification, one-transcript-per-agent rule, `/audit-transcripts` command created
 
+- **2026-01-27** — Agent spawn simplification (two-mode: user vs Jake), agent persistence, session history fix for mortal agents, testing principles established (5 principles), log helper scripts, macOS 26+ platform policy
+
 
 ---
 
@@ -100,7 +102,7 @@
 
 - `AgentRegistry` for tracking active agents
 
-- `MortalAgent` class with assignment, state tracking (idle/working/waiting/done)
+- `MortalAgent` class with optional assignment, state tracking (idle/working/waiting/done)
 
 - `MortalAgent` methods: `addCommitment()`, `markWaiting()`, `markDone()`
 
@@ -116,16 +118,22 @@
 
 - Global name uniqueness
 
-- Spawn sheet UI with toolbar `+` button
+- Two-mode spawn: user-spawn (waits for input) vs Jake-spawn (works immediately)
 
-- Agent list sidebar with state indicators
+- Instant spawn via toolbar `+` button (no dialog)
+
+- Agent list sidebar with state indicators and context menu (edit/close)
+
+- Agent persistence via UserDefaults (`PersistedAgent` type)
+
+- Agent restoration on app restart
+
+- Mutable chat description field (visible in sidebar)
 
 
 **Remaining:**
 
 - Jake autonomously spawning agents via tool
-
-- Agent dismissal from UI
 
 - Hierarchical spawn trees (agents spawning children)
 
@@ -151,7 +159,7 @@
 
 - Content block parsing from Claude's JSONL
 
-- Agent list sidebar with selection
+- Agent list sidebar with selection and context menu
 
 - Multi-chat navigation (switching between agents)
 
@@ -160,6 +168,8 @@
 - Chat view model caching (reused on agent reselection)
 
 - UI module bridging SwiftUI views to TavernCore
+
+- Session history loading for mortal agents (fixed in 01-27)
 
 
 **Remaining:**
@@ -359,7 +369,7 @@
 
 - Redo build system (build, run, test, stop, clean, xcodegen)
 
-- 173 unit tests
+- 180 unit tests (173 + 7 new testing principle tests)
 
 - 8 stress tests
 
@@ -374,6 +384,10 @@
 - Integration tests for session rehydration
 
 - App icon generation via redo (`icon.do`)
+
+- Log helper scripts (`scripts/logs.sh`, `logs-stream.sh`, `logs-category.sh`, `logs-errors.sh`)
+
+- macOS 26+ platform target (no backwards compat)
 
 
 **Remaining:**
@@ -501,6 +515,19 @@
 - **Perception-Bounded Performance** — "Fast" defined by user perception; isolation, responsiveness, scale independence
 
 - **App Restart Workflow** — After rebuilding, kill and relaunch the app
+
+
+**Testing Principles (added 2026-01-27):**
+
+- **Parallel Code Path Testing** — All paths to same outcome need tests
+
+- **Feature Toggle Coverage** — If tests disable a feature, other tests must enable it
+
+- **User Journey Integration Tests** — Test what users actually do end-to-end
+
+- **Symmetry Assertions** — Assert parallel APIs behave consistently (compile-time drift detection)
+
+- **New Entity = New Test Coverage** — New types need equivalent tests to existing types
 
 
 ---

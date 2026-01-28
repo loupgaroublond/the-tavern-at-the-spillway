@@ -6,12 +6,17 @@ public enum TavernError: Error, LocalizedError {
 
     /// Session couldn't be resumed - it may be corrupt, expired, or a test artifact
     /// This happens when a saved session ID doesn't correspond to a valid Claude session
-    case sessionCorrupt(sessionId: String, underlyingError: Error)
+    case sessionCorrupt(sessionId: String, underlyingError: Error?)
+
+    /// Internal error - something unexpected happened
+    case internalError(String)
 
     public var errorDescription: String? {
         switch self {
         case .sessionCorrupt(let sessionId, _):
             return "Session '\(sessionId)' could not be resumed"
+        case .internalError(let message):
+            return "Internal error: \(message)"
         }
     }
 }

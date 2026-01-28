@@ -2,6 +2,7 @@
 # run.do - Kill existing Tavern and launch fresh build
 # Usage: redo run
 
+redo test
 redo build
 
 APP="$HOME/.local/builds/tavern/Build/Products/Debug/Tavern.app"

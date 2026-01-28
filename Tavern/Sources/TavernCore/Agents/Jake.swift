@@ -25,6 +25,14 @@ public final class Jake: Agent, @unchecked Sendable {
     private var _sessionId: String?
     private var _projectPath: String?
     private var _isCogitating: Bool = false
+    private var _toolHandler: JakeToolHandler?
+
+    /// Tool handler for processing Jake's actions (spawn, etc.)
+    /// Injected after init to break circular dependency with spawner
+    public var toolHandler: JakeToolHandler? {
+        get { queue.sync { _toolHandler } }
+        set { queue.sync { _toolHandler = newValue } }
+    }
 
     /// The current session ID (for conversation continuity)
     public var sessionId: String? {
@@ -68,6 +76,18 @@ public final class Jake: Agent, @unchecked Sendable {
         Be FRESH and SPONTANEOUS every time - different jokes, different angles.
 
         Remember: Perfect execution. Lingering unease. That's the Tavern experience.
+
+        RESPONSE FORMAT:
+        Always respond with valid JSON in this format:
+        {"message": "your response to the user"}
+
+        ACTIONS:
+        When you need to delegate work to an agent, include a spawn action:
+        {"message": "your response", "spawn": {"assignment": "task description", "name": "optional name"}}
+
+        The "name" field is optional - omit it to auto-generate a themed name.
+        Only spawn ONE agent per response. If multiple agents are needed, spawn them in sequence.
+        After spawning, you'll receive confirmation and can continue the conversation.
         """
 
     // MARK: - Initialization
@@ -146,7 +166,35 @@ public final class Jake: Agent, @unchecked Sendable {
             throw error
         }
 
-        // Extract response
+        // Extract raw response from result
+        let rawResponse = extractResponse(from: result)
+
+        // Process through tool handler if available
+        guard let handler = queue.sync(execute: { _toolHandler }) else {
+            return rawResponse
+        }
+
+        // Tool execution loop: process response, execute actions, continue if needed
+        var toolResult = try await handler.processResponse(rawResponse)
+
+        while let feedback = toolResult.toolFeedback {
+            TavernLogger.agents.info("Jake tool feedback: \(feedback)")
+
+            // Send feedback to Jake and get continuation
+            let continuation = try await sendContinuation(feedback, options: options)
+            let continuationResponse = extractResponse(from: continuation)
+
+            // Process the continuation for more actions
+            toolResult = try await handler.processResponse(continuationResponse)
+        }
+
+        return toolResult.displayMessage
+    }
+
+    // MARK: - Private Helpers
+
+    /// Extract the response string from a ClaudeCodeResult
+    private func extractResponse(from result: ClaudeCodeResult) -> String {
         switch result {
         case .json(let resultMessage):
             // Primary path - JSON format gives us session ID and content blocks
@@ -173,6 +221,22 @@ public final class Jake: Agent, @unchecked Sendable {
             TavernLogger.agents.debug("Jake received unexpected stream result")
             return ""
         }
+    }
+
+    /// Send a continuation message to Jake (used for tool feedback)
+    private func sendContinuation(_ message: String, options: ClaudeCodeOptions) async throws -> ClaudeCodeResult {
+        guard let sessionId = queue.sync(execute: { _sessionId }) else {
+            TavernLogger.agents.error("Jake.sendContinuation called without session ID")
+            throw TavernError.sessionCorrupt(sessionId: "nil", underlyingError: nil)
+        }
+
+        TavernLogger.claude.info("Jake sending continuation to session: \(sessionId)")
+        return try await claude.resumeConversation(
+            sessionId: sessionId,
+            prompt: message,
+            outputFormat: .json,
+            options: options
+        )
     }
 
     /// Reset Jake's conversation (start fresh)

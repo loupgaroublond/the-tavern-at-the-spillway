@@ -75,15 +75,15 @@ def create_icon(size: int = 1024, dark_mode: bool = True) -> Image.Image:
     img = background
     draw = ImageDraw.Draw(img)
 
-    # Try to load Luminari font
+    # Try to load Bradley Hand font
     font_size = int(size * 0.45)
     font = None
 
-    # Luminari is a decorative font with a medieval/fantasy feel
+    # Bradley Hand is a casual handwritten font
     font_paths = [
-        "/Library/Fonts/Luminari.ttf",
-        "/System/Library/Fonts/Supplemental/Luminari.ttf",
-        "/System/Library/Fonts/Luminari.ttf",
+        "/Library/Fonts/Bradley Hand Bold.ttf",
+        "/System/Library/Fonts/Supplemental/Bradley Hand Bold.ttf",
+        "/System/Library/Fonts/Bradley Hand Bold.ttf",
     ]
 
     for font_path in font_paths:
@@ -95,7 +95,7 @@ def create_icon(size: int = 1024, dark_mode: bool = True) -> Image.Image:
             continue
 
     if font is None:
-        print("Warning: Luminari font not found, using default")
+        print("Warning: Bradley Hand font not found, using default")
         font = ImageFont.load_default()
 
     # Draw "JT" text

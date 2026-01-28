@@ -143,4 +143,120 @@ struct JakeTests {
         // State should return to idle after error
         #expect(jake.state == .idle)
     }
+
+    // MARK: - Tool Handler Integration Tests (Principle #1: Parallel Code Paths)
+    // These tests cover the WITH tool handler path, complementing tests above (without)
+
+    @Test("Jake with tool handler passes through when no feedback")
+    func jakeWithToolHandlerPassthrough() async throws {
+        let mock = MockClaudeCode()
+        mock.queueJSONResponse(result: #"{"message": "Just chatting"}"#, sessionId: "session-123")
+
+        let jake = Jake(claude: mock, loadSavedSession: false)
+
+        // Create a passthrough handler that returns no feedback
+        let handler = JSONActionHandler { _, _ in
+            Issue.record("Spawn should not be called for message-only response")
+            return SpawnResult(agentId: UUID(), agentName: "Unused")
+        }
+        jake.toolHandler = handler
+
+        let response = try await jake.send("Hello")
+
+        // Should extract the message from JSON
+        #expect(response == "Just chatting")
+        #expect(jake.sessionId == "session-123")
+    }
+
+    @Test("Jake with tool handler executes spawn and continues")
+    func jakeWithToolHandlerSpawnAndContinue() async throws {
+        let mock = MockClaudeCode()
+        // First response: spawn action
+        mock.queueJSONResponse(
+            result: #"{"message": "Spawning helper!", "spawn": {"assignment": "Write tests"}}"#,
+            sessionId: "session-123"
+        )
+        // Second response: after receiving spawn feedback (continuation)
+        mock.queueJSONResponse(
+            result: #"{"message": "Helper is on it!"}"#,
+            sessionId: "session-123"
+        )
+
+        let jake = Jake(claude: mock, loadSavedSession: false)
+
+        let spawnContext = MockSpawnContext()
+        spawnContext.addResult(name: "TestHelper")
+        let handler = JSONActionHandler { assignment, name in
+            spawnContext.recordCall(assignment: assignment, name: name)
+            return spawnContext.nextResult()
+        }
+        jake.toolHandler = handler
+
+        let response = try await jake.send("I need help with tests")
+
+        #expect(spawnContext.spawnCalls.count == 1)
+        #expect(spawnContext.spawnCalls[0].assignment == "Write tests")
+        #expect(spawnContext.spawnCalls[0].name == nil)
+        // Final response should be from the continuation
+        #expect(response == "Helper is on it!")
+        // Should have sent the continuation message
+        #expect(mock.resumedSessions.count == 1)
+        #expect(mock.resumedSessions[0].sessionId == "session-123")
+        // The continuation prompt should mention the spawn
+        #expect(mock.sentPrompts.last?.contains("TestHelper") == true)
+    }
+
+    @Test("Jake tool handler loop continues for multiple spawns")
+    func jakeToolHandlerMultipleSpawns() async throws {
+        let mock = MockClaudeCode()
+        // First: spawn agent 1
+        mock.queueJSONResponse(
+            result: #"{"message": "Spawning first!", "spawn": {"assignment": "Task 1"}}"#,
+            sessionId: "session-123"
+        )
+        // Second: spawn agent 2
+        mock.queueJSONResponse(
+            result: #"{"message": "Spawning second!", "spawn": {"assignment": "Task 2"}}"#,
+            sessionId: "session-123"
+        )
+        // Third: done
+        mock.queueJSONResponse(
+            result: #"{"message": "Both agents ready!"}"#,
+            sessionId: "session-123"
+        )
+
+        let jake = Jake(claude: mock, loadSavedSession: false)
+
+        let spawnContext = MockSpawnContext()
+        spawnContext.addResult(name: "Agent1")
+        spawnContext.addResult(name: "Agent2")
+        let handler = JSONActionHandler { assignment, name in
+            spawnContext.recordCall(assignment: assignment, name: name)
+            return spawnContext.nextResult()
+        }
+        jake.toolHandler = handler
+
+        let response = try await jake.send("Spawn two agents")
+
+        #expect(spawnContext.spawnCalls.count == 2)
+        #expect(response == "Both agents ready!")
+        // Should have 2 continuations (after each spawn)
+        #expect(mock.resumedSessions.count == 2)
+    }
+
+    @Test("Jake without tool handler returns raw response unchanged")
+    func jakeWithoutToolHandlerReturnsRaw() async throws {
+        let mock = MockClaudeCode()
+        // Return JSON that LOOKS like it has a spawn action
+        let rawJSON = #"{"message": "Hello", "spawn": {"assignment": "Task"}}"#
+        mock.queueJSONResponse(result: rawJSON, sessionId: "session-123")
+
+        let jake = Jake(claude: mock, loadSavedSession: false)
+        // No tool handler set - should return raw response
+
+        let response = try await jake.send("Test")
+
+        // Without handler, the raw JSON string is returned as-is
+        #expect(response == rawJSON)
+    }
 }

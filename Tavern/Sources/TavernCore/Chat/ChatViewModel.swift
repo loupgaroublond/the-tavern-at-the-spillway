@@ -231,6 +231,8 @@ public final class ChatViewModel: ObservableObject {
                 self.corruptSessionId = sessionId
                 self.showSessionRecoveryOptions = true
                 TavernLogger.chat.debugError("[\(self.agentName)] session '\(sessionId)' is corrupt")
+            case .internalError(let message):
+                TavernLogger.chat.debugError("[\(self.agentName)] internal error: \(message)")
             }
             // Add informative error message to chat
             let errorContent = TavernErrorMessages.message(for: error)

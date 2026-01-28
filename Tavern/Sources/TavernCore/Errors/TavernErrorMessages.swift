@@ -168,6 +168,13 @@ public enum TavernErrorMessages {
 
                 Click "Start Fresh" below to clear the old session and try again.
                 """
+        case .internalError(let message):
+            return """
+                Something unexpected happened inside the Tavern.
+                \(message)
+
+                Try again — if this keeps happening, it's a bug.
+                """
         }
     }
 

@@ -56,8 +56,47 @@ public final class TavernCoordinator: ObservableObject {
         // Create the agent list view model
         self.agentListViewModel = AgentListViewModel(jake: jake, spawner: spawner)
 
+        // Wire up Jake's tool handler for spawn actions
+        // Captures self weakly to avoid retain cycle
+        setupJakeToolHandler()
+
         // Restore persisted agents
         restoreAgents()
+    }
+
+    // MARK: - Tool Handler Setup
+
+    /// Configure Jake's tool handler to route spawn actions through the coordinator
+    private func setupJakeToolHandler() {
+        // Create spawn action that uses the coordinator's spawn method
+        // Uses weak self to avoid retain cycle (Jake -> handler -> coordinator -> jake)
+        let handler = JSONActionHandler { [weak self] assignment, name in
+            guard let coordinator = self else {
+                throw TavernError.internalError("Coordinator deallocated during spawn")
+            }
+
+            // Spawn the agent (AgentSpawner is not MainActor-isolated)
+            let agent: MortalAgent
+            if let name = name {
+                // Jake specified a name
+                agent = try coordinator.spawner.spawn(name: name, assignment: assignment)
+            } else {
+                // Auto-generate name
+                agent = try coordinator.spawner.spawn(assignment: assignment)
+            }
+
+            // Persist and update UI on MainActor (don't auto-select Jake-spawned agents)
+            await MainActor.run {
+                coordinator.persistAgent(agent)
+                coordinator.agentListViewModel.agentsDidChange()
+            }
+
+            TavernLogger.coordination.info("Jake spawned agent: \(agent.name) for: \(assignment)")
+            return SpawnResult(agentId: agent.id, agentName: agent.name)
+        }
+
+        jake.toolHandler = handler
+        TavernLogger.coordination.info("Jake tool handler configured")
     }
 
     // MARK: - Agent Restoration

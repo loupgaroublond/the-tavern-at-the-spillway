@@ -133,6 +133,29 @@ TRANSCRIPTS VERIFIED: 22 total
 
 ---
 
+## SwiftUI Persistence Documentation Import
+
+*[Note added 2026-01-28: This section documents an import that happened during this session but outside Claude Code.]*
+
+**[U]** *Imported two documents from a claude.ai conversation into the project:*
+- `docs/swiftui-persistence-complete-guide.md` (745 lines)
+- `docs/swiftui-persistence-layer-qa.md` (2,781 lines)
+
+These documents capture SwiftUI observation patterns and anti-patterns critical for building DocStore — Tavern's custom persistence layer. The conversation happened on claude.ai web interface; the user manually saved the files at 18:12, then Claude Code updated CLAUDE.md to reference them as architecture principles.
+
+**Key patterns documented:**
+1. DynamicProperty must be struct with @StateObject inside
+2. @Query is anti-MVVM — use Combine publishers in ViewModels
+3. Edge sync: persistence context is canonical, ViewModels are lightweight
+4. Transaction-based observation for cross-field invariants
+5. Content closures don't form SwiftUI dependencies
+6. EquatableView fails with reference types
+
+*[T] These docs serve as reference material for DocStore implementation, not as a design transcript. The original discussion predates this project's Claude Code sessions.*
+
+
+---
+
 ## [S] Synthesis: Transcript Audit as Maintenance Practice
 
 ___

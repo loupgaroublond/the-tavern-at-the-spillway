@@ -221,4 +221,9 @@ public enum SessionStore {
     public static func getAgent(id: UUID) -> PersistedAgent? {
         loadAgentList().first { $0.id == id }
     }
+
+    /// Clear all persisted agents (for testing)
+    public static func clearAgentList() {
+        saveAgentList([])
+    }
 }
