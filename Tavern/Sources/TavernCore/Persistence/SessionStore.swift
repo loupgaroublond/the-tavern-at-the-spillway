@@ -1,5 +1,4 @@
 import Foundation
-import ClaudeCodeSDK
 
 /// Stores session IDs locally using UserDefaults
 /// Session IDs are machine-local (stored in ~/.claude/projects/) so they

@@ -7,13 +7,18 @@ struct AgentSpawnerTests {
 
     // MARK: - Test Setup
 
+    private static func testProjectURL() -> URL {
+        URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("tavern-test-\(UUID().uuidString)")
+    }
+
     func createSpawner() -> (AgentSpawner, AgentRegistry, NameGenerator) {
         let registry = AgentRegistry()
         let nameGenerator = NameGenerator(theme: .lotr)
         let spawner = AgentSpawner(
             registry: registry,
             nameGenerator: nameGenerator,
-            claudeFactory: { MockClaudeCode() }
+            projectURL: Self.testProjectURL()
         )
         return (spawner, registry, nameGenerator)
     }

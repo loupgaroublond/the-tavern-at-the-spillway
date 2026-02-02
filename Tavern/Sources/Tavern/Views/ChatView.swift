@@ -47,7 +47,7 @@ struct ChatView: View {
                     }
                     .padding()
                 }
-                .onChange(of: viewModel.messages.count) { _ in
+                .onChange(of: viewModel.messages.count) {
                     // Scroll to bottom when new message arrives
                     if let lastMessage = viewModel.messages.last {
                         withAnimation {
@@ -55,8 +55,8 @@ struct ChatView: View {
                         }
                     }
                 }
-                .onChange(of: viewModel.isCogitating) { isCogitating in
-                    if isCogitating {
+                .onChange(of: viewModel.isCogitating) {
+                    if viewModel.isCogitating {
                         withAnimation {
                             proxy.scrollTo("cogitating", anchor: .bottom)
                         }
@@ -421,13 +421,11 @@ private struct InputBar: View {
 // MARK: - Preview
 
 #Preview {
-    // Create a mock Jake for preview
-    let mock = MockClaudeCode()
-    mock.queueJSONResponse(result: "Well well WELL!", sessionId: "preview-session")
+    // Create Jake for preview (no saved session for preview)
+    let projectURL = URL(fileURLWithPath: "/tmp/tavern-preview")
+    let jake = Jake(projectURL: projectURL, loadSavedSession: false)
+    let viewModel = ChatViewModel(jake: jake, loadHistory: false)
 
-    let jake = Jake(claude: mock)
-    let viewModel = ChatViewModel(jake: jake)
-
-    return ChatView(viewModel: viewModel)
+    ChatView(viewModel: viewModel)
         .frame(width: 400, height: 600)
 }

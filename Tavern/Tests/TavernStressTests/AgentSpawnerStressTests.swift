@@ -5,6 +5,11 @@ import XCTest
 /// Run with: swift test --filter TavernStressTests
 final class AgentSpawnerStressTests: XCTestCase {
 
+    private func testProjectURL() -> URL {
+        URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("tavern-stress-\(UUID().uuidString)")
+    }
+
     // MARK: - Test: Many Agents Spawned
 
     /// Tests spawning many agents in sequence
@@ -18,7 +23,7 @@ final class AgentSpawnerStressTests: XCTestCase {
         let spawner = AgentSpawner(
             registry: registry,
             nameGenerator: nameGenerator,
-            claudeFactory: { MockClaudeCode() }
+            projectURL: testProjectURL()
         )
 
         let agentCount = 100
@@ -62,7 +67,7 @@ final class AgentSpawnerStressTests: XCTestCase {
         let spawner = AgentSpawner(
             registry: registry,
             nameGenerator: nameGenerator,
-            claudeFactory: { MockClaudeCode() }
+            projectURL: testProjectURL()
         )
 
         let cycleCount = 50
@@ -96,7 +101,7 @@ final class AgentSpawnerStressTests: XCTestCase {
         let spawner = AgentSpawner(
             registry: registry,
             nameGenerator: nameGenerator,
-            claudeFactory: { MockClaudeCode() }
+            projectURL: testProjectURL()
         )
 
         // LOTR theme has limited names, spawn way more than that

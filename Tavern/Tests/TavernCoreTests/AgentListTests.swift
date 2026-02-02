@@ -5,6 +5,12 @@ import Testing
 @Suite("AgentListItem Tests")
 struct AgentListItemTests {
 
+    // Test helper
+    private static func testProjectURL() -> URL {
+        URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("tavern-test-\(UUID().uuidString)")
+    }
+
     @Test("Item has all required properties")
     func itemHasRequiredProperties() {
         let item = AgentListItem(
@@ -23,8 +29,7 @@ struct AgentListItemTests {
 
     @Test("Item from Jake marks isJake true")
     func itemFromJakeMarksIsJake() {
-        let mock = MockClaudeCode()
-        let jake = Jake(claude: mock, loadSavedSession: false)
+        let jake = Jake(projectURL: Self.testProjectURL(), loadSavedSession: false)
         let item = AgentListItem.from(jake: jake)
 
         #expect(item.isJake == true)
@@ -35,12 +40,12 @@ struct AgentListItemTests {
 
     @Test("Item from MortalAgent uses chatDescription")
     func itemFromMortalAgentUsesChatDescription() {
-        let mock = MockClaudeCode()
         let agent = MortalAgent(
             name: "Frodo",
             assignment: "Carry the ring",
             chatDescription: "Ring duty",
-            claude: mock
+            projectURL: Self.testProjectURL(),
+            loadSavedSession: false
         )
         let item = AgentListItem.from(mortalAgent: agent)
 
@@ -52,11 +57,11 @@ struct AgentListItemTests {
 
     @Test("Item from MortalAgent without description has nil chatDescription")
     func itemFromMortalAgentWithoutDescription() {
-        let mock = MockClaudeCode()
         let agent = MortalAgent(
             name: "Sam",
             assignment: "Help Frodo",
-            claude: mock
+            projectURL: Self.testProjectURL(),
+            loadSavedSession: false
         )
         let item = AgentListItem.from(mortalAgent: agent)
 
@@ -83,16 +88,21 @@ struct AgentListItemTests {
 @Suite("AgentListViewModel Tests")
 struct AgentListViewModelTests {
 
+    private static func testProjectURL() -> URL {
+        URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("tavern-test-\(UUID().uuidString)")
+    }
+
     @MainActor
     func createTestSetup() -> (AgentListViewModel, Jake, AgentSpawner) {
-        let mock = MockClaudeCode()
-        let jake = Jake(claude: mock, loadSavedSession: false)
+        let projectURL = Self.testProjectURL()
+        let jake = Jake(projectURL: projectURL, loadSavedSession: false)
         let registry = AgentRegistry()
         let nameGenerator = NameGenerator(theme: .lotr)
         let spawner = AgentSpawner(
             registry: registry,
             nameGenerator: nameGenerator,
-            claudeFactory: { MockClaudeCode() }
+            projectURL: projectURL
         )
         let viewModel = AgentListViewModel(jake: jake, spawner: spawner)
         return (viewModel, jake, spawner)

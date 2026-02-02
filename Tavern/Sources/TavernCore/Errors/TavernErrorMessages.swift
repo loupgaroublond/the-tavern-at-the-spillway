@@ -14,9 +14,14 @@ public enum TavernErrorMessages {
             return message(for: tavernError)
         }
 
-        // Handle ClaudeCodeError specifically
-        if let claudeError = error as? ClaudeCodeError {
-            return message(for: claudeError)
+        // Handle ClodeMonster QueryError
+        if let queryError = error as? QueryError {
+            return message(for: queryError)
+        }
+
+        // Handle ClodeMonster SessionError
+        if let sessionError = error as? SessionError {
+            return message(for: sessionError)
         }
 
         // Handle URL/network errors
@@ -40,120 +45,56 @@ public enum TavernErrorMessages {
         return unknownErrorMessage(error: error)
     }
 
-    /// Convert ClaudeCodeError to an informative message
-    public static func message(for error: ClaudeCodeError) -> String {
+    /// Convert ClodeMonster QueryError to an informative message
+    public static func message(for error: QueryError) -> String {
         switch error {
-        case .notInstalled:
-            return """
-                Claude Code isn't installed on this machine.
-                You'll need to run: npm install -g @anthropic/claude-code
-                (Jake can't do his thing without it!)
-                """
-
-        case .executionFailed(let details):
-            // Parse the details for more specific messages
-            let lower = details.lowercased()
-
-            if lower.contains("api key") || lower.contains("unauthorized") || lower.contains("authentication") {
+        case .launchFailed(let reason):
+            if reason.lowercased().contains("not found") || reason.lowercased().contains("no such file") {
                 return """
-                    Authentication problem — Claude doesn't recognize your API key.
-                    Check that ANTHROPIC_API_KEY is set correctly in your environment.
+                    Claude Code isn't installed on this machine.
+                    You'll need to run: npm install -g @anthropic/claude-code
+                    (Jake can't do his thing without it!)
                     """
             }
-
-            if lower.contains("rate limit") || lower.contains("too many requests") {
-                return """
-                    Claude's asking us to slow down — rate limit hit.
-                    Give it a minute and try again. The Tavern's not going anywhere.
-                    """
-            }
-
-            if lower.contains("timeout") || lower.contains("timed out") {
-                return """
-                    Claude took too long to respond — request timed out.
-                    Could be a complex request, could be Claude having a moment.
-                    Try again, maybe with a simpler ask.
-                    """
-            }
-
-            if lower.contains("connection") || lower.contains("network") {
-                return """
-                    Network hiccup — couldn't reach Claude.
-                    Check your internet connection and try again.
-                    """
-            }
-
-            // Generic execution failure
-            return "Claude ran into a problem: \(details)"
-
-        case .invalidOutput(let details):
-            return """
-                Claude sent back something unexpected.
-                This is usually temporary — try again.
-                (Technical: \(details))
-                """
-
-        case .jsonParsingError(let underlyingError):
-            // Extract details from the underlying error for debugging
-            let details = underlyingError.localizedDescription
-            return """
-                Claude's response couldn't be parsed.
-                This usually means something went wrong on Claude's end, or
-                there's an environment issue (PATH, permissions, etc.).
-
-                Try again. If it keeps happening, check Console.app for
-                logs from "ClaudeCode" to see what Claude actually returned.
-
-                (Technical: \(details))
-                """
-
-        case .cancelled:
-            return "Request cancelled. The Tavern stands ready when you are."
-
-        case .timeout(let duration):
-            return """
-                Request timed out after \(Int(duration)) seconds.
-                Claude might be busy or your request might be too complex.
-                Try again, or break it into smaller pieces.
-                """
-
-        case .rateLimitExceeded(let retryAfter):
-            if let seconds = retryAfter {
-                return """
-                    Rate limit hit — Claude needs a breather.
-                    Try again in \(Int(seconds)) seconds. The Tavern will wait.
-                    """
-            }
-            return """
-                Rate limit hit — Claude needs a breather.
-                Give it a minute and try again.
-                """
-
-        case .networkError(let underlyingError):
-            return """
-                Network error — can't reach Claude right now.
-                Check your internet connection.
-                (Error: \(underlyingError.localizedDescription))
-                """
-
-        case .permissionDenied(let details):
-            return """
-                Permission denied — Claude can't do that.
-                \(details)
-                You might need to adjust your settings or permissions.
-                """
-
-        case .processLaunchFailed(let details):
             return """
                 Couldn't start the Claude process.
                 Make sure Claude Code is installed and accessible.
-                (Error: \(details))
+                (Error: \(reason))
                 """
 
-        case .invalidConfiguration(let details):
+        case .mcpConfigFailed(let reason):
+            return """
+                MCP configuration problem.
+                \(reason)
+                """
+
+        case .invalidOptions(let reason):
             return """
                 Configuration problem — something's not set up right.
-                \(details)
+                \(reason)
+                """
+        }
+    }
+
+    /// Convert ClodeMonster SessionError to an informative message
+    public static func message(for error: SessionError) -> String {
+        switch error {
+        case .sessionClosed:
+            return """
+                The session was closed unexpectedly.
+                Try starting a new conversation.
+                """
+
+        case .notInitialized:
+            return """
+                Session wasn't initialized properly.
+                This is a bug — try again.
+                """
+
+        case .initializationFailed(let reason):
+            return """
+                Couldn't initialize the session.
+                \(reason)
                 """
         }
     }

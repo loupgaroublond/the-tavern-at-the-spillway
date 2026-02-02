@@ -1,5 +1,4 @@
 import Foundation
-import ClaudeCodeSDK
 import os.log
 
 /// Represents an open project in the Tavern
@@ -45,61 +44,25 @@ public final class TavernProject: ObservableObject, Identifiable {
     public func initialize() async {
         TavernLogger.coordination.info("[\(self.name)] Initializing project at: \(self.rootURL.path)")
 
-        do {
-            TavernLogger.coordination.debug("[\(self.name)] Creating ClaudeCode client...")
-            let claude = try Self.createClaudeCode(for: rootURL)
-            TavernLogger.coordination.debug("[\(self.name)] ClaudeCode client created")
+        TavernLogger.coordination.debug("[\(self.name)] Creating Jake...")
+        let jake = Jake(projectURL: rootURL)
+        TavernLogger.coordination.debug("[\(self.name)] Jake created")
 
-            TavernLogger.coordination.debug("[\(self.name)] Creating Jake...")
-            let jake = Jake(claude: claude)
-            TavernLogger.coordination.debug("[\(self.name)] Jake created")
+        let registry = AgentRegistry()
+        let nameGenerator = NameGenerator(theme: .lotr)
 
-            let registry = AgentRegistry()
-            let nameGenerator = NameGenerator(theme: .lotr)
+        let spawner = AgentSpawner(
+            registry: registry,
+            nameGenerator: nameGenerator,
+            projectURL: rootURL
+        )
+        TavernLogger.coordination.debug("[\(self.name)] AgentSpawner created")
 
-            // Factory for creating ClaudeCode instances for spawned/restored agents
-            let claudeFactory: () -> ClaudeCode = { [rootURL] in
-                do {
-                    return try Self.createClaudeCode(for: rootURL)
-                } catch {
-                    TavernLogger.coordination.error("Failed to create ClaudeCode for agent: \(error.localizedDescription)")
-                    // Fall back to mock if real client fails
-                    let mock = MockClaudeCode()
-                    mock.errorToThrow = error
-                    return mock
-                }
-            }
+        TavernLogger.coordination.debug("[\(self.name)] Creating TavernCoordinator...")
+        self.coordinator = TavernCoordinator(jake: jake, spawner: spawner, projectURL: rootURL)
+        self.isReady = true
 
-            let spawner = AgentSpawner(
-                registry: registry,
-                nameGenerator: nameGenerator,
-                claudeFactory: claudeFactory
-            )
-            TavernLogger.coordination.debug("[\(self.name)] AgentSpawner created")
-
-            TavernLogger.coordination.debug("[\(self.name)] Creating TavernCoordinator...")
-            self.coordinator = TavernCoordinator(jake: jake, spawner: spawner, claudeFactory: claudeFactory)
-            self.isReady = true
-
-            TavernLogger.coordination.info("[\(self.name)] Project initialized successfully")
-
-        } catch {
-            self.initializationError = error
-            TavernLogger.coordination.error("[\(self.name)] Project initialization failed: \(error.localizedDescription)")
-        }
-    }
-
-    // MARK: - ClaudeCode Factory
-
-    /// Create a ClaudeCode instance configured for this project
-    private static func createClaudeCode(for rootURL: URL) throws -> ClaudeCode {
-        var config = ClaudeCodeConfiguration.default
-        config.workingDirectory = rootURL.path
-        config.enableDebugLogging = true
-
-        TavernLogger.claude.debug("Creating ClaudeCode with workingDirectory: \(rootURL.path)")
-
-        return try ClaudeCodeClient(configuration: config)
+        TavernLogger.coordination.info("[\(self.name)] Project initialized successfully")
     }
 }
 

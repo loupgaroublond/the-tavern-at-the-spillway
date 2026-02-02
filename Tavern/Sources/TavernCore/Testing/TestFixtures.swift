@@ -1,43 +1,7 @@
 import Foundation
-import ClaudeCodeSDK
 
 /// Test fixtures and helpers for Tavern tests
 public enum TestFixtures {
-
-    // MARK: - Session Fixtures
-
-    /// Create a mock SessionInfo for testing
-    /// Note: SessionInfo doesn't have a public memberwise init, so we use JSON decoding
-    public static func makeSessionInfo(
-        id: String = UUID().uuidString,
-        created: String? = nil,
-        lastActive: String? = nil,
-        totalCostUsd: Double? = nil,
-        project: String? = nil
-    ) -> SessionInfo? {
-        let json: [String: Any?] = [
-            "id": id,
-            "created": created,
-            "last_active": lastActive,
-            "total_cost_usd": totalCostUsd,
-            "project": project
-        ]
-
-        guard let data = try? JSONSerialization.data(withJSONObject: json.compactMapValues { $0 }),
-              let session = try? JSONDecoder().decode(SessionInfo.self, from: data) else {
-            return nil
-        }
-        return session
-    }
-
-    // MARK: - Configuration Fixtures
-
-    /// Default test configuration (doesn't make real API calls)
-    public static var testConfiguration: ClaudeCodeConfiguration {
-        var config = ClaudeCodeConfiguration.default
-        config.enableDebugLogging = false
-        return config
-    }
 
     // MARK: - Response Fixtures
 

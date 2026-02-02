@@ -5,6 +5,11 @@ import Testing
 @Suite("AgentNode Tests")
 struct AgentNodeTests {
 
+    private static func testProjectURL() -> URL {
+        URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("tavern-test-\(UUID().uuidString)")
+    }
+
     @Test("AgentNode has all required properties")
     func agentNodeHasProperties() {
         let node = AgentNode(
@@ -23,15 +28,15 @@ struct AgentNodeTests {
 
     @Test("AgentNode creates from MortalAgent")
     func agentNodeCreatesFromMortalAgent() {
-        let mock = MockClaudeCode()
         let commitments = CommitmentList()
         commitments.add(description: "Tests pass", assertion: "swift test")
 
         let agent = MortalAgent(
             name: "Worker",
             assignment: "Build the thing",
-            claude: mock,
-            commitments: commitments
+            projectURL: Self.testProjectURL(),
+            commitments: commitments,
+            loadSavedSession: false
         )
 
         let node = AgentNode(from: agent)
@@ -207,6 +212,11 @@ struct CommitmentNodeTests {
 @Suite("AgentPersistence Tests")
 struct AgentPersistenceTests {
 
+    private static func testProjectURL() -> URL {
+        URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("tavern-test-\(UUID().uuidString)")
+    }
+
     func makeTempDocStore() throws -> DocStore {
         let tempDir = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString)
@@ -223,11 +233,11 @@ struct AgentPersistenceTests {
         defer { cleanupDocStore(store) }
 
         let persistence = AgentPersistence(docStore: store)
-        let mock = MockClaudeCode()
         let agent = MortalAgent(
             name: "Saveable",
             assignment: "Test saving",
-            claude: mock
+            projectURL: Self.testProjectURL(),
+            loadSavedSession: false
         )
 
         try persistence.save(agent)
@@ -241,12 +251,12 @@ struct AgentPersistenceTests {
         defer { cleanupDocStore(store) }
 
         let persistence = AgentPersistence(docStore: store)
-        let mock = MockClaudeCode()
 
         let agent = MortalAgent(
             name: "Stateful",
             assignment: "Track state",
-            claude: mock
+            projectURL: Self.testProjectURL(),
+            loadSavedSession: false
         )
         agent.markWaiting()
 
@@ -260,9 +270,9 @@ struct AgentPersistenceTests {
     func agentRestoredFromFile() throws {
         let store = try makeTempDocStore()
         defer { cleanupDocStore(store) }
+        let projectURL = Self.testProjectURL()
 
         let persistence = AgentPersistence(docStore: store)
-        let mock = MockClaudeCode()
 
         // Create and save agent
         let originalId = UUID()
@@ -274,15 +284,16 @@ struct AgentPersistenceTests {
             id: originalId,
             name: "Restorable",
             assignment: "Test restoration",
-            claude: mock,
-            commitments: commitments
+            projectURL: projectURL,
+            commitments: commitments,
+            loadSavedSession: false
         )
         original.markDone()
 
         try persistence.save(original)
 
         // Restore from file
-        let restored = try persistence.restore(name: "Restorable", claude: mock)
+        let restored = try persistence.restore(name: "Restorable", projectURL: projectURL)
 
         #expect(restored.id == originalId)
         #expect(restored.name == "Restorable")
@@ -298,7 +309,6 @@ struct AgentPersistenceTests {
         defer { cleanupDocStore(store) }
 
         let persistence = AgentPersistence(docStore: store)
-        let mock = MockClaudeCode()
 
         let commitments = CommitmentList()
         commitments.add(description: "Build passes", assertion: "swift build")
@@ -307,8 +317,9 @@ struct AgentPersistenceTests {
         let agent = MortalAgent(
             name: "Committed",
             assignment: "Task with commitments",
-            claude: mock,
-            commitments: commitments
+            projectURL: Self.testProjectURL(),
+            commitments: commitments,
+            loadSavedSession: false
         )
 
         try persistence.save(agent)
@@ -325,12 +336,12 @@ struct AgentPersistenceTests {
         defer { cleanupDocStore(store) }
 
         let persistence = AgentPersistence(docStore: store)
-        let mock = MockClaudeCode()
 
         let agent = MortalAgent(
             name: "Deletable",
             assignment: "To be deleted",
-            claude: mock
+            projectURL: Self.testProjectURL(),
+            loadSavedSession: false
         )
 
         try persistence.save(agent)
@@ -346,11 +357,11 @@ struct AgentPersistenceTests {
         defer { cleanupDocStore(store) }
 
         let persistence = AgentPersistence(docStore: store)
-        let mock = MockClaudeCode()
+        let projectURL = Self.testProjectURL()
 
-        let agent1 = MortalAgent(name: "Alpha", assignment: "A", claude: mock)
-        let agent2 = MortalAgent(name: "Beta", assignment: "B", claude: mock)
-        let agent3 = MortalAgent(name: "Gamma", assignment: "C", claude: mock)
+        let agent1 = MortalAgent(name: "Alpha", assignment: "A", projectURL: projectURL, loadSavedSession: false)
+        let agent2 = MortalAgent(name: "Beta", assignment: "B", projectURL: projectURL, loadSavedSession: false)
+        let agent3 = MortalAgent(name: "Gamma", assignment: "C", projectURL: projectURL, loadSavedSession: false)
 
         try persistence.save(agent1)
         try persistence.save(agent2)
@@ -370,10 +381,10 @@ struct AgentPersistenceTests {
         defer { cleanupDocStore(store) }
 
         let persistence = AgentPersistence(docStore: store)
-        let mock = MockClaudeCode()
+        let projectURL = Self.testProjectURL()
 
-        let agent1 = MortalAgent(name: "First", assignment: "Task 1", claude: mock)
-        let agent2 = MortalAgent(name: "Second", assignment: "Task 2", claude: mock)
+        let agent1 = MortalAgent(name: "First", assignment: "Task 1", projectURL: projectURL, loadSavedSession: false)
+        let agent2 = MortalAgent(name: "Second", assignment: "Task 2", projectURL: projectURL, loadSavedSession: false)
 
         try persistence.save(agent1)
         try persistence.save(agent2)
@@ -391,12 +402,12 @@ struct AgentPersistenceTests {
         defer { cleanupDocStore(store) }
 
         let persistence = AgentPersistence(docStore: store)
-        let mock = MockClaudeCode()
 
         let agent = MortalAgent(
             name: "Updatable",
             assignment: "Initial task",
-            claude: mock
+            projectURL: Self.testProjectURL(),
+            loadSavedSession: false
         )
 
         try persistence.save(agent)

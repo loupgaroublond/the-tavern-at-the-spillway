@@ -1,5 +1,4 @@
 import Foundation
-import ClaudeCodeSDK
 
 /// Manages persisting agents to the doc store
 public final class AgentPersistence: @unchecked Sendable {
@@ -62,13 +61,13 @@ public final class AgentPersistence: @unchecked Sendable {
     /// Restore a MortalAgent from the doc store
     /// - Parameters:
     ///   - name: The agent's name
-    ///   - claude: ClaudeCode instance for the restored agent
+    ///   - projectURL: Project directory URL for the restored agent
     ///   - verifier: Optional verifier (defaults to shell-based)
     /// - Returns: The restored agent
     /// - Throws: If restoration fails
     public func restore(
         name: String,
-        claude: ClaudeCode,
+        projectURL: URL,
         verifier: CommitmentVerifier = CommitmentVerifier()
     ) throws -> MortalAgent {
         let node = try load(name: name)
@@ -85,7 +84,7 @@ public final class AgentPersistence: @unchecked Sendable {
             id: node.id,
             name: node.name,
             assignment: node.assignment,
-            claude: claude,
+            projectURL: projectURL,
             commitments: commitmentList,
             verifier: verifier
         )

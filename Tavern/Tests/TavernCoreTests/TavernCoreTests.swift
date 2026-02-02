@@ -11,95 +11,6 @@ struct TavernCoreTests {
     }
 }
 
-@Suite("MockClaudeCode Tests")
-struct MockClaudeCodeTests {
-
-    @Test("Mock returns queued text response")
-    func mockReturnsQueuedTextResponse() async throws {
-        let mock = MockClaudeCode()
-        mock.queueTextResponse("Hello from mock!")
-
-        let result = try await mock.runSinglePrompt(
-            prompt: "Test prompt",
-            outputFormat: .text,
-            options: nil
-        )
-
-        if case .text(let text) = result {
-            #expect(text == "Hello from mock!")
-        } else {
-            Issue.record("Expected text result")
-        }
-    }
-
-    @Test("Mock records sent prompts")
-    func mockRecordsSentPrompts() async throws {
-        let mock = MockClaudeCode()
-        mock.queueTextResponse("Response 1")
-        mock.queueTextResponse("Response 2")
-
-        _ = try await mock.runSinglePrompt(prompt: "First prompt", outputFormat: .text, options: nil)
-        _ = try await mock.runSinglePrompt(prompt: "Second prompt", outputFormat: .text, options: nil)
-
-        #expect(mock.sentPrompts.count == 2)
-        #expect(mock.sentPrompts[0] == "First prompt")
-        #expect(mock.sentPrompts[1] == "Second prompt")
-    }
-
-    @Test("Mock throws configured error")
-    func mockThrowsConfiguredError() async throws {
-        let mock = MockClaudeCode()
-        mock.errorToThrow = ClaudeCodeError.executionFailed("Test error")
-
-        do {
-            _ = try await mock.runSinglePrompt(prompt: "Test", outputFormat: .text, options: nil)
-            Issue.record("Expected error to be thrown")
-        } catch {
-            // Expected
-            #expect(error is ClaudeCodeError)
-        }
-    }
-
-    @Test("Mock tracks cancel calls")
-    func mockTracksCancelCalls() {
-        let mock = MockClaudeCode()
-        #expect(mock.wasCancelled == false)
-
-        mock.cancel()
-
-        #expect(mock.wasCancelled == true)
-    }
-
-    @Test("Mock reset clears state")
-    func mockResetClearsState() async throws {
-        let mock = MockClaudeCode()
-        mock.queueTextResponse("Response")
-        _ = try await mock.runSinglePrompt(prompt: "Test", outputFormat: .text, options: nil)
-        mock.cancel()
-
-        mock.reset()
-
-        #expect(mock.queuedResponses.isEmpty)
-        #expect(mock.sentPrompts.isEmpty)
-        #expect(mock.wasCancelled == false)
-    }
-
-    @Test("Mock returns JSON response with session ID")
-    func mockReturnsJSONResponseWithSessionID() async throws {
-        let mock = MockClaudeCode()
-        let sessionId = "test-session-123"
-        mock.queueJSONResponse(result: "Success!", sessionId: sessionId)
-
-        let result = try await mock.runSinglePrompt(
-            prompt: "Test",
-            outputFormat: .json,
-            options: nil
-        )
-
-        #expect(result.sessionId == sessionId)
-    }
-}
-
 @Suite("TestFixtures Tests")
 struct TestFixturesTests {
 
@@ -114,9 +25,69 @@ struct TestFixturesTests {
         #expect(!FileManager.default.fileExists(atPath: tempDir.path))
     }
 
-    @Test("Test configuration is valid")
-    func testConfigurationIsValid() {
-        let config = TestFixtures.testConfiguration
-        #expect(config.enableDebugLogging == false)
+    // Note: TestFixtures.testConfiguration was removed in SDK migration
+    // The new SDK doesn't have the same configuration pattern
+}
+
+// MARK: - MockSDKMessage Tests (new SDK helper tests)
+
+@Suite("MockSDKMessage Tests")
+struct MockSDKMessageTests {
+
+    @Test("Result message has correct type")
+    func resultMessageHasCorrectType() {
+        let msg = MockSDKMessage.result(text: "Hello")
+        #expect(msg.type == "result")
+        #expect(msg.content?.stringValue == "Hello")
+    }
+
+    @Test("Assistant message has correct type")
+    func assistantMessageHasCorrectType() {
+        let msg = MockSDKMessage.assistant(text: "Response")
+        #expect(msg.type == "assistant")
+        #expect(msg.content?.stringValue == "Response")
+    }
+
+    @Test("System init message has session ID")
+    func systemInitMessageHasSessionId() {
+        let msg = MockSDKMessage.systemInit(sessionId: "test-123")
+        #expect(msg.type == "system")
+        // The session_id is in the data, not content
+        if case .object(let obj) = msg.data,
+           case .string(let sessId) = obj["session_id"] {
+            #expect(sessId == "test-123")
+        } else {
+            Issue.record("Expected session_id in data")
+        }
+    }
+}
+
+@Suite("MockQueryStream Tests")
+struct MockQueryStreamTests {
+
+    @Test("Stream yields all messages")
+    func streamYieldsAllMessages() async throws {
+        let stream = MockQueryStream(result: "Test response", sessionId: "s-123")
+
+        var messages: [StdoutMessage] = []
+        for try await msg in stream {
+            messages.append(msg)
+        }
+
+        #expect(messages.count == 2) // system init + result
+    }
+
+    @Test("Stream convenience init creates correct messages")
+    func streamConvenienceInitCreatesCorrectMessages() async throws {
+        let stream = MockQueryStream(result: "Hello!", sessionId: "sess-abc")
+
+        var resultContent: String?
+        for try await msg in stream {
+            if case .regular(let sdk) = msg, sdk.type == "result" {
+                resultContent = sdk.content?.stringValue
+            }
+        }
+
+        #expect(resultContent == "Hello!")
     }
 }

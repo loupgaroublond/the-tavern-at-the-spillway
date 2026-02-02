@@ -1,5 +1,4 @@
 import Foundation
-import ClaudeCodeSDK
 import os.log
 
 /// Spawns and manages mortal agents for the Tavern
@@ -10,7 +9,7 @@ public final class AgentSpawner: @unchecked Sendable {
 
     private let registry: AgentRegistry
     private let nameGenerator: NameGenerator
-    private let claudeFactory: () -> ClaudeCode
+    private let projectURL: URL
 
     // MARK: - Initialization
 
@@ -18,15 +17,15 @@ public final class AgentSpawner: @unchecked Sendable {
     /// - Parameters:
     ///   - registry: The agent registry to add spawned agents to
     ///   - nameGenerator: The name generator for themed names
-    ///   - claudeFactory: Factory to create ClaudeCode instances for new agents
+    ///   - projectURL: The project directory URL for spawned agents
     public init(
         registry: AgentRegistry,
         nameGenerator: NameGenerator,
-        claudeFactory: @escaping () -> ClaudeCode
+        projectURL: URL
     ) {
         self.registry = registry
         self.nameGenerator = nameGenerator
-        self.claudeFactory = claudeFactory
+        self.projectURL = projectURL
     }
 
     // MARK: - Spawning
@@ -42,12 +41,10 @@ public final class AgentSpawner: @unchecked Sendable {
         let name = nameGenerator.nextNameOrFallback()
         TavernLogger.coordination.debug("Generated name: \(name)")
 
-        let claude = claudeFactory()
-
         let agent = MortalAgent(
             name: name,
             assignment: nil,
-            claude: claude
+            projectURL: projectURL
         )
 
         try registry.register(agent)
@@ -67,12 +64,10 @@ public final class AgentSpawner: @unchecked Sendable {
         let name = nameGenerator.nextNameOrFallback()
         TavernLogger.coordination.debug("Generated name: \(name)")
 
-        let claude = claudeFactory()
-
         let agent = MortalAgent(
             name: name,
             assignment: assignment,
-            claude: claude
+            projectURL: projectURL
         )
 
         try registry.register(agent)
@@ -97,12 +92,10 @@ public final class AgentSpawner: @unchecked Sendable {
             throw AgentRegistryError.nameAlreadyExists(name)
         }
 
-        let claude = claudeFactory()
-
         let agent = MortalAgent(
             name: name,
             assignment: assignment,
-            claude: claude
+            projectURL: projectURL
         )
 
         do {

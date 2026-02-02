@@ -12,23 +12,26 @@ let package = Package(
         .library(name: "TavernCore", targets: ["TavernCore"])
     ],
     dependencies: [
-        // Using local fork with JSON array parsing fix
-        // Original: .package(url: "https://github.com/jamesrochabrun/ClaudeCodeSDK.git", from: "1.0.0")
-        .package(path: "LocalPackages/ClaudeCodeSDK")
+        // ClodeMonster's native Swift SDK
+        .package(path: "/Users/yankee/Documents/Projects/ClodeMonster/NativeClaudeCodeSDK")
     ],
     targets: [
         // Core library - all logic, testable without UI
         .target(
             name: "TavernCore",
             dependencies: [
-                .product(name: "ClaudeCodeSDK", package: "ClaudeCodeSDK")
+                .product(name: "ClaudeCodeSDK", package: "NativeClaudeCodeSDK")
             ]
         ),
 
         // SwiftUI App
         .executableTarget(
             name: "Tavern",
-            dependencies: ["TavernCore"]
+            dependencies: ["TavernCore"],
+            resources: [
+                .process("Assets.xcassets"),
+                .copy("AppIcon.icon")
+            ]
         ),
 
         // Core tests

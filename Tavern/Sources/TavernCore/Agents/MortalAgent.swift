@@ -34,7 +34,7 @@ public final class MortalAgent: Agent, @unchecked Sendable {
 
     // MARK: - Private State
 
-    private let claude: ClaudeCode
+    private let projectURL: URL
     private let queue = DispatchQueue(label: "com.tavern.MortalAgent")
 
     private var _state: AgentState = .idle
@@ -98,7 +98,7 @@ public final class MortalAgent: Agent, @unchecked Sendable {
     ///   - name: Display name for this agent
     ///   - assignment: The task this agent is responsible for (nil for user-spawned agents)
     ///   - chatDescription: User-editable description shown in sidebar
-    ///   - claude: The ClaudeCode SDK instance to use
+    ///   - projectURL: The project directory URL
     ///   - commitments: List of commitments to verify before completion (defaults to empty)
     ///   - verifier: Verifier for checking commitments (defaults to shell-based)
     ///   - loadSavedSession: Whether to load a saved session from SessionStore (default true)
@@ -107,7 +107,7 @@ public final class MortalAgent: Agent, @unchecked Sendable {
         name: String,
         assignment: String? = nil,
         chatDescription: String? = nil,
-        claude: ClaudeCode,
+        projectURL: URL,
         commitments: CommitmentList = CommitmentList(),
         verifier: CommitmentVerifier = CommitmentVerifier(),
         loadSavedSession: Bool = true
@@ -116,7 +116,7 @@ public final class MortalAgent: Agent, @unchecked Sendable {
         self.name = name
         self.assignment = assignment
         self.chatDescription = chatDescription
-        self.claude = claude
+        self.projectURL = projectURL
         self.commitments = commitments
         self.verifier = verifier
 
@@ -137,61 +137,60 @@ public final class MortalAgent: Agent, @unchecked Sendable {
         queue.sync { _state = .working }
         defer { updateStateAfterResponse() }
 
-        var options = ClaudeCodeOptions()
-        options.systemPrompt = systemPrompt
-
-        let result: ClaudeCodeResult
         let currentSessionId: String? = queue.sync { _sessionId }
 
-        // Using .json format (fixed in local SDK fork)
-        // This gives us session ID tracking and full content blocks
+        // Build query options
+        var options = QueryOptions()
+        options.systemPrompt = systemPrompt
+        options.workingDirectory = projectURL
+        if let sessionId = currentSessionId {
+            options.resume = sessionId
+            TavernLogger.claude.info("[\(self.name)] resuming session: \(sessionId)")
+        } else {
+            TavernLogger.claude.info("[\(self.name)] starting new conversation")
+        }
 
+        // Run query and collect response
+        let response: String
         do {
-            if let sessionId = currentSessionId {
-                TavernLogger.claude.info("[\(self.name)] resuming session: \(sessionId)")
-                result = try await claude.resumeConversation(
-                    sessionId: sessionId,
-                    prompt: message,
-                    outputFormat: .json,
-                    options: options
-                )
-            } else {
-                TavernLogger.claude.info("[\(self.name)] starting new conversation")
-                result = try await claude.runSinglePrompt(
-                    prompt: message,
-                    outputFormat: .json,
-                    options: options
-                )
-            }
+            let query = try await ClaudeCode.query(prompt: message, options: options)
+            response = try await collectResponse(from: query)
         } catch {
             TavernLogger.agents.error("[\(self.name)] send failed: \(error.localizedDescription)")
             throw error
         }
 
-        // Extract response
-        switch result {
-        case .json(let resultMessage):
-            // Primary path - JSON format gives us session ID and content blocks
-            queue.sync { _sessionId = resultMessage.sessionId }
+        await checkForCompletionSignal(in: response)
+        return response
+    }
 
-            // Persist session (useful if agent is persisted to DocStore)
-            SessionStore.saveAgentSession(agentId: id, sessionId: resultMessage.sessionId)
+    /// Collect the response from a ClaudeQuery stream
+    private func collectResponse(from query: ClaudeQuery) async throws -> String {
+        var responseText: String = ""
 
-            let response = resultMessage.result ?? ""
-            TavernLogger.agents.info("[\(self.name)] received JSON response, length: \(response.count), sessionId: \(resultMessage.sessionId)")
-            await checkForCompletionSignal(in: response)
-            return response
-
-        case .text(let text):
-            // Fallback - no session ID tracking with text format
-            TavernLogger.agents.info("[\(self.name)] received text response, length: \(text.count)")
-            await checkForCompletionSignal(in: text)
-            return text
-
-        case .stream:
-            TavernLogger.agents.debug("[\(self.name)] received unexpected stream result")
-            return ""
+        for try await message in query {
+            switch message {
+            case .regular(let sdkMessage):
+                if sdkMessage.type == "result" {
+                    if let content = sdkMessage.content?.stringValue {
+                        responseText = content
+                    }
+                }
+            case .controlRequest, .controlResponse, .controlCancelRequest, .keepAlive:
+                break
+            }
         }
+
+        // Get session ID from the query
+        if let newSessionId = await query.sessionId {
+            queue.sync { _sessionId = newSessionId }
+            SessionStore.saveAgentSession(agentId: id, sessionId: newSessionId)
+            TavernLogger.agents.info("[\(self.name)] received response, length: \(responseText.count), sessionId: \(newSessionId)")
+        } else {
+            TavernLogger.agents.info("[\(self.name)] received response, length: \(responseText.count), no sessionId")
+        }
+
+        return responseText
     }
 
     /// Reset the agent's conversation state

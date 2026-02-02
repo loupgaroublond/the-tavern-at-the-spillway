@@ -216,16 +216,16 @@ private struct AttentionBadge: View {
 
 // MARK: - Preview
 
-#Preview("Agent List") {
-    // Create mock data for preview
-    let mock = MockClaudeCode()
-    let jake = Jake(claude: mock)
+@MainActor
+private func makePreviewAgentList() -> AgentListView {
+    let projectURL = URL(fileURLWithPath: "/tmp/tavern-preview")
+    let jake = Jake(projectURL: projectURL, loadSavedSession: false)
     let registry = AgentRegistry()
     let nameGen = NameGenerator(theme: .lotr)
     let spawner = AgentSpawner(
         registry: registry,
         nameGenerator: nameGen,
-        claudeFactory: { MockClaudeCode() }
+        projectURL: projectURL
     )
 
     // Spawn a couple of agents (no assignment - user-spawned style)
@@ -242,7 +242,11 @@ private struct AttentionBadge: View {
         onUpdateDescription: { id, desc in print("Update \(id): \(desc ?? "nil")") },
         onSelectAgent: { id in print("Select agent: \(id)") }
     )
-    .frame(width: 300, height: 400)
+}
+
+#Preview("Agent List") {
+    makePreviewAgentList()
+        .frame(width: 300, height: 400)
 }
 
 #Preview("Edit Description Sheet") {

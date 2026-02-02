@@ -619,21 +619,19 @@ private struct TavernHeader: View {
 }
 
 #Preview("Project") {
-    let mock = MockClaudeCode()
-    mock.queueJSONResponse(result: "Well well WELL, look who just walked in!", sessionId: "preview")
+    let projectURL = URL(fileURLWithPath: "/tmp/tavern-preview")
 
-    let jake = Jake(claude: mock)
+    let jake = Jake(projectURL: projectURL, loadSavedSession: false)
     let registry = AgentRegistry()
     let nameGenerator = NameGenerator(theme: .lotr)
-    let claudeFactory: () -> ClaudeCode = { MockClaudeCode() }
     let spawner = AgentSpawner(
         registry: registry,
         nameGenerator: nameGenerator,
-        claudeFactory: claudeFactory
+        projectURL: projectURL
     )
 
-    let coordinator = TavernCoordinator(jake: jake, spawner: spawner, claudeFactory: claudeFactory)
-    let project = TavernProject(rootURL: URL(fileURLWithPath: "/tmp/test-project"))
+    let coordinator = TavernCoordinator(jake: jake, spawner: spawner, projectURL: projectURL)
+    let project = TavernProject(rootURL: projectURL)
 
-    return ProjectContentView(project: project, coordinator: coordinator)
+    ProjectContentView(project: project, coordinator: coordinator)
 }

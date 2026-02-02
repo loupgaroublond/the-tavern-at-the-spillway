@@ -19,11 +19,10 @@ public final class Jake: Agent, @unchecked Sendable {
 
     // MARK: - Properties
 
-    private let claude: ClaudeCode
+    private let projectURL: URL
     private let queue = DispatchQueue(label: "com.tavern.Jake")
 
     private var _sessionId: String?
-    private var _projectPath: String?
     private var _isCogitating: Bool = false
     private var _toolHandler: JakeToolHandler?
 
@@ -40,8 +39,8 @@ public final class Jake: Agent, @unchecked Sendable {
     }
 
     /// The project path where sessions are stored
-    public var projectPath: String? {
-        queue.sync { _projectPath }
+    public var projectPath: String {
+        projectURL.path
     }
 
     /// Whether Jake is currently cogitating (working)
@@ -114,23 +113,19 @@ public final class Jake: Agent, @unchecked Sendable {
 
     // MARK: - Initialization
 
-    /// Create Jake with a ClaudeCode instance
+    /// Create Jake with a project URL
     /// - Parameters:
     ///   - id: Unique identifier (auto-generated if not provided)
-    ///   - claude: The ClaudeCode SDK instance to use (injectable for testing)
+    ///   - projectURL: The project directory URL
     ///   - loadSavedSession: Whether to load a saved session from SessionStore (default true)
-    public init(id: UUID = UUID(), claude: ClaudeCode, loadSavedSession: Bool = true) {
+    public init(id: UUID = UUID(), projectURL: URL, loadSavedSession: Bool = true) {
         self.id = id
-        self.claude = claude
-
-        // Determine project path from Claude configuration
-        let currentProjectPath = claude.configuration.workingDirectory ?? FileManager.default.currentDirectoryPath
-        self._projectPath = currentProjectPath
+        self.projectURL = projectURL
 
         // Restore session from previous run (per-project)
-        if loadSavedSession, let savedSession = SessionStore.loadJakeSession(projectPath: currentProjectPath) {
+        if loadSavedSession, let savedSession = SessionStore.loadJakeSession(projectPath: projectURL.path) {
             self._sessionId = savedSession
-            TavernLogger.agents.info("Jake restored session: \(savedSession) for project: \(currentProjectPath)")
+            TavernLogger.agents.info("Jake restored session: \(savedSession) for project: \(projectURL.path)")
         }
     }
 
@@ -139,7 +134,7 @@ public final class Jake: Agent, @unchecked Sendable {
     /// Send a message to Jake and get a response
     /// - Parameter message: The user's message
     /// - Returns: Jake's response text
-    /// - Throws: ClaudeCodeError if communication fails
+    /// - Throws: QueryError if communication fails
     public func send(_ message: String) async throws -> String {
         TavernLogger.agents.info("Jake.send called, prompt length: \(message.count)")
         TavernLogger.agents.debug("Jake state: idle -> working")
@@ -150,34 +145,24 @@ public final class Jake: Agent, @unchecked Sendable {
             TavernLogger.agents.debug("Jake state: working -> idle")
         }
 
-        var options = ClaudeCodeOptions()
-        options.systemPrompt = Self.systemPrompt
-
-        let result: ClaudeCodeResult
         let currentSessionId: String? = queue.sync { _sessionId }
 
-        // Using .json format (fixed in local SDK fork)
-        // This gives us session ID tracking and full content blocks
+        // Build query options
+        var options = QueryOptions()
+        options.systemPrompt = Self.systemPrompt
+        options.workingDirectory = projectURL
+        if let sessionId = currentSessionId {
+            options.resume = sessionId
+            TavernLogger.claude.info("Jake resuming session: \(sessionId)")
+        } else {
+            TavernLogger.claude.info("Jake starting new conversation")
+        }
 
+        // Run query and collect response
+        let rawResponse: String
         do {
-            if let sessionId = currentSessionId {
-                // Continue existing conversation
-                TavernLogger.claude.info("Jake resuming session: \(sessionId)")
-                result = try await claude.resumeConversation(
-                    sessionId: sessionId,
-                    prompt: message,
-                    outputFormat: .json,
-                    options: options
-                )
-            } else {
-                // Start new conversation
-                TavernLogger.claude.info("Jake starting new conversation")
-                result = try await claude.runSinglePrompt(
-                    prompt: message,
-                    outputFormat: .json,
-                    options: options
-                )
-            }
+            let query = try await ClaudeCode.query(prompt: message, options: options)
+            rawResponse = try await collectResponse(from: query)
         } catch {
             // If resuming failed with a session ID, it's likely corrupt/stale
             if let sessionId = currentSessionId {
@@ -187,9 +172,6 @@ public final class Jake: Agent, @unchecked Sendable {
             TavernLogger.agents.debugError("Jake.send failed: \(error.localizedDescription)")
             throw error
         }
-
-        // Extract raw response from result
-        let rawResponse = extractResponse(from: result)
 
         // Process through tool handler if available
         guard let handler = queue.sync(execute: { _toolHandler }) else {
@@ -203,8 +185,7 @@ public final class Jake: Agent, @unchecked Sendable {
             TavernLogger.agents.info("Jake tool feedback: \(feedback)")
 
             // Send feedback to Jake and get continuation
-            let continuation = try await sendContinuation(feedback, options: options)
-            let continuationResponse = extractResponse(from: continuation)
+            let continuationResponse = try await sendContinuation(feedback)
 
             // Process the continuation for more actions
             toolResult = try await handler.processResponse(continuationResponse)
@@ -215,63 +196,62 @@ public final class Jake: Agent, @unchecked Sendable {
 
     // MARK: - Private Helpers
 
-    /// Extract the response string from a ClaudeCodeResult
-    private func extractResponse(from result: ClaudeCodeResult) -> String {
-        switch result {
-        case .json(let resultMessage):
-            // Primary path - JSON format gives us session ID and content blocks
-            let currentProjectPath = queue.sync { _projectPath } ?? FileManager.default.currentDirectoryPath
+    /// Collect the response from a ClaudeQuery stream
+    private func collectResponse(from query: ClaudeQuery) async throws -> String {
+        var responseText: String = ""
 
-            queue.sync {
-                _sessionId = resultMessage.sessionId
+        for try await message in query {
+            switch message {
+            case .regular(let sdkMessage):
+                // Look for result message with the final response
+                if sdkMessage.type == "result" {
+                    // The result content is typically a string
+                    if let content = sdkMessage.content?.stringValue {
+                        responseText = content
+                    }
+                }
+            case .controlRequest, .controlResponse, .controlCancelRequest, .keepAlive:
+                // Control messages handled internally by SDK
+                break
             }
-
-            // Persist session for next app launch (per-project)
-            SessionStore.saveJakeSession(resultMessage.sessionId, projectPath: currentProjectPath)
-
-            let response = resultMessage.result ?? ""
-            TavernLogger.agents.info("Jake received JSON response, length: \(response.count), sessionId: \(resultMessage.sessionId), projectPath: \(currentProjectPath)")
-            return response
-
-        case .text(let text):
-            // Fallback - no session ID tracking with text format
-            TavernLogger.agents.info("Jake received text response, length: \(text.count)")
-            return text
-
-        case .stream:
-            // For non-streaming calls, this shouldn't happen
-            TavernLogger.agents.debug("Jake received unexpected stream result")
-            return ""
         }
+
+        // Get session ID from the query
+        if let newSessionId = await query.sessionId {
+            queue.sync { _sessionId = newSessionId }
+            SessionStore.saveJakeSession(newSessionId, projectPath: projectURL.path)
+            TavernLogger.agents.info("Jake received response, length: \(responseText.count), sessionId: \(newSessionId)")
+        } else {
+            TavernLogger.agents.info("Jake received response, length: \(responseText.count), no sessionId")
+        }
+
+        return responseText
     }
 
     /// Send a continuation message to Jake (used for tool feedback)
-    private func sendContinuation(_ message: String, options: ClaudeCodeOptions) async throws -> ClaudeCodeResult {
+    private func sendContinuation(_ message: String) async throws -> String {
         guard let sessionId = queue.sync(execute: { _sessionId }) else {
             TavernLogger.agents.error("Jake.sendContinuation called without session ID")
             throw TavernError.sessionCorrupt(sessionId: "nil", underlyingError: nil)
         }
 
         TavernLogger.claude.info("Jake sending continuation to session: \(sessionId)")
-        return try await claude.resumeConversation(
-            sessionId: sessionId,
-            prompt: message,
-            outputFormat: .json,
-            options: options
-        )
+
+        var options = QueryOptions()
+        options.systemPrompt = Self.systemPrompt
+        options.workingDirectory = projectURL
+        options.resume = sessionId
+
+        let query = try await ClaudeCode.query(prompt: message, options: options)
+        return try await collectResponse(from: query)
     }
 
     /// Reset Jake's conversation (start fresh)
     public func resetConversation() {
         TavernLogger.agents.info("Jake conversation reset")
-        let currentProjectPath = queue.sync {
-            _sessionId = nil
-            return _projectPath
-        }
+        queue.sync { _sessionId = nil }
 
         // Clear persisted session for this project
-        if let projectPath = currentProjectPath {
-            SessionStore.clearJakeSession(projectPath: projectPath)
-        }
+        SessionStore.clearJakeSession(projectPath: projectURL.path)
     }
 }

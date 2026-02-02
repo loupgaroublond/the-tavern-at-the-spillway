@@ -1,7 +1,6 @@
 import Foundation
 import Combine
 import os.log
-import ClaudeCodeSDK
 
 /// View model for managing a chat conversation with an agent
 @MainActor
@@ -161,7 +160,14 @@ public final class ChatViewModel: ObservableObject {
                         debugLog("  -> Skipping empty text")
                         continue
                     }
-                    chatMessage = ChatMessage(role: role, content: text, messageType: .text)
+                    // For Jake's agent messages, parse JSON to extract the "message" field
+                    let displayText: String
+                    if role == .agent && isJake {
+                        displayText = Self.parseJakeMessage(text) ?? text
+                    } else {
+                        displayText = text
+                    }
+                    chatMessage = ChatMessage(role: role, content: displayText, messageType: .text)
 
                 case .toolUse(_, let name, let input):
                     chatMessage = ChatMessage(
@@ -275,5 +281,24 @@ public final class ChatViewModel: ObservableObject {
         showSessionRecoveryOptions = false
         corruptSessionId = nil
         // Keep messages so user can see what they tried to send
+    }
+
+    // MARK: - Private Helpers
+
+    /// Parse Jake's JSON response format to extract the display message
+    /// Jake responds with: {"message": "...", "spawn": {...}}
+    /// Returns nil if the text isn't valid Jake JSON
+    private static func parseJakeMessage(_ text: String) -> String? {
+        guard let data = text.data(using: .utf8) else { return nil }
+
+        struct JakeResponse: Codable {
+            let message: String
+        }
+
+        guard let response = try? JSONDecoder().decode(JakeResponse.self, from: data) else {
+            return nil
+        }
+
+        return response.message
     }
 }

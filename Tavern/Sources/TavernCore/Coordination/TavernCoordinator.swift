@@ -1,5 +1,4 @@
 import Foundation
-import ClaudeCodeSDK
 import os.log
 
 /// Coordinates the Tavern's agents and their chat sessions
@@ -31,8 +30,8 @@ public final class TavernCoordinator: ObservableObject {
     /// Jake's chat view model (always exists)
     private let jakeChatViewModel: ChatViewModel
 
-    /// Factory for creating ClaudeCode instances (for agent restoration)
-    private let claudeFactory: () -> ClaudeCode
+    /// Project URL for creating restored agents
+    private let projectURL: URL
 
     // MARK: - Initialization
 
@@ -40,11 +39,11 @@ public final class TavernCoordinator: ObservableObject {
     /// - Parameters:
     ///   - jake: The Proprietor
     ///   - spawner: Agent spawner for the Slop Squad
-    ///   - claudeFactory: Factory for creating ClaudeCode instances (for restored agents)
-    public init(jake: Jake, spawner: AgentSpawner, claudeFactory: @escaping () -> ClaudeCode) {
+    ///   - projectURL: The project directory URL
+    public init(jake: Jake, spawner: AgentSpawner, projectURL: URL) {
         self.jake = jake
         self.spawner = spawner
-        self.claudeFactory = claudeFactory
+        self.projectURL = projectURL
 
         // Create Jake's chat view model
         self.jakeChatViewModel = ChatViewModel(jake: jake)
@@ -107,13 +106,12 @@ public final class TavernCoordinator: ObservableObject {
         TavernLogger.coordination.info("Restoring \(persistedAgents.count) persisted agents")
 
         for persisted in persistedAgents {
-            let claude = claudeFactory()
             let agent = MortalAgent(
                 id: persisted.id,
                 name: persisted.name,
                 assignment: nil,  // Restored agents don't have original assignment
                 chatDescription: persisted.chatDescription,
-                claude: claude,
+                projectURL: projectURL,
                 loadSavedSession: true  // Will load session from SessionStore
             )
 
