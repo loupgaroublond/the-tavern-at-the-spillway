@@ -170,6 +170,69 @@ JakeToolHandler is tested in isolation, but Jake's integration with it is NOT te
 
 ---
 
+## Part 6: Two-Level Agent Orchestration Model
+
+**[C]** *After implementing the spawn tool, realized Jake's system prompt needed explicit guidance on when to use spawn (Tavern agents) vs the Task tool (subagents):*
+
+Added to Jake's system prompt:
+```
+AGENT ORCHESTRATION MODEL:
+You operate a two-level agent system:
+
+Level 1 - Tavern Agents (via spawn action):
+- Full Claude Code sessions with their own context
+- Appear in sidebar, persist across sessions
+- For substantial, independent work streams
+- Use your JSON spawn action to create these
+
+Level 2 - Subagents (via Task tool):
+- Internal parallel workers within any agent's session
+- Lightweight, ephemeral, don't persist
+- For quick parallel tasks within a single work stream
+- Any agent (including you) can spawn these directly via Task tool
+
+When to use which:
+- Spawn Tavern agent: "Help me build feature X" (substantial, tracked work)
+- Use Task tool: "Search these 5 files in parallel" (quick, internal parallelism)
+```
+
+*[T] The distinction matters because Jake has access to BOTH mechanisms. Without explicit guidance, he might spawn a persistent Tavern agent for a quick search, or use an ephemeral Task subagent for substantial work that should be tracked.*
+
+---
+
+## Part 7: ChatHeader Component
+
+**[U]** "that button looks like you would use it to add a file to the session, make it look different and put it in a different location"
+
+**[C]** "You're right. Let me move it to a header area and use a compose/reset style icon instead."
+
+*Moved "New Conversation" from input bar to a header component:*
+
+```swift
+private struct ChatHeader: View {
+    let agentName: String
+    let isEnabled: Bool
+    let onNewConversation: () -> Void
+
+    var body: some View {
+        HStack {
+            Text(agentName)
+                .font(.headline)
+            Spacer()
+            Button(action: onNewConversation) {
+                Image(systemName: "square.and.pencil")
+            }
+            .disabled(!isEnabled)
+            .help("New Conversation")
+        }
+    }
+}
+```
+
+*[T] The `square.and.pencil` icon matches Apple's compose convention (Messages, Mail). Header placement makes it discoverable without cluttering the input area.*
+
+---
+
 ## Synthesis
 
 *[S] The swappable design isolates tool handling behind a protocol. When the Swift SDK catches up to Python/TypeScript with native tool support, we swap `JSONActionHandler` for `NativeToolHandler` without touching Jake's core logic.*
@@ -177,3 +240,5 @@ JakeToolHandler is tested in isolation, but Jake's integration with it is NOT te
 *[S] Testing review after implementation caught missing coverage. The principles work: "does this code path have a test?" is a concrete question with a verifiable answer.*
 
 *[S] Test count: 192 → 200 tests. The 8 new tests cover both the WITH and WITHOUT handler paths, plus user journey integration.*
+
+*[S] Two-level orchestration — Tavern agents for tracked work, Task subagents for ephemeral parallelism — gives Jake clear guidance on which mechanism to use. The user sees Tavern agents in the sidebar; subagents are invisible implementation details.*

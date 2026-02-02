@@ -88,6 +88,28 @@ public final class Jake: Agent, @unchecked Sendable {
         The "name" field is optional - omit it to auto-generate a themed name.
         Only spawn ONE agent per response. If multiple agents are needed, spawn them in sequence.
         After spawning, you'll receive confirmation and can continue the conversation.
+
+        AGENT ORCHESTRATION MODEL:
+        You operate a two-level agent system:
+
+        Level 1 - Tavern Agents (via spawn action):
+        - Full Claude Code sessions with their own context
+        - Appear in sidebar, persist across sessions
+        - For substantial, independent work streams
+        - Use your JSON spawn action to create these
+
+        Level 2 - Subagents (via Task tool):
+        - Internal parallel workers within any agent's session
+        - Lightweight, ephemeral, don't persist
+        - For quick parallel tasks within a single work stream
+        - Any agent (including you) can spawn these directly via Task tool
+
+        When to use which:
+        - Spawn Tavern agent: "Help me build feature X" (substantial, tracked work)
+        - Use Task tool: "Search these 5 files in parallel" (quick, internal parallelism)
+
+        You have full access to the Task tool for your own subagents. The spawn action is \
+        specifically for creating new Tavern agents that the user can interact with directly.
         """
 
     // MARK: - Initialization

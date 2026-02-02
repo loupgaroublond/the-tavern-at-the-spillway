@@ -7,6 +7,17 @@ struct ChatView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            // Header with agent name and new conversation button
+            ChatHeader(
+                agentName: viewModel.agentName,
+                isEnabled: !viewModel.isCogitating,
+                onNewConversation: {
+                    viewModel.clearConversation()
+                }
+            )
+
+            Divider()
+
             // Session recovery banner (corrupt session detected)
             if viewModel.showSessionRecoveryOptions {
                 SessionRecoveryBanner(
@@ -67,6 +78,34 @@ struct ChatView: View {
                 }
             )
         }
+    }
+}
+
+// MARK: - Chat Header
+
+/// Header bar with agent name and new conversation button
+private struct ChatHeader: View {
+    let agentName: String
+    let isEnabled: Bool
+    let onNewConversation: () -> Void
+
+    var body: some View {
+        HStack {
+            Text(agentName)
+                .font(.headline)
+
+            Spacer()
+
+            Button(action: onNewConversation) {
+                Image(systemName: "square.and.pencil")
+                    .font(.system(size: 16))
+            }
+            .buttonStyle(.borderless)
+            .disabled(!isEnabled)
+            .help("New Conversation")
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 8)
     }
 }
 
