@@ -4,7 +4,7 @@
 
 A multi-agent orchestrator for macOS. Jake is the top-level coordinating agent — The Proprietor. He talks weird, works perfect.
 
-**Tech Stack:** Swift 6, SwiftUI, macOS 26+ (Tahoe), ClaudeCodeSDK (local fork), XcodeGen, SPM
+**Tech Stack:** Swift 6, SwiftUI, macOS 26+ (Tahoe), ClodeMonster SDK, XcodeGen, SPM
 
 **Platform Policy:** Target only the most recent macOS release. No backwards compatibility cruft.
 
@@ -18,7 +18,6 @@ the-tavern-at-the-spillway/
 │   ├── Package.swift                # SPM manifest
 │   ├── project.yml                  # XcodeGen config
 │   ├── *.do                         # redo build scripts (build, run, test, etc.)
-│   ├── LocalPackages/ClaudeCodeSDK/ # Forked SDK (JSON fix)
 │   ├── Sources/
 │   │   ├── Tavern/                  # App target (SwiftUI)
 │   │   │   ├── TavernApp.swift      # Entry point, multi-window orchestration
@@ -93,7 +92,7 @@ redo build
 ## Current State
 
 **Working:**
-- Jake responds using `.json` format (SDK bug fixed via local fork)
+- Jake responds using `.json` format (via ClodeMonster SDK)
 - Multi-project support with per-project session persistence
 - Session history restoration from Claude's native storage
 - Multi-window architecture (welcome window + per-project windows)
@@ -120,7 +119,6 @@ redo build
 | `Sources/TavernCore/Project/ProjectManager.swift` | Multi-project management |
 | `Sources/TavernCore/Persistence/SessionStore.swift` | Session IDs (UserDefaults) |
 | `Sources/TavernCore/Errors/TavernErrorMessages.swift` | Error mapping |
-| `LocalPackages/ClaudeCodeSDK/` | Forked SDK |
 | `docs/architecture-v1.md` | Architecture |
 
 

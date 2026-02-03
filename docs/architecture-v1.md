@@ -140,7 +140,7 @@ graph TD
     end
 
     subgraph "TavernCore Framework"
-        Core["TavernCore<br/>@_exported import ClaudeCodeSDK"]
+        Core["TavernCore<br/>@_exported import ClaudeCodeSDK (ClodeMonster)"]
     end
 
     subgraph "Core Modules"
@@ -152,7 +152,7 @@ graph TD
         UI["UI/"]
     end
 
-    SDK["ClaudeCodeSDK<br/>(local fork)"]
+    SDK["ClaudeCodeSDK<br/>(ClodeMonster)"]
 
     App --> Core
     Core --> Agents
