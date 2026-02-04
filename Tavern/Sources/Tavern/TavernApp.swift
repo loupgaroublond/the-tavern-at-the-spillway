@@ -624,7 +624,7 @@ private struct TavernHeader: View {
     let jake = Jake(projectURL: projectURL, loadSavedSession: false)
     let registry = AgentRegistry()
     let nameGenerator = NameGenerator(theme: .lotr)
-    let spawner = AgentSpawner(
+    let spawner = ServitorSpawner(
         registry: registry,
         nameGenerator: nameGenerator,
         projectURL: projectURL

@@ -17,7 +17,7 @@ final class ConcurrencyStressTests: XCTestCase {
     func testConcurrentSpawnDismiss() async throws {
         let registry = AgentRegistry()
         let nameGenerator = NameGenerator(theme: .lotr)
-        let spawner = AgentSpawner(
+        let spawner = ServitorSpawner(
             registry: registry,
             nameGenerator: nameGenerator,
             projectURL: testProjectURL()
@@ -35,7 +35,7 @@ final class ConcurrencyStressTests: XCTestCase {
                     var successCount = 0
                     for i in 0..<operationsPerTask {
                         do {
-                            let agent = try spawner.spawn(assignment: "Task \(taskIndex)-\(i)")
+                            let agent = try spawner.summon(assignment: "Task \(taskIndex)-\(i)")
                             // Small delay to increase chance of interleaving
                             try? await Task.sleep(nanoseconds: 1000)
                             try spawner.dismiss(agent)
@@ -77,8 +77,8 @@ final class ConcurrencyStressTests: XCTestCase {
         let taskCount = 10
 
         // Create agents to register/deregister
-        let agents: [MortalAgent] = (0..<iterations).map { i in
-            MortalAgent(
+        let agents: [Servitor] = (0..<iterations).map { i in
+            Servitor(
                 name: "SafetyTest-\(i)",
                 assignment: "Test \(i)",
                 projectURL: projectURL,

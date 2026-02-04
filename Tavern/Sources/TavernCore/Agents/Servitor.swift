@@ -2,10 +2,14 @@ import Foundation
 import ClaudeCodeSDK
 import os.log
 
-/// A mortal agent - a worker spawned by Jake to handle specific tasks
-/// Unlike Jake (who is eternal), mortal agents are created for a purpose
+/// A servitor - a worker spawned by Jake to handle specific assignments
+/// Unlike Jake (who is eternal), servitors are created for a purpose
 /// and eventually complete their work.
-public final class MortalAgent: Agent, @unchecked Sendable {
+///
+/// Terminology:
+/// - Jake calls them "Regulars" (individuals)
+/// - The whole team is the "Slop Squad"
+public final class Servitor: Agent, @unchecked Sendable {
 
     // MARK: - Agent Protocol
 
@@ -17,16 +21,16 @@ public final class MortalAgent: Agent, @unchecked Sendable {
         queue.sync { _state }
     }
 
-    // MARK: - Mortal Agent Properties
+    // MARK: - Servitor Properties
 
-    /// The assignment given to this agent (their purpose)
-    /// nil for user-spawned agents that wait for user's first message
+    /// The assignment given to this servitor (their purpose)
+    /// nil for user-spawned servitors that wait for user's first message
     public let assignment: String?
 
     /// User-editable description shown in the sidebar
     public var chatDescription: String?
 
-    /// Commitments this agent must verify before completing
+    /// Commitments this servitor must verify before completing
     public let commitments: CommitmentList
 
     /// Verifier used to check commitments (injected for testability)
@@ -35,7 +39,7 @@ public final class MortalAgent: Agent, @unchecked Sendable {
     // MARK: - Private State
 
     private let projectURL: URL
-    private let queue = DispatchQueue(label: "com.tavern.MortalAgent")
+    private let queue = DispatchQueue(label: "com.tavern.Servitor")
 
     private var _state: AgentState = .idle
     private var _sessionId: String?
@@ -47,10 +51,10 @@ public final class MortalAgent: Agent, @unchecked Sendable {
 
     // MARK: - System Prompt
 
-    /// Generate the system prompt for this agent
+    /// Generate the system prompt for this servitor
     private var systemPrompt: String {
         if let assignment = assignment {
-            // Jake-spawned: has an assignment, start working immediately
+            // Jake-summoned: has an assignment, start working immediately
             return """
             You are a worker agent in The Tavern at the Spillway.
 
@@ -77,9 +81,9 @@ public final class MortalAgent: Agent, @unchecked Sendable {
             Your name is \(name).
 
             You are part of Jake's "Slop Squad" - worker agents who get things done.
-            Wait for the user to give you a task. Once they do, be efficient and thorough.
+            Wait for the user to give you an assignment. Once they do, be efficient and thorough.
 
-            When you complete a task, say "DONE" clearly.
+            When you complete an assignment, say "DONE" clearly.
             If you need input or clarification, ask for it.
             If you encounter an error you can't resolve, report it clearly.
 
@@ -92,11 +96,11 @@ public final class MortalAgent: Agent, @unchecked Sendable {
 
     // MARK: - Initialization
 
-    /// Create a mortal agent, optionally with an assignment
+    /// Create a servitor, optionally with an assignment
     /// - Parameters:
     ///   - id: Unique identifier (auto-generated if not provided)
-    ///   - name: Display name for this agent
-    ///   - assignment: The task this agent is responsible for (nil for user-spawned agents)
+    ///   - name: Display name for this servitor
+    ///   - assignment: The assignment this servitor is responsible for (nil for user-spawned servitors)
     ///   - chatDescription: User-editable description shown in sidebar
     ///   - projectURL: The project directory URL
     ///   - commitments: List of commitments to verify before completion (defaults to empty)
@@ -120,7 +124,7 @@ public final class MortalAgent: Agent, @unchecked Sendable {
         self.commitments = commitments
         self.verifier = verifier
 
-        // Restore session from previous run (useful if agent was persisted)
+        // Restore session from previous run (useful if servitor was persisted)
         if loadSavedSession, let savedSession = SessionStore.loadAgentSession(agentId: id) {
             self._sessionId = savedSession
             TavernLogger.agents.info("[\(name)] restored session: \(savedSession)")
@@ -129,7 +133,7 @@ public final class MortalAgent: Agent, @unchecked Sendable {
 
     // MARK: - Agent Protocol Implementation
 
-    /// Send a message to this agent and get a response
+    /// Send a message to this servitor and get a response
     public func send(_ message: String) async throws -> String {
         TavernLogger.agents.info("[\(self.name)] send called, prompt length: \(message.count)")
         TavernLogger.agents.debug("[\(self.name)] state: \(self._state.rawValue) -> working")
@@ -193,7 +197,7 @@ public final class MortalAgent: Agent, @unchecked Sendable {
         return responseText
     }
 
-    /// Reset the agent's conversation state
+    /// Reset the servitor's conversation state
     public func resetConversation() {
         TavernLogger.agents.info("[\(self.name)] conversation reset")
         queue.sync {
@@ -218,7 +222,7 @@ public final class MortalAgent: Agent, @unchecked Sendable {
 
     // MARK: - State Management
 
-    /// Explicitly mark this agent as waiting for input
+    /// Explicitly mark this servitor as waiting for input
     public func markWaiting() {
         queue.sync {
             if _state != .done {
@@ -227,7 +231,7 @@ public final class MortalAgent: Agent, @unchecked Sendable {
         }
     }
 
-    /// Explicitly mark this agent as done
+    /// Explicitly mark this servitor as done
     public func markDone() {
         queue.sync { _state = .done }
     }
@@ -256,7 +260,7 @@ public final class MortalAgent: Agent, @unchecked Sendable {
         }
     }
 
-    /// Handle when the agent signals completion
+    /// Handle when the servitor signals completion
     /// Verifies all commitments before actually marking done
     private func handleCompletionAttempt() async {
         // If no commitments or all already passed, mark done immediately
@@ -277,12 +281,12 @@ public final class MortalAgent: Agent, @unchecked Sendable {
                 TavernLogger.agents.info("[\(self.name)] all commitments passed, state -> done")
                 queue.sync { _state = .done }
             } else {
-                // Verification failed - agent needs to continue working
+                // Verification failed - servitor needs to continue working
                 TavernLogger.agents.info("[\(self.name)] commitment verification failed, state -> idle")
                 queue.sync { _state = .idle }
             }
         } catch {
-            // Verification error - stay idle so agent can retry
+            // Verification error - stay idle so servitor can retry
             TavernLogger.agents.error("[\(self.name)] commitment verification error: \(error.localizedDescription)")
             queue.sync { _state = .idle }
         }

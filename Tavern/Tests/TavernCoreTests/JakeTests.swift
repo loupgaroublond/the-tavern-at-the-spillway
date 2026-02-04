@@ -49,21 +49,31 @@ struct JakeTests {
         #expect(jake.projectPath == projectURL.path)
     }
 
-    @Test("Jake tool handler can be set")
-    func jakeToolHandlerCanBeSet() async throws {
+    @Test("Jake MCP server can be set")
+    func jakeMCPServerCanBeSet() async throws {
         let jake = Jake(projectURL: Self.testProjectURL(), loadSavedSession: false)
 
-        // Initially no tool handler
-        #expect(jake.toolHandler == nil)
+        // Initially no MCP server
+        #expect(jake.mcpServer == nil)
 
-        // Create a passthrough handler
-        let handler = JSONActionHandler { _, _ in
-            SpawnResult(agentId: UUID(), agentName: "Test")
-        }
-        jake.toolHandler = handler
+        // Create a mock MCP server
+        let registry = AgentRegistry()
+        let nameGenerator = NameGenerator(theme: .lotr)
+        let spawner = ServitorSpawner(
+            registry: registry,
+            nameGenerator: nameGenerator,
+            projectURL: Self.testProjectURL()
+        )
 
-        // Tool handler is now set
-        #expect(jake.toolHandler != nil)
+        let server = createTavernMCPServer(
+            spawner: spawner,
+            onSummon: { _ in },
+            onDismiss: { _ in }
+        )
+        jake.mcpServer = server
+
+        // MCP server is now set
+        #expect(jake.mcpServer != nil)
     }
 
     // MARK: - Tests requiring SDK mocking (skipped for now)

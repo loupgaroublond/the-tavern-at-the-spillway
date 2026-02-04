@@ -105,7 +105,7 @@ public final class ChatViewModel: ObservableObject {
     // MARK: - Session History
 
     /// Load session history from Claude's native storage
-    /// Works for both Jake and mortal agents
+    /// Works for both Jake and servitors
     public func loadSessionHistory() async {
         TavernLogger.chat.info("loadSessionHistory called, isJake=\(self.isJake), agentId=\(self.agentId)")
 
@@ -219,6 +219,10 @@ public final class ChatViewModel: ObservableObject {
         // Set cogitating state with random verb
         isCogitating = true
         cogitationVerb = Self.cogitationVerbs.randomElement() ?? "Cogitating"
+        TavernLogger.chat.info("[\(self.agentName)] cogitating state set, verb: \(self.cogitationVerb)")
+
+        // Yield to let UI update before potentially blocking call
+        await Task.yield()
 
         do {
             // Get response from agent

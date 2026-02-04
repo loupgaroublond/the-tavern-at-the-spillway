@@ -1,4 +1,5 @@
 import Foundation
+import ClaudeCodeSDK
 import os.log
 
 /// Coordinates the Tavern's agents and their chat sessions
@@ -19,8 +20,8 @@ public final class TavernCoordinator: ObservableObject {
     /// Jake - The Proprietor (eternal, always present)
     public let jake: Jake
 
-    /// Spawner for mortal agents
-    public let spawner: AgentSpawner
+    /// Spawner for servitors
+    public let spawner: ServitorSpawner
 
     // MARK: - Private State
 
@@ -30,17 +31,20 @@ public final class TavernCoordinator: ObservableObject {
     /// Jake's chat view model (always exists)
     private let jakeChatViewModel: ChatViewModel
 
-    /// Project URL for creating restored agents
+    /// Project URL for creating restored servitors
     private let projectURL: URL
+
+    /// The MCP server for Jake's tools (optional to allow delayed init)
+    private var mcpServer: SDKMCPServer?
 
     // MARK: - Initialization
 
     /// Create the coordinator with dependencies
     /// - Parameters:
     ///   - jake: The Proprietor
-    ///   - spawner: Agent spawner for the Slop Squad
+    ///   - spawner: Servitor spawner for the Slop Squad
     ///   - projectURL: The project directory URL
-    public init(jake: Jake, spawner: AgentSpawner, projectURL: URL) {
+    public init(jake: Jake, spawner: ServitorSpawner, projectURL: URL) {
         self.jake = jake
         self.spawner = spawner
         self.projectURL = projectURL
@@ -55,71 +59,63 @@ public final class TavernCoordinator: ObservableObject {
         // Create the agent list view model
         self.agentListViewModel = AgentListViewModel(jake: jake, spawner: spawner)
 
-        // Wire up Jake's tool handler for spawn actions
-        // Captures self weakly to avoid retain cycle
-        setupJakeToolHandler()
+        // Setup MCP server for Jake's tools (must be after all stored properties initialized)
+        setupMCPServer()
 
-        // Restore persisted agents
-        restoreAgents()
+        // Restore persisted servitors
+        restoreServitors()
     }
 
-    // MARK: - Tool Handler Setup
-
-    /// Configure Jake's tool handler to route spawn actions through the coordinator
-    private func setupJakeToolHandler() {
-        // Create spawn action that uses the coordinator's spawn method
-        // Uses weak self to avoid retain cycle (Jake -> handler -> coordinator -> jake)
-        let handler = JSONActionHandler { [weak self] assignment, name in
-            guard let coordinator = self else {
-                throw TavernError.internalError("Coordinator deallocated during spawn")
+    /// Setup the MCP server for Jake - called after init completes
+    private func setupMCPServer() {
+        let server = createTavernMCPServer(
+            spawner: spawner,
+            onSummon: { [weak self] servitor in
+                guard let coordinator = self else { return }
+                await MainActor.run {
+                    coordinator.persistServitor(servitor)
+                    coordinator.agentListViewModel.agentsDidChange()
+                }
+                TavernLogger.coordination.info("Jake summoned servitor: \(servitor.name)")
+            },
+            onDismiss: { [weak self] servitorId in
+                guard let coordinator = self else { return }
+                await MainActor.run {
+                    coordinator.chatViewModels.removeValue(forKey: servitorId)
+                    SessionStore.removeAgent(id: servitorId)
+                    coordinator.agentListViewModel.agentsDidChange()
+                    coordinator.updateActiveChatViewModel()
+                }
+                TavernLogger.coordination.info("Jake dismissed servitor: \(servitorId)")
             }
-
-            // Spawn the agent (AgentSpawner is not MainActor-isolated)
-            let agent: MortalAgent
-            if let name = name {
-                // Jake specified a name
-                agent = try coordinator.spawner.spawn(name: name, assignment: assignment)
-            } else {
-                // Auto-generate name
-                agent = try coordinator.spawner.spawn(assignment: assignment)
-            }
-
-            // Persist and update UI on MainActor (don't auto-select Jake-spawned agents)
-            await MainActor.run {
-                coordinator.persistAgent(agent)
-                coordinator.agentListViewModel.agentsDidChange()
-            }
-
-            TavernLogger.coordination.info("Jake spawned agent: \(agent.name) for: \(assignment)")
-            return SpawnResult(agentId: agent.id, agentName: agent.name)
-        }
-
-        jake.toolHandler = handler
-        TavernLogger.coordination.info("Jake tool handler configured")
+        )
+        self.mcpServer = server
+        jake.mcpServer = server
+        TavernLogger.coordination.info("TavernMCPServer configured for Jake")
     }
 
-    // MARK: - Agent Restoration
+    // MARK: - Servitor Restoration
 
-    /// Restore agents from UserDefaults on app launch
-    private func restoreAgents() {
+    /// Restore servitors from UserDefaults on app launch
+    private func restoreServitors() {
         let persistedAgents = SessionStore.loadAgentList()
-        TavernLogger.coordination.info("Restoring \(persistedAgents.count) persisted agents")
+        TavernLogger.coordination.info("Restoring \(persistedAgents.count) persisted servitors")
 
         for persisted in persistedAgents {
-            let agent = MortalAgent(
+            let servitor = Servitor(
                 id: persisted.id,
                 name: persisted.name,
-                assignment: nil,  // Restored agents don't have original assignment
+                assignment: nil,  // Restored servitors don't have original assignment
                 chatDescription: persisted.chatDescription,
                 projectURL: projectURL,
                 loadSavedSession: true  // Will load session from SessionStore
             )
 
             do {
-                try spawner.register(agent)
-                TavernLogger.coordination.info("Restored agent: \(persisted.name) (id: \(persisted.id))")
+                try spawner.register(servitor)
+                TavernLogger.coordination.info("Restored servitor: \(persisted.name) (id: \(persisted.id))")
             } catch {
-                TavernLogger.coordination.error("Failed to restore agent \(persisted.name): \(error.localizedDescription)")
+                TavernLogger.coordination.error("Failed to restore servitor \(persisted.name): \(error.localizedDescription)")
             }
         }
 
@@ -153,17 +149,17 @@ public final class TavernCoordinator: ObservableObject {
             TavernLogger.coordination.info("updateActiveChatViewModel: using cached viewModel for \(selectedId)")
             activeChatViewModel = existingViewModel
         } else {
-            // Create a new chat view model for this agent
-            // We need to get the agent from spawner
-            if let anyAgent = spawner.activeAgents.first(where: { $0.id == selectedId }) {
+            // Create a new chat view model for this servitor
+            // We need to get the servitor from spawner
+            if let anyAgent = spawner.activeServitors.first(where: { $0.id == selectedId }) {
                 TavernLogger.coordination.info("updateActiveChatViewModel: creating new viewModel for \(anyAgent.name)")
-                // Pass project path so mortal agents can load their session history
+                // Pass project path so servitors can load their session history
                 let viewModel = ChatViewModel(agent: anyAgent, projectPath: jake.projectPath)
                 chatViewModels[selectedId] = viewModel
                 activeChatViewModel = viewModel
             } else {
-                // Agent not found, fallback to Jake
-                TavernLogger.coordination.error("updateActiveChatViewModel: agent \(selectedId) not found, using Jake")
+                // Servitor not found, fallback to Jake
+                TavernLogger.coordination.error("updateActiveChatViewModel: servitor \(selectedId) not found, using Jake")
                 activeChatViewModel = jakeChatViewModel
             }
         }
@@ -172,97 +168,125 @@ public final class TavernCoordinator: ObservableObject {
 
     // MARK: - Agent Lifecycle
 
-    /// Spawn a new agent for user interaction (no assignment)
-    /// The agent waits for the user's first message
-    /// - Parameter selectAfterSpawn: Whether to switch to the new agent's chat
-    /// - Returns: The spawned agent
+    /// Summon a new servitor for user interaction (no assignment)
+    /// The servitor waits for the user's first message
+    /// - Parameter selectAfterSummon: Whether to switch to the new servitor's chat
+    /// - Returns: The summoned servitor
     @discardableResult
-    public func spawnAgent(selectAfterSpawn: Bool = true) throws -> MortalAgent {
-        TavernLogger.coordination.info("Spawning new agent (user-spawned, no assignment)")
+    public func summonServitor(selectAfterSummon: Bool = true) throws -> Servitor {
+        TavernLogger.coordination.info("Summoning new servitor (user-spawned, no assignment)")
 
-        let agent = try spawner.spawn()
-        TavernLogger.coordination.info("Agent spawned: \(agent.name) (id: \(agent.id))")
+        let servitor = try spawner.summon()
+        TavernLogger.coordination.info("Servitor summoned: \(servitor.name) (id: \(servitor.id))")
 
-        // Persist the agent
-        persistAgent(agent)
+        // Persist the servitor
+        persistServitor(servitor)
 
         // Refresh the list
         agentListViewModel.agentsDidChange()
 
-        // Optionally select the new agent
-        if selectAfterSpawn {
-            selectAgent(id: agent.id)
+        // Optionally select the new servitor
+        if selectAfterSummon {
+            selectAgent(id: servitor.id)
         }
 
-        return agent
+        return servitor
     }
 
-    /// Spawn a new agent with an assignment (Jake-spawned)
+    /// Summon a new servitor with an assignment (Jake-summoned)
     /// - Parameters:
-    ///   - assignment: The task for the agent
-    ///   - selectAfterSpawn: Whether to switch to the new agent's chat
-    /// - Returns: The spawned agent
+    ///   - assignment: The assignment for the servitor
+    ///   - selectAfterSummon: Whether to switch to the new servitor's chat
+    /// - Returns: The summoned servitor
     @discardableResult
-    public func spawnAgent(assignment: String, selectAfterSpawn: Bool = true) throws -> MortalAgent {
-        TavernLogger.coordination.info("Spawning new agent with assignment: \(assignment)")
+    public func summonServitor(assignment: String, selectAfterSummon: Bool = true) throws -> Servitor {
+        TavernLogger.coordination.info("Summoning new servitor with assignment: \(assignment)")
 
-        let agent = try spawner.spawn(assignment: assignment)
-        TavernLogger.coordination.info("Agent spawned: \(agent.name) (id: \(agent.id))")
+        let servitor = try spawner.summon(assignment: assignment)
+        TavernLogger.coordination.info("Servitor summoned: \(servitor.name) (id: \(servitor.id))")
 
-        // Persist the agent
-        persistAgent(agent)
+        // Persist the servitor
+        persistServitor(servitor)
 
         // Refresh the list
         agentListViewModel.agentsDidChange()
 
-        // Optionally select the new agent
-        if selectAfterSpawn {
-            selectAgent(id: agent.id)
+        // Optionally select the new servitor
+        if selectAfterSummon {
+            selectAgent(id: servitor.id)
         }
 
-        return agent
+        return servitor
     }
 
-    /// Close an agent (remove from UI and persistence, keep Claude session orphaned)
-    /// - Parameter agentId: The ID of the agent to close
-    public func closeAgent(id agentId: UUID) throws {
-        TavernLogger.coordination.info("Closing agent: \(agentId)")
+    /// Close a servitor (remove from UI and persistence, keep Claude session orphaned)
+    /// - Parameter servitorId: The ID of the servitor to close
+    public func closeServitor(id servitorId: UUID) throws {
+        TavernLogger.coordination.info("Closing servitor: \(servitorId)")
 
         // Remove the chat view model
-        chatViewModels.removeValue(forKey: agentId)
+        chatViewModels.removeValue(forKey: servitorId)
 
         // Remove from persistence (doesn't delete Claude session)
-        SessionStore.removeAgent(id: agentId)
+        SessionStore.removeAgent(id: servitorId)
 
         // Dismiss from spawner
-        try spawner.dismiss(id: agentId)
-        TavernLogger.coordination.info("Agent closed successfully: \(agentId)")
+        try spawner.dismiss(id: servitorId)
+        TavernLogger.coordination.info("Servitor closed successfully: \(servitorId)")
 
-        // Update the list (will select Jake if closed agent was selected)
+        // Update the list (will select Jake if closed servitor was selected)
         agentListViewModel.agentsDidChange()
 
         // Update active view model
         updateActiveChatViewModel()
     }
 
-    /// Dismiss an agent (alias for closeAgent for backward compatibility)
-    /// - Parameter agentId: The ID of the agent to dismiss
-    public func dismissAgent(id agentId: UUID) throws {
-        try closeAgent(id: agentId)
+    /// Dismiss a servitor (alias for closeServitor for backward compatibility)
+    /// - Parameter servitorId: The ID of the servitor to dismiss
+    public func dismissServitor(id servitorId: UUID) throws {
+        try closeServitor(id: servitorId)
     }
 
-    // MARK: - Agent Persistence
+    // MARK: - Legacy compatibility methods
 
-    /// Persist an agent to UserDefaults
-    private func persistAgent(_ agent: MortalAgent) {
+    /// Spawn a new agent (legacy - calls summonServitor)
+    @available(*, deprecated, renamed: "summonServitor(selectAfterSummon:)")
+    @discardableResult
+    public func spawnAgent(selectAfterSpawn: Bool = true) throws -> Servitor {
+        try summonServitor(selectAfterSummon: selectAfterSpawn)
+    }
+
+    /// Spawn a new agent with assignment (legacy - calls summonServitor)
+    @available(*, deprecated, renamed: "summonServitor(assignment:selectAfterSummon:)")
+    @discardableResult
+    public func spawnAgent(assignment: String, selectAfterSpawn: Bool = true) throws -> Servitor {
+        try summonServitor(assignment: assignment, selectAfterSummon: selectAfterSpawn)
+    }
+
+    /// Close an agent (legacy - calls closeServitor)
+    @available(*, deprecated, renamed: "closeServitor(id:)")
+    public func closeAgent(id agentId: UUID) throws {
+        try closeServitor(id: agentId)
+    }
+
+    /// Dismiss an agent (legacy - calls dismissServitor)
+    @available(*, deprecated, renamed: "dismissServitor(id:)")
+    public func dismissAgent(id agentId: UUID) throws {
+        try dismissServitor(id: agentId)
+    }
+
+    // MARK: - Servitor Persistence
+
+    /// Persist a servitor to UserDefaults
+    private func persistServitor(_ servitor: Servitor) {
         let persisted = SessionStore.PersistedAgent(
-            id: agent.id,
-            name: agent.name,
-            sessionId: agent.sessionId,
-            chatDescription: agent.chatDescription
+            id: servitor.id,
+            name: servitor.name,
+            sessionId: servitor.sessionId,
+            chatDescription: servitor.chatDescription
         )
         SessionStore.addAgent(persisted)
-        TavernLogger.coordination.debug("Persisted agent: \(agent.name) (id: \(agent.id))")
+        TavernLogger.coordination.debug("Persisted servitor: \(servitor.name) (id: \(servitor.id))")
     }
 
     // MARK: - Refresh

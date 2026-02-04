@@ -51,12 +51,12 @@ public final class TavernProject: ObservableObject, Identifiable {
         let registry = AgentRegistry()
         let nameGenerator = NameGenerator(theme: .lotr)
 
-        let spawner = AgentSpawner(
+        let spawner = ServitorSpawner(
             registry: registry,
             nameGenerator: nameGenerator,
             projectURL: rootURL
         )
-        TavernLogger.coordination.debug("[\(self.name)] AgentSpawner created")
+        TavernLogger.coordination.debug("[\(self.name)] ServitorSpawner created")
 
         TavernLogger.coordination.debug("[\(self.name)] Creating TavernCoordinator...")
         self.coordinator = TavernCoordinator(jake: jake, spawner: spawner, projectURL: rootURL)

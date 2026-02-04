@@ -24,6 +24,16 @@ public enum TavernErrorMessages {
             return message(for: sessionError)
         }
 
+        // Handle ClodeMonster ControlProtocolError
+        if let controlError = error as? ControlProtocolError {
+            return message(for: controlError)
+        }
+
+        // Handle ClodeMonster TransportError
+        if let transportError = error as? TransportError {
+            return message(for: transportError)
+        }
+
         // Handle URL/network errors
         if let urlError = error as? URLError {
             return message(for: urlError)
@@ -95,6 +105,81 @@ public enum TavernErrorMessages {
             return """
                 Couldn't initialize the session.
                 \(reason)
+                """
+        }
+    }
+
+    /// Convert ClodeMonster ControlProtocolError to an informative message
+    public static func message(for error: ControlProtocolError) -> String {
+        switch error {
+        case .timeout(let requestId):
+            return """
+                Request timed out waiting for Claude.
+                Claude might be overloaded or there's a connection issue.
+                (Request: \(requestId.prefix(8))...)
+                """
+
+        case .cancelled(let requestId):
+            return """
+                Request was cancelled.
+                (Request: \(requestId.prefix(8))...)
+                """
+
+        case .responseError(let requestId, let message):
+            return """
+                Claude returned an error: \(message)
+                (Request: \(requestId.prefix(8))...)
+                """
+
+        case .unknownSubtype(let subtype):
+            return """
+                Unexpected response type from Claude: \(subtype)
+                This might be a version mismatch. Try updating Claude Code.
+                """
+
+        case .invalidMessage(let details):
+            return """
+                Invalid message from Claude process.
+                \(details)
+                Try restarting the app.
+                """
+        }
+    }
+
+    /// Convert ClodeMonster TransportError to an informative message
+    public static func message(for error: TransportError) -> String {
+        switch error {
+        case .notConnected:
+            return """
+                Not connected to Claude.
+                The Claude process isn't running. Try restarting the app.
+                """
+
+        case .writeFailed(let reason):
+            return """
+                Couldn't send message to Claude.
+                The Claude process may have crashed.
+                \(reason)
+                """
+
+        case .processTerminated(let exitCode):
+            return """
+                Claude process terminated unexpectedly.
+                Exit code: \(exitCode)
+                Try restarting the app.
+                """
+
+        case .launchFailed(let reason):
+            return """
+                Couldn't start Claude.
+                Make sure Claude Code is installed: npm install -g @anthropic/claude-code
+                \(reason)
+                """
+
+        case .closed:
+            return """
+                Connection to Claude was closed.
+                Try starting a new conversation.
                 """
         }
     }

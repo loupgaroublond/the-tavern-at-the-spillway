@@ -43,13 +43,13 @@ public struct AgentListItem: Identifiable, Equatable, Sendable {
 
     // MARK: - Factory Methods
 
-    /// Create an item from a MortalAgent
-    public static func from(mortalAgent: MortalAgent) -> AgentListItem {
+    /// Create an item from a Servitor
+    public static func from(servitor: Servitor) -> AgentListItem {
         AgentListItem(
-            id: mortalAgent.id,
-            name: mortalAgent.name,
-            chatDescription: mortalAgent.chatDescription,
-            state: mortalAgent.state,
+            id: servitor.id,
+            name: servitor.name,
+            chatDescription: servitor.chatDescription,
+            state: servitor.state,
             isJake: false
         )
     }

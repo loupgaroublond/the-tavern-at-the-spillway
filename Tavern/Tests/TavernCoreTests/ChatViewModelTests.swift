@@ -52,10 +52,10 @@ struct ChatViewModelTests {
     // MARK: - Symmetry Tests (Testing Principle #4)
     // These tests ensure parallel code paths behave consistently
 
-    @Test("ChatViewModel for mortal agent accepts projectPath parameter")
+    @Test("ChatViewModel for servitor agent accepts projectPath parameter")
     @MainActor
-    func mortalAgentViewModelAcceptsProjectPath() {
-        let agent = MortalAgent(
+    func servitorAgentViewModelAcceptsProjectPath() {
+        let agent = Servitor(
             name: "Worker",
             assignment: "Test task",
             projectURL: Self.testProjectURL(),
@@ -69,10 +69,10 @@ struct ChatViewModelTests {
         #expect(viewModel.agentName == "Worker")
     }
 
-    @Test("ChatViewModel for mortal agent without assignment works")
+    @Test("ChatViewModel for servitor agent without assignment works")
     @MainActor
-    func mortalAgentViewModelWithoutAssignment() {
-        let agent = MortalAgent(
+    func servitorAgentViewModelWithoutAssignment() {
+        let agent = Servitor(
             name: "User-Spawned",
             projectURL: Self.testProjectURL(),
             loadSavedSession: false
@@ -90,16 +90,16 @@ struct ChatViewModelTests {
         let projectURL = Self.testProjectURL()
 
         let jake = Jake(projectURL: projectURL, loadSavedSession: false)
-        let mortal = MortalAgent(name: "Worker", projectURL: projectURL, loadSavedSession: false)
+        let servitor = Servitor(name: "Worker", projectURL: projectURL, loadSavedSession: false)
 
         // Jake initializer with loadHistory
         let jakeVM = ChatViewModel(jake: jake, loadHistory: false)
 
         // Mortal agent initializer with loadHistory (this was the bug - parameter didn't exist)
-        let mortalVM = ChatViewModel(agent: mortal, projectPath: "/test", loadHistory: false)
+        let servitorVM = ChatViewModel(agent: servitor, projectPath: "/test", loadHistory: false)
 
         #expect(jakeVM.messages.isEmpty)
-        #expect(mortalVM.messages.isEmpty)
+        #expect(servitorVM.messages.isEmpty)
     }
 
     @Test("Agent ID and name are accessible")
@@ -121,5 +121,5 @@ struct ChatViewModelTests {
     // - cogitationVerbIsSet
     // - errorIsCapturedAndDisplayed
     // - multipleMessagesAccumulate
-    // - mortalAgentCanSendMessages
+    // - servitorAgentCanSendMessages
 }

@@ -38,16 +38,16 @@ struct AgentListItemTests {
         #expect(item.chatDescription == nil)
     }
 
-    @Test("Item from MortalAgent uses chatDescription")
-    func itemFromMortalAgentUsesChatDescription() {
-        let agent = MortalAgent(
+    @Test("Item from Servitor uses chatDescription")
+    func itemFromServitorUsesChatDescription() {
+        let agent = Servitor(
             name: "Frodo",
             assignment: "Carry the ring",
             chatDescription: "Ring duty",
             projectURL: Self.testProjectURL(),
             loadSavedSession: false
         )
-        let item = AgentListItem.from(mortalAgent: agent)
+        let item = AgentListItem.from(servitor: agent)
 
         #expect(item.isJake == false)
         #expect(item.name == "Frodo")
@@ -55,15 +55,15 @@ struct AgentListItemTests {
         #expect(item.id == agent.id)
     }
 
-    @Test("Item from MortalAgent without description has nil chatDescription")
-    func itemFromMortalAgentWithoutDescription() {
-        let agent = MortalAgent(
+    @Test("Item from Servitor without description has nil chatDescription")
+    func itemFromServitorWithoutDescription() {
+        let agent = Servitor(
             name: "Sam",
             assignment: "Help Frodo",
             projectURL: Self.testProjectURL(),
             loadSavedSession: false
         )
-        let item = AgentListItem.from(mortalAgent: agent)
+        let item = AgentListItem.from(servitor: agent)
 
         #expect(item.chatDescription == nil)
     }
@@ -94,12 +94,12 @@ struct AgentListViewModelTests {
     }
 
     @MainActor
-    func createTestSetup() -> (AgentListViewModel, Jake, AgentSpawner) {
+    func createTestSetup() -> (AgentListViewModel, Jake, ServitorSpawner) {
         let projectURL = Self.testProjectURL()
         let jake = Jake(projectURL: projectURL, loadSavedSession: false)
         let registry = AgentRegistry()
         let nameGenerator = NameGenerator(theme: .lotr)
-        let spawner = AgentSpawner(
+        let spawner = ServitorSpawner(
             registry: registry,
             nameGenerator: nameGenerator,
             projectURL: projectURL
@@ -123,9 +123,9 @@ struct AgentListViewModelTests {
     func listShowsAllSpawnedAgents() throws {
         let (viewModel, _, spawner) = createTestSetup()
 
-        try spawner.spawn(assignment: "Task 1")
-        try spawner.spawn(assignment: "Task 2")
-        try spawner.spawn(assignment: "Task 3")
+        try spawner.summon(assignment: "Task 1")
+        try spawner.summon(assignment: "Task 2")
+        try spawner.summon(assignment: "Task 3")
 
         viewModel.refreshItems()
 
@@ -147,7 +147,7 @@ struct AgentListViewModelTests {
     func selectionWorks() throws {
         let (viewModel, jake, spawner) = createTestSetup()
 
-        let agent = try spawner.spawn(assignment: "Test task")
+        let agent = try spawner.summon(assignment: "Test task")
         viewModel.refreshItems()
 
         // Initially Jake is selected
@@ -180,7 +180,7 @@ struct AgentListViewModelTests {
         #expect(viewModel.selectedItem?.isJake == true)
 
         // After selecting another agent
-        let agent = try spawner.spawn(assignment: "Test")
+        let agent = try spawner.summon(assignment: "Test")
         viewModel.refreshItems()
         viewModel.selectAgent(id: agent.id)
 
@@ -195,7 +195,7 @@ struct AgentListViewModelTests {
 
         #expect(viewModel.items.count == 1) // Just Jake
 
-        try spawner.spawn(assignment: "Task")
+        try spawner.summon(assignment: "Task")
         viewModel.agentsDidChange()
 
         #expect(viewModel.items.count == 2) // Jake + agent
@@ -206,7 +206,7 @@ struct AgentListViewModelTests {
     func agentsDidChangeSelectsJakeWhenSelectedRemoved() throws {
         let (viewModel, jake, spawner) = createTestSetup()
 
-        let agent = try spawner.spawn(assignment: "Task")
+        let agent = try spawner.summon(assignment: "Task")
         viewModel.refreshItems()
         viewModel.selectAgent(id: agent.id)
 
@@ -237,7 +237,7 @@ struct AgentListViewModelTests {
     func userSpawnedAgentHasNoAssignment() throws {
         let (viewModel, _, spawner) = createTestSetup()
 
-        let agent = try spawner.spawn()  // No assignment
+        let agent = try spawner.summon()  // No assignment
         viewModel.refreshItems()
 
         let item = viewModel.items.first { $0.id == agent.id }

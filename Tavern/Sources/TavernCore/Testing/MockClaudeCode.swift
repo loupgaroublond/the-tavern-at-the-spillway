@@ -16,21 +16,37 @@ import ClaudeCodeSDK
 public enum MockSDKMessage {
 
     /// Create a result message with text content
+    /// SDKMessage.content for "result" type returns rawJSON["result"]
     public static func result(text: String) -> SDKMessage {
-        SDKMessage(type: "result", content: .string(text), data: nil)
+        SDKMessage(type: "result", rawJSON: [
+            "type": .string("result"),
+            "result": .string(text)
+        ])
     }
 
     /// Create an assistant message
+    /// SDKMessage.content for "assistant" type extracts from message.content[0].text
     public static func assistant(text: String) -> SDKMessage {
-        SDKMessage(type: "assistant", content: .string(text), data: nil)
+        SDKMessage(type: "assistant", rawJSON: [
+            "type": .string("assistant"),
+            "message": .object([
+                "content": .array([
+                    .object([
+                        "type": .string("text"),
+                        "text": .string(text)
+                    ])
+                ])
+            ])
+        ])
     }
 
     /// Create a system init message with session ID
     public static func systemInit(sessionId: String) -> SDKMessage {
-        let data = JSONValue.object([
+        SDKMessage(type: "system", rawJSON: [
+            "type": .string("system"),
+            "subtype": .string("init"),
             "session_id": .string(sessionId)
         ])
-        return SDKMessage(type: "system", content: .string("init"), data: data)
     }
 }
 

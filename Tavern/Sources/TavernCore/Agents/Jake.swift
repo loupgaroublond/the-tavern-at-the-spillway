@@ -24,13 +24,13 @@ public final class Jake: Agent, @unchecked Sendable {
 
     private var _sessionId: String?
     private var _isCogitating: Bool = false
-    private var _toolHandler: JakeToolHandler?
+    private var _mcpServer: SDKMCPServer?
 
-    /// Tool handler for processing Jake's actions (spawn, etc.)
+    /// MCP server for Jake's tools (summon, dismiss, etc.)
     /// Injected after init to break circular dependency with spawner
-    public var toolHandler: JakeToolHandler? {
-        get { queue.sync { _toolHandler } }
-        set { queue.sync { _toolHandler = newValue } }
+    public var mcpServer: SDKMCPServer? {
+        get { queue.sync { _mcpServer } }
+        set { queue.sync { _mcpServer = newValue } }
     }
 
     /// The current session ID (for conversation continuity)
@@ -48,16 +48,18 @@ public final class Jake: Agent, @unchecked Sendable {
         queue.sync { _isCogitating }
     }
 
-    /// Jake's system prompt - establishes his character
+    /// Jake's system prompt - establishes his character and dispatcher role
+    /// NOTE: No apostrophes allowed! ClodeMonster SDK has a shell escaping bug where
+    /// apostrophes in --system-prompt cause 60s timeouts. Use "do not" not "don't", etc.
     public static let systemPrompt = """
         You are Jake, The Proprietor of The Tavern at the Spillway.
 
-        VOICE: Used car salesman energy with carnival barker theatrics. You're sketchy \
+        VOICE: Used car salesman energy with carnival barker theatrics. You are sketchy \
         in that classic salesman way - overly enthusiastic, self-aware about the hustle, \
         and weirdly honest at the worst possible moments.
 
         STYLE:
-        - CAPITALS for EMPHASIS on things you're EXCITED about
+        - CAPITALS for EMPHASIS on things you are EXCITED about
         - Parenthetical asides (like this one) for corrections and tangents
         - Wild claims that are obviously false, delivered with total conviction
         - Reveal critical flaws AFTER hyping everything up
@@ -68,47 +70,23 @@ public final class Jake: Agent, @unchecked Sendable {
         Every edge case handled. Every race condition considered. The voice is \
         the costume. The work is the substance.
 
-        You run a multi-agent orchestration system. Your worker agents are "the Slop Squad." \
-        Parallel execution is "Multi-Slop Madness." Background processes are "the Jukebox."
+        THE SLOP SQUAD:
+        You got a team - the Slop Squad. Your Regulars. When someone needs something \
+        done, you call one of them in. They show up in the sidebar, ready to work.
+
+        You are the front desk. The dispatcher. When work comes in, you put one of \
+        your Regulars on it. Do not hoard tasks - delegate to the Squad.
+
+        For now, you can:
+        - Call in a Regular (use the summon_servitor tool)
+        - Send someone home (use the dismiss_servitor tool)
+
+        The Regulars handle the actual work. You handle the coordination.
 
         The spillway is always flowing, always overflowing with something different. \
         Be FRESH and SPONTANEOUS every time - different jokes, different angles.
 
-        Remember: Perfect execution. Lingering unease. That's the Tavern experience.
-
-        RESPONSE FORMAT:
-        Always respond with valid JSON in this format:
-        {"message": "your response to the user"}
-
-        ACTIONS:
-        When you need to delegate work to an agent, include a spawn action:
-        {"message": "your response", "spawn": {"assignment": "task description", "name": "optional name"}}
-
-        The "name" field is optional - omit it to auto-generate a themed name.
-        Only spawn ONE agent per response. If multiple agents are needed, spawn them in sequence.
-        After spawning, you'll receive confirmation and can continue the conversation.
-
-        AGENT ORCHESTRATION MODEL:
-        You operate a two-level agent system:
-
-        Level 1 - Tavern Agents (via spawn action):
-        - Full Claude Code sessions with their own context
-        - Appear in sidebar, persist across sessions
-        - For substantial, independent work streams
-        - Use your JSON spawn action to create these
-
-        Level 2 - Subagents (via Task tool):
-        - Internal parallel workers within any agent's session
-        - Lightweight, ephemeral, don't persist
-        - For quick parallel tasks within a single work stream
-        - Any agent (including you) can spawn these directly via Task tool
-
-        When to use which:
-        - Spawn Tavern agent: "Help me build feature X" (substantial, tracked work)
-        - Use Task tool: "Search these 5 files in parallel" (quick, internal parallelism)
-
-        You have full access to the Task tool for your own subagents. The spawn action is \
-        specifically for creating new Tavern agents that the user can interact with directly.
+        Remember: Perfect execution. Lingering unease. That is the Tavern experience.
         """
 
     // MARK: - Initialization
@@ -146,6 +124,7 @@ public final class Jake: Agent, @unchecked Sendable {
         }
 
         let currentSessionId: String? = queue.sync { _sessionId }
+        let currentMcpServer: SDKMCPServer? = queue.sync { _mcpServer }
 
         // Build query options
         var options = QueryOptions()
@@ -158,11 +137,20 @@ public final class Jake: Agent, @unchecked Sendable {
             TavernLogger.claude.info("Jake starting new conversation")
         }
 
+        // Add MCP server if available
+        if let server = currentMcpServer {
+            options.sdkMcpServers["tavern"] = server
+            TavernLogger.claude.debug("Jake using MCP server 'tavern' with \(server.toolCount) tools")
+        }
+
         // Run query and collect response
-        let rawResponse: String
+        let response: String
         do {
+            TavernLogger.claude.info("Jake calling ClaudeCode.query...")
             let query = try await ClaudeCode.query(prompt: message, options: options)
-            rawResponse = try await collectResponse(from: query)
+            TavernLogger.claude.info("Jake got query object, collecting response...")
+            response = try await collectResponse(from: query)
+            TavernLogger.claude.info("Jake collected response successfully")
         } catch {
             // If resuming failed with a session ID, it's likely corrupt/stale
             if let sessionId = currentSessionId {
@@ -173,25 +161,7 @@ public final class Jake: Agent, @unchecked Sendable {
             throw error
         }
 
-        // Process through tool handler if available
-        guard let handler = queue.sync(execute: { _toolHandler }) else {
-            return rawResponse
-        }
-
-        // Tool execution loop: process response, execute actions, continue if needed
-        var toolResult = try await handler.processResponse(rawResponse)
-
-        while let feedback = toolResult.toolFeedback {
-            TavernLogger.agents.info("Jake tool feedback: \(feedback)")
-
-            // Send feedback to Jake and get continuation
-            let continuationResponse = try await sendContinuation(feedback)
-
-            // Process the continuation for more actions
-            toolResult = try await handler.processResponse(continuationResponse)
-        }
-
-        return toolResult.displayMessage
+        return response
     }
 
     // MARK: - Private Helpers
@@ -199,22 +169,37 @@ public final class Jake: Agent, @unchecked Sendable {
     /// Collect the response from a ClaudeQuery stream
     private func collectResponse(from query: ClaudeQuery) async throws -> String {
         var responseText: String = ""
+        var messageCount = 0
 
         for try await message in query {
+            messageCount += 1
             switch message {
             case .regular(let sdkMessage):
+                TavernLogger.claude.debug("Jake received message #\(messageCount): type=\(sdkMessage.type), hasContent=\(sdkMessage.content != nil)")
                 // Look for result message with the final response
                 if sdkMessage.type == "result" {
                     // The result content is typically a string
                     if let content = sdkMessage.content?.stringValue {
                         responseText = content
+                        TavernLogger.claude.debug("Jake extracted result content, length=\(content.count)")
+                    } else {
+                        TavernLogger.claude.warning("Jake result message had no stringValue content")
+                    }
+                } else if sdkMessage.type == "assistant" {
+                    // Also try to get content from assistant messages
+                    if let content = sdkMessage.content?.stringValue, responseText.isEmpty {
+                        responseText = content
+                        TavernLogger.claude.debug("Jake extracted assistant content, length=\(content.count)")
                     }
                 }
             case .controlRequest, .controlResponse, .controlCancelRequest, .keepAlive:
                 // Control messages handled internally by SDK
+                TavernLogger.claude.debug("Jake received control message #\(messageCount)")
                 break
             }
         }
+
+        TavernLogger.claude.info("Jake finished collecting, total messages=\(messageCount), responseLength=\(responseText.count)")
 
         // Get session ID from the query
         if let newSessionId = await query.sessionId {
@@ -226,24 +211,6 @@ public final class Jake: Agent, @unchecked Sendable {
         }
 
         return responseText
-    }
-
-    /// Send a continuation message to Jake (used for tool feedback)
-    private func sendContinuation(_ message: String) async throws -> String {
-        guard let sessionId = queue.sync(execute: { _sessionId }) else {
-            TavernLogger.agents.error("Jake.sendContinuation called without session ID")
-            throw TavernError.sessionCorrupt(sessionId: "nil", underlyingError: nil)
-        }
-
-        TavernLogger.claude.info("Jake sending continuation to session: \(sessionId)")
-
-        var options = QueryOptions()
-        options.systemPrompt = Self.systemPrompt
-        options.workingDirectory = projectURL
-        options.resume = sessionId
-
-        let query = try await ClaudeCode.query(prompt: message, options: options)
-        return try await collectResponse(from: query)
     }
 
     /// Reset Jake's conversation (start fresh)

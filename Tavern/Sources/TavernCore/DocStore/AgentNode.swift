@@ -10,7 +10,7 @@ public struct AgentNode: Codable, Equatable, Sendable {
     /// Display name
     public let name: String
 
-    /// The agent's assignment (task description), nil for user-spawned agents
+    /// The servitor's assignment description, nil for user-spawned servitors
     public let assignment: String?
 
     /// Current state
@@ -45,14 +45,14 @@ public struct AgentNode: Codable, Equatable, Sendable {
         self.updatedAt = updatedAt
     }
 
-    /// Create from a MortalAgent
-    public init(from agent: MortalAgent) {
-        self.id = agent.id
-        self.name = agent.name
-        self.assignment = agent.assignment
-        self.state = agent.state.rawValue
-        self.commitments = agent.commitments.commitments.map { CommitmentNode(from: $0) }
-        self.createdAt = Date() // MortalAgent doesn't track creation time
+    /// Create from a Servitor
+    public init(from servitor: Servitor) {
+        self.id = servitor.id
+        self.name = servitor.name
+        self.assignment = servitor.assignment
+        self.state = servitor.state.rawValue
+        self.commitments = servitor.commitments.commitments.map { CommitmentNode(from: $0) }
+        self.createdAt = Date() // Servitor doesn't track creation time
         self.updatedAt = Date()
     }
 

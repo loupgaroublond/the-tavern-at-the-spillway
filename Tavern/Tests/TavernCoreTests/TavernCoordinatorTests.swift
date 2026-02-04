@@ -16,7 +16,7 @@ struct TavernCoordinatorTests {
         let jake = Jake(projectURL: projectURL, loadSavedSession: false)
         let registry = AgentRegistry()
         let nameGenerator = NameGenerator(theme: .lotr)
-        let spawner = AgentSpawner(
+        let spawner = ServitorSpawner(
             registry: registry,
             nameGenerator: nameGenerator,
             projectURL: projectURL
@@ -158,21 +158,21 @@ struct TavernCoordinatorTests {
         #expect(coordinator.activeChatViewModel.messages.isEmpty)
     }
 
-    @Test("Jake tool handler is configured on coordinator init")
+    @Test("Jake MCP server is configured on coordinator init")
     @MainActor
-    func jakeToolHandlerConfigured() {
+    func jakeMCPServerConfigured() {
         let coordinator = createCoordinator()
 
-        // Jake should have a tool handler after coordinator init
-        #expect(coordinator.jake.toolHandler != nil)
+        // Jake should have an MCP server after coordinator init
+        #expect(coordinator.jake.mcpServer != nil)
     }
 
     // MARK: - Tests requiring SDK mocking (skipped for now)
     // TODO: These tests need dependency injection or SDK mocking to work
     // - chatHistoryPreservedWhenSwitching
-    // - mortalAgentChatViewModelCanReceiveMessages
+    // - servitorChatViewModelCanReceiveMessages
     // - switchingPreservesBothHistories
-    // - jakeSpawnActionCreatesAgent
-    // - jakeSpawnActionWithName
-    // - jakeSpawnFailureReportsError
+    // - jakeSummonActionCreatesServitor
+    // - jakeSummonActionWithName
+    // - jakeSummonFailureReportsError
 }

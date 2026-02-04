@@ -18,21 +18,21 @@ public final class AgentPersistence: @unchecked Sendable {
 
     // MARK: - Save Operations
 
-    /// Save a mortal agent to the doc store
-    /// - Parameter agent: The agent to save
+    /// Save a servitor to the doc store
+    /// - Parameter servitor: The servitor to save
     /// - Throws: If saving fails
-    public func save(_ agent: MortalAgent) throws {
-        let node = AgentNode(from: agent)
+    public func save(_ servitor: Servitor) throws {
+        let node = AgentNode(from: servitor)
         let document = node.toDocument()
         try docStore.save(document)
     }
 
-    /// Save multiple agents
-    /// - Parameter agents: The agents to save
+    /// Save multiple servitors
+    /// - Parameter servitors: The servitors to save
     /// - Throws: If any save fails
-    public func saveAll(_ agents: [MortalAgent]) throws {
-        for agent in agents {
-            try save(agent)
+    public func saveAll(_ servitors: [Servitor]) throws {
+        for servitor in servitors {
+            try save(servitor)
         }
     }
 
@@ -58,18 +58,18 @@ public final class AgentPersistence: @unchecked Sendable {
         }
     }
 
-    /// Restore a MortalAgent from the doc store
+    /// Restore a Servitor from the doc store
     /// - Parameters:
-    ///   - name: The agent's name
-    ///   - projectURL: Project directory URL for the restored agent
+    ///   - name: The servitor's name
+    ///   - projectURL: Project directory URL for the restored servitor
     ///   - verifier: Optional verifier (defaults to shell-based)
-    /// - Returns: The restored agent
+    /// - Returns: The restored servitor
     /// - Throws: If restoration fails
     public func restore(
         name: String,
         projectURL: URL,
         verifier: CommitmentVerifier = CommitmentVerifier()
-    ) throws -> MortalAgent {
+    ) throws -> Servitor {
         let node = try load(name: name)
 
         // Create commitment list from stored commitments
@@ -79,8 +79,8 @@ public final class AgentPersistence: @unchecked Sendable {
             commitmentList.add(commitment)
         }
 
-        // Create the agent
-        let agent = MortalAgent(
+        // Create the servitor
+        let servitor = Servitor(
             id: node.id,
             name: node.name,
             assignment: node.assignment,
@@ -92,13 +92,13 @@ public final class AgentPersistence: @unchecked Sendable {
         // Restore state (if not idle - idle is default)
         switch node.state {
         case "working": break // Can't restore working state
-        case "waiting": agent.markWaiting()
+        case "waiting": servitor.markWaiting()
         case "verifying": break // Can't restore verifying state
-        case "done": agent.markDone()
+        case "done": servitor.markDone()
         default: break
         }
 
-        return agent
+        return servitor
     }
 
     // MARK: - Delete Operations

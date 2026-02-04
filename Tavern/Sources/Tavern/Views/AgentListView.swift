@@ -15,7 +15,11 @@ struct AgentListView: View {
     var body: some View {
         List(selection: $viewModel.selectedAgentId) {
             ForEach(viewModel.items) { item in
-                AgentListRow(item: item, isSelected: viewModel.isSelected(id: item.id))
+                AgentListRow(
+                    item: item,
+                    isSelected: viewModel.isSelected(id: item.id),
+                    onClose: item.isJake ? nil : { onCloseAgent?(item.id) }
+                )
                     .tag(item.id)
                     .onTapGesture {
                         onSelectAgent?(item.id)
@@ -132,6 +136,9 @@ extension UUID: @retroactive Identifiable {
 private struct AgentListRow: View {
     let item: AgentListItem
     let isSelected: Bool
+    var onClose: (() -> Void)?
+
+    @State private var isHovered = false
 
     var body: some View {
         HStack(spacing: 12) {
@@ -152,7 +159,7 @@ private struct AgentListRow: View {
                     }
                 }
 
-                // Show description or "New chat" placeholder for mortal agents
+                // Show description or "New chat" placeholder for servitors
                 if !item.isJake {
                     Text(item.chatDescription ?? "New chat")
                         .font(.caption)
@@ -167,9 +174,23 @@ private struct AgentListRow: View {
             if item.needsAttention {
                 AttentionBadge()
             }
+
+            // Close button (visible on hover for servitors)
+            if let onClose = onClose, isHovered {
+                Button(action: onClose) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(.secondary)
+                }
+                .buttonStyle(.plain)
+                .help("Close chat")
+            }
         }
         .padding(.vertical, 4)
         .contentShape(Rectangle())
+        .onHover { hovering in
+            isHovered = hovering
+        }
     }
 }
 
@@ -222,15 +243,15 @@ private func makePreviewAgentList() -> AgentListView {
     let jake = Jake(projectURL: projectURL, loadSavedSession: false)
     let registry = AgentRegistry()
     let nameGen = NameGenerator(theme: .lotr)
-    let spawner = AgentSpawner(
+    let spawner = ServitorSpawner(
         registry: registry,
         nameGenerator: nameGen,
         projectURL: projectURL
     )
 
-    // Spawn a couple of agents (no assignment - user-spawned style)
-    _ = try? spawner.spawn()
-    _ = try? spawner.spawn()
+    // Summon a couple of servitors (no task - user-spawned style)
+    _ = try? spawner.summon()
+    _ = try? spawner.summon()
 
     let viewModel = AgentListViewModel(jake: jake, spawner: spawner)
     viewModel.refreshItems()

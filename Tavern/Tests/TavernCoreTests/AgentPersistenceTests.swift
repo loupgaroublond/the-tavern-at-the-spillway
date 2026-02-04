@@ -26,12 +26,12 @@ struct AgentNodeTests {
         #expect(node.commitments.isEmpty)
     }
 
-    @Test("AgentNode creates from MortalAgent")
-    func agentNodeCreatesFromMortalAgent() {
+    @Test("AgentNode creates from Servitor")
+    func agentNodeCreatesFromServitor() {
         let commitments = CommitmentList()
         commitments.add(description: "Tests pass", assertion: "swift test")
 
-        let agent = MortalAgent(
+        let servitor = Servitor(
             name: "Worker",
             assignment: "Build the thing",
             projectURL: Self.testProjectURL(),
@@ -39,9 +39,9 @@ struct AgentNodeTests {
             loadSavedSession: false
         )
 
-        let node = AgentNode(from: agent)
+        let node = AgentNode(from: servitor)
 
-        #expect(node.id == agent.id)
+        #expect(node.id == servitor.id)
         #expect(node.name == "Worker")
         #expect(node.assignment == "Build the thing")
         #expect(node.state == "idle")
@@ -233,7 +233,7 @@ struct AgentPersistenceTests {
         defer { cleanupDocStore(store) }
 
         let persistence = AgentPersistence(docStore: store)
-        let agent = MortalAgent(
+        let agent = Servitor(
             name: "Saveable",
             assignment: "Test saving",
             projectURL: Self.testProjectURL(),
@@ -252,7 +252,7 @@ struct AgentPersistenceTests {
 
         let persistence = AgentPersistence(docStore: store)
 
-        let agent = MortalAgent(
+        let agent = Servitor(
             name: "Stateful",
             assignment: "Track state",
             projectURL: Self.testProjectURL(),
@@ -280,7 +280,7 @@ struct AgentPersistenceTests {
         let c1 = commitments.add(description: "First", assertion: "cmd1")
         commitments.markPassed(id: c1.id)
 
-        let original = MortalAgent(
+        let original = Servitor(
             id: originalId,
             name: "Restorable",
             assignment: "Test restoration",
@@ -314,7 +314,7 @@ struct AgentPersistenceTests {
         commitments.add(description: "Build passes", assertion: "swift build")
         commitments.add(description: "Tests pass", assertion: "swift test")
 
-        let agent = MortalAgent(
+        let agent = Servitor(
             name: "Committed",
             assignment: "Task with commitments",
             projectURL: Self.testProjectURL(),
@@ -337,7 +337,7 @@ struct AgentPersistenceTests {
 
         let persistence = AgentPersistence(docStore: store)
 
-        let agent = MortalAgent(
+        let agent = Servitor(
             name: "Deletable",
             assignment: "To be deleted",
             projectURL: Self.testProjectURL(),
@@ -359,9 +359,9 @@ struct AgentPersistenceTests {
         let persistence = AgentPersistence(docStore: store)
         let projectURL = Self.testProjectURL()
 
-        let agent1 = MortalAgent(name: "Alpha", assignment: "A", projectURL: projectURL, loadSavedSession: false)
-        let agent2 = MortalAgent(name: "Beta", assignment: "B", projectURL: projectURL, loadSavedSession: false)
-        let agent3 = MortalAgent(name: "Gamma", assignment: "C", projectURL: projectURL, loadSavedSession: false)
+        let agent1 = Servitor(name: "Alpha", assignment: "A", projectURL: projectURL, loadSavedSession: false)
+        let agent2 = Servitor(name: "Beta", assignment: "B", projectURL: projectURL, loadSavedSession: false)
+        let agent3 = Servitor(name: "Gamma", assignment: "C", projectURL: projectURL, loadSavedSession: false)
 
         try persistence.save(agent1)
         try persistence.save(agent2)
@@ -383,8 +383,8 @@ struct AgentPersistenceTests {
         let persistence = AgentPersistence(docStore: store)
         let projectURL = Self.testProjectURL()
 
-        let agent1 = MortalAgent(name: "First", assignment: "Task 1", projectURL: projectURL, loadSavedSession: false)
-        let agent2 = MortalAgent(name: "Second", assignment: "Task 2", projectURL: projectURL, loadSavedSession: false)
+        let agent1 = Servitor(name: "First", assignment: "Task 1", projectURL: projectURL, loadSavedSession: false)
+        let agent2 = Servitor(name: "Second", assignment: "Task 2", projectURL: projectURL, loadSavedSession: false)
 
         try persistence.save(agent1)
         try persistence.save(agent2)
@@ -403,7 +403,7 @@ struct AgentPersistenceTests {
 
         let persistence = AgentPersistence(docStore: store)
 
-        let agent = MortalAgent(
+        let agent = Servitor(
             name: "Updatable",
             assignment: "Initial task",
             projectURL: Self.testProjectURL(),
