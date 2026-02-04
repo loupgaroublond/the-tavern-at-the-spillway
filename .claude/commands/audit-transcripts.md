@@ -54,11 +54,12 @@ Verify if existing transcripts cover the design discussions in these sessions. I
    - Feature discussions
    - Process/methodology discussions
    - [U] content that looks like interview material
-4. If you find missing content:
+4. **User completeness check**: Verify that EVERYTHING the user said in the session is accounted for in transcripts. User statements are primary sources — nothing they said should be lost or summarized away.
+5. If you find missing content:
    - Produce a transcript following [U], [C], [T], [S] notation
    - Return filename and full content
    - STOP after ONE transcript
-5. If nothing missing, report what you verified
+6. If nothing missing, report what you verified
 
 ## Return Format
 STATUS: [MISSING_FOUND | ALL_COVERED]
@@ -129,5 +130,6 @@ docs/seed-design/transcript_*.md
 
 - All major sessions audited
 - All design discussions captured in transcripts
+- **Everything the user said is accounted for** — user statements are primary sources, nothing lost or summarized away
 - Final audit returns ALL_COVERED with HIGH confidence
 - Implementation-only sessions appropriately have no transcripts
