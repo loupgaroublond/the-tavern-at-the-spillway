@@ -4,10 +4,10 @@ You are continuing a multi-session conceiving process — articulating and shapi
 
 ## Where Things Live
 
-- **Process doc:** `docs/seed-design/process_2026-01-19-0906.md` — meta-document with open questions, tangent legend, current state
-- **Transcripts:** `docs/seed-design/transcript_*.md` — interview records with notation
-- **Vocabulary:** `docs/seed-design/vocab_*.md` — collected terminology
-- **Notes:** `docs/seed-design/notes_*.md` — topical notes
+- **Process doc:** `docs/0-transcripts/process_2026-01-19-0906.md` — meta-document with open questions, tangent legend, current state
+- **Transcripts:** `docs/0-transcripts/transcript_*.md` — interview records with notation
+- **Vocabulary:** `docs/0-transcripts/vocab_*.md` — collected terminology
+- **Notes:** `docs/0-transcripts/notes_*.md` — topical notes
 
 ## How We Work
 

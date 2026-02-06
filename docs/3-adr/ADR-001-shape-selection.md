@@ -398,9 +398,9 @@ class AgentListViewModel: ObservableObject {
 
 ## References
 
-- `docs/architecture-proposals/00-synthesis-report.md` — Full shape analysis
-- `docs/architecture-proposals/03-document-centric.md` — Shared workspace details
-- `docs/architecture-proposals/04-supervisor-trees.md` — Supervisor tree details
-- `docs/architecture-proposals/10-reactive-streams.md` — Reactive UI details
-- `docs/architecture-proposals/38-sidecar.md` — Sidecar pattern details
-- `docs/seed-design/prd_2026-01-19.md` — PRD requirements
+- `proposals/00-synthesis-report.md` — Full shape analysis
+- `proposals/03-document-centric.md` — Shared workspace details
+- `proposals/04-supervisor-trees.md` — Supervisor tree details
+- `proposals/10-reactive-streams.md` — Reactive UI details
+- `proposals/38-sidecar.md` — Sidecar pattern details
+- `../1-prd/prd_2026-01-19.md` — PRD requirements

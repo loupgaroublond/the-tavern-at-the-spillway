@@ -107,15 +107,33 @@ echo ""
 docs_top_lines=$(find docs -maxdepth 1 -name "*.md" 2>/dev/null | xargs wc -l 2>/dev/null | tail -1 | awk '{print $1}')
 docs_top_files=$(find docs -maxdepth 1 -name "*.md" 2>/dev/null | wc -l | tr -d ' ')
 
-# Architecture proposals
-arch_proposals_lines=$(find docs/architecture-proposals -name "*.md" 2>/dev/null | xargs wc -l 2>/dev/null | tail -1 | awk '{print $1}')
-arch_proposals_files=$(find docs/architecture-proposals -name "*.md" 2>/dev/null | wc -l | tr -d ' ')
+# PRD
+prd_dir_lines=$(find docs/1-prd -name "*.md" 2>/dev/null | xargs wc -l 2>/dev/null | tail -1 | awk '{print $1}')
+prd_dir_files=$(find docs/1-prd -name "*.md" 2>/dev/null | wc -l | tr -d ' ')
+
+# Spec
+spec_dir_lines=$(find docs/2-spec -name "*.md" 2>/dev/null | xargs wc -l 2>/dev/null | tail -1 | awk '{print $1}')
+spec_dir_files=$(find docs/2-spec -name "*.md" 2>/dev/null | wc -l | tr -d ' ')
+
+# ADR & proposals
+adr_lines=$(find docs/3-adr -maxdepth 1 -name "*.md" 2>/dev/null | xargs wc -l 2>/dev/null | tail -1 | awk '{print $1}')
+adr_files=$(find docs/3-adr -maxdepth 1 -name "*.md" 2>/dev/null | wc -l | tr -d ' ')
+arch_proposals_lines=$(find docs/3-adr/proposals -name "*.md" 2>/dev/null | xargs wc -l 2>/dev/null | tail -1 | awk '{print $1}')
+arch_proposals_files=$(find docs/3-adr/proposals -name "*.md" 2>/dev/null | wc -l | tr -d ' ')
+
+# Reference docs
+ref_docs_lines=$(find docs/4-docs -name "*.md" 2>/dev/null | xargs wc -l 2>/dev/null | tail -1 | awk '{print $1}')
+ref_docs_files=$(find docs/4-docs -name "*.md" 2>/dev/null | wc -l | tr -d ' ')
 
 printf "  %-40s %8s lines  (%s files)\n" "Top-level docs (docs/*.md)" "${docs_top_lines:-0}" "${docs_top_files:-0}"
+printf "  %-40s %8s lines  (%s files)\n" "PRD (docs/1-prd/)" "${prd_dir_lines:-0}" "${prd_dir_files:-0}"
+printf "  %-40s %8s lines  (%s files)\n" "Spec (docs/2-spec/)" "${spec_dir_lines:-0}" "${spec_dir_files:-0}"
+printf "  %-40s %8s lines  (%s files)\n" "ADRs (docs/3-adr/)" "${adr_lines:-0}" "${adr_files:-0}"
 printf "  %-40s %8s lines  (%s files)\n" "Architecture Proposals" "${arch_proposals_lines:-0}" "${arch_proposals_files:-0}"
+printf "  %-40s %8s lines  (%s files)\n" "Reference Docs (docs/4-docs/)" "${ref_docs_lines:-0}" "${ref_docs_files:-0}"
 echo "  ─────────────────────────────────────────────────────────────"
-total_docs_dir=$((${docs_top_lines:-0} + ${arch_proposals_lines:-0}))
-total_docs_dir_files=$((${docs_top_files:-0} + ${arch_proposals_files:-0}))
+total_docs_dir=$((${docs_top_lines:-0} + ${prd_dir_lines:-0} + ${spec_dir_lines:-0} + ${adr_lines:-0} + ${arch_proposals_lines:-0} + ${ref_docs_lines:-0}))
+total_docs_dir_files=$((${docs_top_files:-0} + ${prd_dir_files:-0} + ${spec_dir_files:-0} + ${adr_files:-0} + ${arch_proposals_files:-0} + ${ref_docs_files:-0}))
 printf "  %-40s %8s lines  (%s files)\n" "SUBTOTAL (docs/)" "$total_docs_dir" "$total_docs_dir_files"
 
 echo ""
@@ -132,39 +150,37 @@ printf "  %-40s %8s lines\n" "README.md" "$readme_lines"
 
 echo ""
 echo "┌─────────────────────────────────────────────────────────────┐"
-echo "│  SEED DESIGN DOCUMENTS (docs/seed-design/)                  │"
+echo "│  TRANSCRIPTS & DESIGN (docs/0-transcripts/)                 │"
 echo "└─────────────────────────────────────────────────────────────┘"
 echo ""
 
 # Transcripts
-transcript_lines=$(find docs/seed-design -name "transcript_*.md" 2>/dev/null | xargs wc -l 2>/dev/null | tail -1 | awk '{print $1}')
-transcript_files=$(find docs/seed-design -name "transcript_*.md" 2>/dev/null | wc -l | tr -d ' ')
+transcript_lines=$(find docs/0-transcripts -name "transcript_*.md" 2>/dev/null | xargs wc -l 2>/dev/null | tail -1 | awk '{print $1}')
+transcript_files=$(find docs/0-transcripts -name "transcript_*.md" 2>/dev/null | wc -l | tr -d ' ')
 
-# PRD and planning docs
-prd_lines=$(wc -l < docs/seed-design/prd_2026-01-19.md 2>/dev/null || echo 0)
-impl_plan_lines=$(wc -l < docs/seed-design/v1-implementation-plan.md 2>/dev/null || echo 0)
+# Planning docs
+impl_plan_lines=$(wc -l < docs/0-transcripts/v1-implementation-plan.md 2>/dev/null || echo 0)
 
 # Process/reader docs
-process_lines=$(find docs/seed-design -name "process_*.md" 2>/dev/null | xargs wc -l 2>/dev/null | tail -1 | awk '{print $1}')
-reader_lines=$(find docs/seed-design -name "reader_*.md" 2>/dev/null | xargs wc -l 2>/dev/null | tail -1 | awk '{print $1}')
+process_lines=$(find docs/0-transcripts -name "process_*.md" 2>/dev/null | xargs wc -l 2>/dev/null | tail -1 | awk '{print $1}')
+reader_lines=$(find docs/0-transcripts -name "reader_*.md" 2>/dev/null | xargs wc -l 2>/dev/null | tail -1 | awk '{print $1}')
 
 # Vocab docs
-vocab_lines=$(find docs/seed-design -name "vocab_*.md" 2>/dev/null | xargs wc -l 2>/dev/null | tail -1 | awk '{print $1}')
-vocab_files=$(find docs/seed-design -name "vocab_*.md" 2>/dev/null | wc -l | tr -d ' ')
+vocab_lines=$(find docs/0-transcripts -name "vocab_*.md" 2>/dev/null | xargs wc -l 2>/dev/null | tail -1 | awk '{print $1}')
+vocab_files=$(find docs/0-transcripts -name "vocab_*.md" 2>/dev/null | wc -l | tr -d ' ')
 
 # Notes
-notes_lines=$(find docs/seed-design -name "notes_*.md" 2>/dev/null | xargs wc -l 2>/dev/null | tail -1 | awk '{print $1}')
+notes_lines=$(find docs/0-transcripts -name "notes_*.md" 2>/dev/null | xargs wc -l 2>/dev/null | tail -1 | awk '{print $1}')
 
 printf "  %-40s %8s lines  (%s files)\n" "Transcripts" "${transcript_lines:-0}" "${transcript_files:-0}"
-printf "  %-40s %8s lines\n" "PRD" "${prd_lines:-0}"
 printf "  %-40s %8s lines\n" "Implementation Plan" "${impl_plan_lines:-0}"
 printf "  %-40s %8s lines\n" "Process docs" "${process_lines:-0}"
 printf "  %-40s %8s lines\n" "Reader analysis" "${reader_lines:-0}"
 printf "  %-40s %8s lines  (%s files)\n" "Vocabulary docs" "${vocab_lines:-0}" "${vocab_files:-0}"
 printf "  %-40s %8s lines\n" "Notes" "${notes_lines:-0}"
 echo "  ─────────────────────────────────────────────────────────────"
-total_seed=$((${transcript_lines:-0} + ${prd_lines:-0} + ${impl_plan_lines:-0} + ${process_lines:-0} + ${reader_lines:-0} + ${vocab_lines:-0} + ${notes_lines:-0}))
-printf "  %-40s %8s lines\n" "SUBTOTAL (seed-design)" "$total_seed"
+total_seed=$((${transcript_lines:-0} + ${impl_plan_lines:-0} + ${process_lines:-0} + ${reader_lines:-0} + ${vocab_lines:-0} + ${notes_lines:-0}))
+printf "  %-40s %8s lines\n" "SUBTOTAL (0-transcripts)" "$total_seed"
 
 echo ""
 echo "┌─────────────────────────────────────────────────────────────┐"
@@ -200,7 +216,7 @@ printf "  %-9s%-31s %8s lines\n" "" "└─ Scripts/Sandbox" "$total_scripts"
 echo ""
 printf "  %-40s %8s lines\n" "Documentation & Design (all)" "$total_docs"
 printf "  %-9s%-31s %8s lines\n" "" "├─ docs/ directory" "$total_docs_dir"
-printf "  %-9s%-31s %8s lines\n" "" "├─ seed-design/" "$total_seed"
+printf "  %-9s%-31s %8s lines\n" "" "├─ 0-transcripts/" "$total_seed"
 printf "  %-9s%-31s %8s lines\n" "" "├─ Root docs (CLAUDE.md, etc)" "$((${claude_md_lines:-0} + ${readme_lines:-0}))"
 printf "  %-9s%-31s %8s lines\n" "" "└─ Archive" "${archive_lines:-0}"
 echo "  ─────────────────────────────────────────────────────────────"

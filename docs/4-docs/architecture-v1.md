@@ -742,7 +742,7 @@ func testAgentTransitionsToWorking() async throws {
 
 ## What's Not Implemented Yet
 
-Per `v1-implementation-plan.md`, these are deferred:
+Per `../0-transcripts/v1-implementation-plan.md`, these are deferred:
 
 - **Real Claude for spawned agents** — Currently mock
 - **Sandboxing/overlays** — Agents have full access

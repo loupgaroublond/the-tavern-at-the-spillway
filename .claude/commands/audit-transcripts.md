@@ -48,7 +48,7 @@ Scripts in `scripts/audit/` handle worktree-aware session discovery:
 ./scripts/audit/list-sessions.sh --json --min-size 100000
 
 # List existing transcripts
-ls -la docs/seed-design/transcript_*.md 2>/dev/null || echo "No transcripts found"
+ls -la docs/0-transcripts/transcript_*.md 2>/dev/null || echo "No transcripts found"
 ```
 
 ## Step 2: Parallel Verification
@@ -105,7 +105,7 @@ TRANSCRIPT_CONTENT:
 
 For each agent that returns `MISSING_FOUND`:
 1. Extract the transcript filename and content
-2. Write to `docs/seed-design/[filename]`
+2. Write to `docs/0-transcripts/[filename]`
 3. Serialize writes (one at a time to prevent contamination)
 
 ## Step 4: Final Audit
@@ -139,7 +139,7 @@ Typical locations:
 - `~/.claude/projects/-Users-yankee-Documents-Projects-the-tavern-at-the-spillway-<worktree>/` (worktrees)
 
 **Transcripts:**
-docs/seed-design/transcript_*.md
+docs/0-transcripts/transcript_*.md
 
 **Transcript format reference:**
 - [U] — User's words (high fidelity)

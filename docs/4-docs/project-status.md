@@ -79,7 +79,7 @@
 
 - Per-project session storage (Jake maintains `_projectPath`)
 
-- Character document extracted to `docs/jake-character.md`
+- Character document extracted to `docs/0-transcripts/jake-character.md`
 
 
 **Remaining:**
@@ -307,7 +307,7 @@
 
 - Window state persisted across app restarts
 
-- GUI instrumentation guide (`docs/gui-instrumentation-guide.md`)
+- GUI instrumentation guide (`docs/4-docs/gui-instrumentation-guide.md`)
 
 
 **Remaining:**
@@ -479,7 +479,7 @@
 
 - ADR-001 documenting decision with rationale
 
-- 49 architecture proposals in `docs/architecture-proposals/`
+- 49 architecture proposals in `docs/3-adr/proposals/`
 
 - Synthesis report with 16 shapes and 122-pair compatibility matrix
 

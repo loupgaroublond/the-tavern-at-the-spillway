@@ -1,6 +1,6 @@
 # System Design Reader Synthesis
 
-Generate a standalone "System Design Reader" document that synthesizes all transcripts in `docs/seed-design/`.
+Generate a standalone "System Design Reader" document that synthesizes all transcripts in `docs/0-transcripts/`.
 
 ## Purpose
 
@@ -8,7 +8,7 @@ Someone with zero prior context can read this instead of tailing transcripts. Th
 
 ## Output
 
-Write to: `docs/seed-design/reader_$DATETIME.md` (use current datetime, e.g., `reader_2026-01-25-1430.md`)
+Write to: `docs/0-transcripts/reader_$DATETIME.md` (use current datetime, e.g., `reader_2026-01-25-1430.md`)
 
 ## Structure
 

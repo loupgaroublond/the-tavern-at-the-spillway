@@ -36,8 +36,29 @@ the-tavern-at-the-spillway/
 │   │       └── UI/                  # AgentListViewModel, AgentListItem
 │   └── Tests/
 ├── docs/
-│   ├── architecture-v1.md           # Architecture guide
-│   └── seed-design/                 # Design transcripts
+│   ├── pipeline.md                  # Formal spec pipeline
+│   ├── 0-transcripts/              # Design transcripts, readers, vocab, notes
+│   │   ├── reader_*.md
+│   │   ├── transcript_*.md
+│   │   ├── vocab_*.md
+│   │   ├── notes_*.md
+│   │   ├── jake-character.md
+│   │   ├── handoff-apostrophe-bug.md
+│   │   └── v1-implementation-plan.md
+│   ├── 1-prd/
+│   │   └── prd_2026-01-19.md
+│   ├── 2-spec/
+│   │   ├── index.md
+│   │   └── *.md (16 spec modules)
+│   ├── 3-adr/
+│   │   ├── ADR-001-shape-selection.md
+│   │   ├── stress-testing.md
+│   │   ├── swiftui-persistence-*.md
+│   │   └── proposals/ (99 research files)
+│   └── 4-docs/
+│       ├── architecture-v1.md
+│       ├── gui-instrumentation-guide.md
+│       └── project-status.md
 └── scripts/
     └── loc.sh                       # Line count
 ```
@@ -119,7 +140,7 @@ redo build
 | `Sources/TavernCore/Project/ProjectManager.swift` | Multi-project management |
 | `Sources/TavernCore/Persistence/SessionStore.swift` | Session IDs (UserDefaults) |
 | `Sources/TavernCore/Errors/TavernErrorMessages.swift` | Error mapping |
-| `docs/architecture-v1.md` | Architecture |
+| `docs/4-docs/architecture-v1.md` | Architecture |
 
 
 ## Debugging
@@ -158,7 +179,7 @@ Design discussions use a formalized interview methodology:
    - **[T]** = Claude's thinking (italics, when it adds understanding)
    - **[S]** = Synthesis (after `___` divider, when new whole ideas emerge)
 
-4. **Transcribe-and-Commit** — `/commit` updates `docs/seed-design/transcript_*.md`
+4. **Transcribe-and-Commit** — `/commit` updates `docs/0-transcripts/transcript_*.md`
 
 **Why this exists:**
 - Context continuity after compaction
@@ -169,22 +190,22 @@ Design discussions use a formalized interview methodology:
 
 **Key rule:** When new principles emerge during implementation, transcribe and commit to preserve design rationale.
 
-**Files:** `docs/seed-design/transcript_*.md`
+**Files:** `docs/0-transcripts/transcript_*.md`
 
 
 ### System Design Reader
 
-The **reader document** synthesizes all transcripts into a standalone reference. Find the latest at `docs/seed-design/reader_*.md` (most recent by datetime suffix).
+The **reader document** synthesizes all transcripts into a standalone reference. Find the latest at `docs/0-transcripts/reader_*.md` (most recent by datetime suffix).
 
 **Proactive update:** When starting a session that touches seed design, compare:
-- Transcripts in `docs/seed-design/transcript_*.md`
+- Transcripts in `docs/0-transcripts/transcript_*.md`
 - Source files listed in the latest reader's "Source Files" section
 
 If there are 2+ transcript files not accounted for in the reader, say *"Mind if I run some updates?"* and invoke `Skill(skill: "reader")` to synthesize the new content.
 
 **Commands:**
 - `/conceive` — Continue the interview process (invoke via `Skill(skill: "conceive")`)
-- `/reader` — Generate updated reader document (invoke via `Skill(skill: "reader")`, outputs `reader_$DATETIME.md`)
+- `/reader` — Generate updated reader document (invoke via `Skill(skill: "reader")`, outputs `docs/0-transcripts/reader_$DATETIME.md`)
 
 
 ## Design Principles
@@ -212,7 +233,7 @@ Tests must catch bugs before users do. These principles ensure comprehensive cov
 
 ## Architecture Principles (ADR-001)
 
-These principles govern all architectural decisions. See `docs/architecture-proposals/ADR-001-shape-selection.md` for full rationale.
+These principles govern all architectural decisions. See `docs/3-adr/ADR-001-shape-selection.md` for full rationale.
 
 **Layer Structure (top to bottom):**
 ```
@@ -241,7 +262,7 @@ Each layer depends only on layers below it. Never reach up.
 - `@MainActor` on all ViewModels
 - Never block the cooperative thread pool (`Thread.sleep`, `DispatchSemaphore.wait`, sync file I/O) — this is why sidecars exist
 
-**SwiftUI Observation Patterns** (see `docs/swiftui-persistence-complete-guide.md`):
+**SwiftUI Observation Patterns** (see `docs/3-adr/swiftui-persistence-complete-guide.md`):
 
 *Critical for DocStore: We're building a custom SwiftUI-compatible persistence layer. These patterns govern how views observe and react to persisted data.*
 
@@ -290,7 +311,7 @@ Derived data already builds to `~/.local/builds/tavern` to avoid code signing is
 
 ## Jake: The Character
 
-Jake is the top-level coordinating agent — The Proprietor. Full character specification is in [`docs/jake-character.md`](docs/jake-character.md).
+Jake is the top-level coordinating agent — The Proprietor. Full character specification is in [`docs/0-transcripts/jake-character.md`](docs/0-transcripts/jake-character.md).
 
 **Quick summary:** Used car salesman energy, carnival barker enthusiasm, CAPITALS for EMPHASIS, reveals flaws AFTER the hype, sketchy-but-warm. The voice is the costume; the work is flawless.
 

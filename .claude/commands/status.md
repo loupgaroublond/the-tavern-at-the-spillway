@@ -1,24 +1,24 @@
 # Update Project Status
 
-Update `docs/seed-design/project-status.md` to reflect all transcripts, including any newly created from audits.
+Update `docs/4-docs/project-status.md` to reflect all transcripts, including any newly created from audits.
 
 ## Process
 
 ### 1. Discover All Transcripts
 
 ```bash
-ls -1 docs/seed-design/transcript_*.md | sort
+ls -1 docs/0-transcripts/transcript_*.md | sort
 ```
 
 ### 2. Read Current Status
 
-Read `docs/seed-design/project-status.md` and identify:
+Read `docs/4-docs/project-status.md` and identify:
 - Which transcripts are mentioned/covered in the Timeline section
 - Which features have been documented
 
 ### 3. Find Uncovered Transcripts
 
-Compare the transcript list against what's mentioned in project-status.md. A transcript is "uncovered" if:
+Compare the transcript list against what's mentioned in `docs/4-docs/project-status.md`. A transcript is "uncovered" if:
 - Its date/topic isn't referenced in the Timeline
 - Its content isn't reflected in the Features sections
 
@@ -59,9 +59,9 @@ Before writing the updated file:
 
 ## Key Files
 
-**Status file:** `docs/seed-design/project-status.md`
-**Transcripts:** `docs/seed-design/transcript_*.md`
-**PRD:** `docs/seed-design/prd_2026-01-19.md`
+**Status file:** `docs/4-docs/project-status.md`
+**Transcripts:** `docs/0-transcripts/transcript_*.md`
+**PRD:** `docs/1-prd/prd_2026-01-19.md`
 
 ## When to Run
 
