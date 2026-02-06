@@ -46,7 +46,7 @@ Verify if existing transcripts cover the design discussions in these sessions. I
 [List relevant transcripts by date]
 
 ## Instructions
-1. Read session files using jq to extract user messages (sample large files)
+1. Read session files using jq to extract ALL user messages (type="human"). Never sample — verify every message.
 2. Read existing transcripts to understand what's covered
 3. Look for design discussions NOT in transcripts:
    - Design principles
@@ -73,9 +73,10 @@ TRANSCRIPT_CONTENT:
 ```
 
 **Batching strategy:**
-- Group sessions by date range (Jan 18-19, Jan 20, Jan 21 early, Jan 21 late, Jan 22, Jan 23-25)
+- Group sessions by date range
 - Each agent gets 2-4 sessions max
-- Large sessions (>20MB) get dedicated agents
+- **Large sessions (>20MB) must be chunked** — spawn multiple agents with message offsets so every user message is verified. Example: agent 1 gets messages 0-500, agent 2 gets 501-1000, etc. Never sample large files.
+- Calculate message counts first: `jq -s '[.[] | select(.type=="human")] | length' < session.jsonl`
 
 ## Step 3: Repair
 
