@@ -1,5 +1,5 @@
 import XCTest
-import ClaudeCodeSDK
+import ClodKit
 @testable import TavernCore
 
 /// Live integration tests that actually call the Claude CLI
@@ -32,7 +32,7 @@ final class SDKLiveIntegrationTests: XCTestCase {
 
         let query: ClaudeQuery
         do {
-            query = try await ClaudeCode.query(prompt: "Say TEST_OK", options: options)
+            query = try await Clod.query(prompt: "Say TEST_OK", options: options)
             print("✓ Query created successfully")
         } catch {
             XCTFail("Failed to create query: \(error)")
@@ -146,7 +146,7 @@ final class SDKLiveIntegrationTests: XCTestCase {
 
         let query: ClaudeQuery
         do {
-            query = try await ClaudeCode.query(prompt: "Say MCP_OK", options: options)
+            query = try await Clod.query(prompt: "Say MCP_OK", options: options)
             print("✓ Query created successfully with MCP server")
         } catch {
             XCTFail("Failed to create query with MCP: \(error)")
@@ -216,7 +216,7 @@ final class SDKLiveIntegrationTests: XCTestCase {
 
         let query: ClaudeQuery
         do {
-            query = try await ClaudeCode.query(prompt: "Say TOOLS_OK", options: options)
+            query = try await Clod.query(prompt: "Say TOOLS_OK", options: options)
             print("✓ Query created successfully with MCP tools")
         } catch {
             XCTFail("Failed to create query with MCP tools: \(error)")
@@ -361,7 +361,7 @@ final class SDKLiveIntegrationTests: XCTestCase {
         let startTime = Date()
         let query: ClaudeQuery
         do {
-            query = try await ClaudeCode.query(prompt: "Say LOGGER_OK", options: options)
+            query = try await Clod.query(prompt: "Say LOGGER_OK", options: options)
             let elapsed = Date().timeIntervalSince(startTime)
             print("✓ Query created in \(String(format: "%.2f", elapsed))s")
         } catch {
@@ -478,7 +478,7 @@ final class SDKLiveIntegrationTests: XCTestCase {
         let startTime = Date()
         let query: ClaudeQuery
         do {
-            query = try await ClaudeCode.query(prompt: "Say CALLBACK_OK", options: options)
+            query = try await Clod.query(prompt: "Say CALLBACK_OK", options: options)
             let elapsed = Date().timeIntervalSince(startTime)
             print("✓ Query created in \(String(format: "%.2f", elapsed))s")
         } catch {
@@ -573,7 +573,7 @@ final class SDKLiveIntegrationTests: XCTestCase {
         let startTime = Date()
         let query: ClaudeQuery
         do {
-            query = try await ClaudeCode.query(prompt: "Say CAPTURE_OK", options: options)
+            query = try await Clod.query(prompt: "Say CAPTURE_OK", options: options)
             let elapsed = Date().timeIntervalSince(startTime)
             print("✓ Query created in \(String(format: "%.2f", elapsed))s")
         } catch {
@@ -643,7 +643,7 @@ final class SDKLiveIntegrationTests: XCTestCase {
         let startTime = Date()
         let query: ClaudeQuery
         do {
-            query = try await ClaudeCode.query(prompt: "Say DIRECT_OK", options: options)
+            query = try await Clod.query(prompt: "Say DIRECT_OK", options: options)
             let elapsed = Date().timeIntervalSince(startTime)
             print("✓ Query created in \(String(format: "%.2f", elapsed))s")
         } catch {
@@ -701,7 +701,7 @@ final class SDKLiveIntegrationTests: XCTestCase {
         let startTime = Date()
         do {
             // Use a shorter timeout for this test since we expect it to fail
-            let query = try await ClaudeCode.query(prompt: "Say TEST", options: options)
+            let query = try await Clod.query(prompt: "Say TEST", options: options)
             let elapsed = Date().timeIntervalSince(startTime)
             print("Query created in \(String(format: "%.2f", elapsed))s - UNEXPECTED!")
 
@@ -758,7 +758,7 @@ final class SDKLiveIntegrationTests: XCTestCase {
             print("\nTesting: '\(prompt)'")
             let startTime = Date()
             do {
-                let query = try await ClaudeCode.query(prompt: "Say TEST", options: options)
+                let query = try await Clod.query(prompt: "Say TEST", options: options)
                 let elapsed = Date().timeIntervalSince(startTime)
                 print("  ✓ Created in \(String(format: "%.2f", elapsed))s")
 
@@ -817,7 +817,7 @@ final class SDKLiveIntegrationTests: XCTestCase {
         let startTime = Date()
         let query: ClaudeQuery
         do {
-            query = try await ClaudeCode.query(prompt: "Say TAVERN_OK", options: options)
+            query = try await Clod.query(prompt: "Say TAVERN_OK", options: options)
             let elapsed = Date().timeIntervalSince(startTime)
             print("✓ Query created in \(String(format: "%.2f", elapsed))s")
         } catch {
@@ -903,7 +903,7 @@ final class SDKLiveIntegrationTests: XCTestCase {
         let startTime = Date()
         let query: ClaudeQuery
         do {
-            query = try await ClaudeCode.query(prompt: "Say PROPS_OK", options: options)
+            query = try await Clod.query(prompt: "Say PROPS_OK", options: options)
             let elapsed = Date().timeIntervalSince(startTime)
             print("✓ Query created in \(String(format: "%.2f", elapsed))s")
         } catch {
@@ -966,7 +966,7 @@ final class SDKLiveIntegrationTests: XCTestCase {
         let startTime = Date()
         let query: ClaudeQuery
         do {
-            query = try await ClaudeCode.query(prompt: "Say TWO_OK", options: options)
+            query = try await Clod.query(prompt: "Say TWO_OK", options: options)
             let elapsed = Date().timeIntervalSince(startTime)
             print("✓ Query created in \(String(format: "%.2f", elapsed))s")
         } catch {
@@ -1022,7 +1022,7 @@ final class SDKLiveIntegrationTests: XCTestCase {
         let startTime = Date()
         let query: ClaudeQuery
         do {
-            query = try await ClaudeCode.query(prompt: "Say SUMMON_OK", options: options)
+            query = try await Clod.query(prompt: "Say SUMMON_OK", options: options)
             let elapsed = Date().timeIntervalSince(startTime)
             print("✓ Query created in \(String(format: "%.2f", elapsed))s")
         } catch {
@@ -1089,7 +1089,7 @@ final class SDKLiveIntegrationTests: XCTestCase {
         let startTime = Date()
         let query: ClaudeQuery
         do {
-            query = try await ClaudeCode.query(prompt: "Say NAME_OK", options: options)
+            query = try await Clod.query(prompt: "Say NAME_OK", options: options)
             let elapsed = Date().timeIntervalSince(startTime)
             print("✓ Query created in \(String(format: "%.2f", elapsed))s")
         } catch {
@@ -1156,7 +1156,7 @@ final class SDKLiveIntegrationTests: XCTestCase {
         let startTime = Date()
         let query: ClaudeQuery
         do {
-            query = try await ClaudeCode.query(prompt: "Say BOTH_OK", options: options)
+            query = try await Clod.query(prompt: "Say BOTH_OK", options: options)
             let elapsed = Date().timeIntervalSince(startTime)
             print("✓ Query created in \(String(format: "%.2f", elapsed))s")
         } catch {
@@ -1193,7 +1193,7 @@ final class SDKLiveIntegrationTests: XCTestCase {
         let t0 = Date()
         print("T+0.00s: Starting query...")
 
-        let query = try await ClaudeCode.query(prompt: "OK", options: options)
+        let query = try await Clod.query(prompt: "OK", options: options)
         let t1 = Date()
         print("T+\(String(format: "%.2f", t1.timeIntervalSince(t0)))s: Query object created")
 

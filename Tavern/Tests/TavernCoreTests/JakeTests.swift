@@ -80,7 +80,7 @@ struct JakeTests {
     // TODO: These tests need dependency injection or SDK mocking to work
     // See: https://github.com/anthropics/claude-code/issues/XXX
 
-    // @Test("Jake responds to message") - requires mocking ClaudeCode.query()
+    // @Test("Jake responds to message") - requires mocking Clod.query()
     // @Test("Jake state changes to working during response") - requires mocking
     // @Test("Jake maintains conversation via session ID") - requires mocking
     // @Test("Jake handles text response fallback") - requires mocking

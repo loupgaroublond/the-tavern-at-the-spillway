@@ -1,5 +1,5 @@
 import Foundation
-import ClaudeCodeSDK
+import ClodKit
 import os.log
 
 /// A servitor - a worker spawned by Jake to handle specific assignments
@@ -157,7 +157,7 @@ public final class Servitor: Agent, @unchecked Sendable {
         // Run query and collect response
         let response: String
         do {
-            let query = try await ClaudeCode.query(prompt: message, options: options)
+            let query = try await Clod.query(prompt: message, options: options)
             response = try await collectResponse(from: query)
         } catch {
             TavernLogger.agents.error("[\(self.name)] send failed: \(error.localizedDescription)")

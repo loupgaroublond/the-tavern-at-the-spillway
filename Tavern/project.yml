@@ -21,8 +21,8 @@ settings:
     STRING_CATALOG_GENERATE_SYMBOLS: YES
 
 packages:
-  NativeClaudeCodeSDK:
-    path: /Users/yankee/Documents/Projects/ClodeMonster/NativeClaudeCodeSDK
+  ClodKit:
+    path: /Users/yankee/Documents/Projects/ClodKit
 
 targets:
   TavernCore:
@@ -31,8 +31,8 @@ targets:
     sources:
       - path: Sources/TavernCore
     dependencies:
-      - package: NativeClaudeCodeSDK
-        product: ClaudeCodeSDK
+      - package: ClodKit
+        product: ClodKit
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: com.tavern.core
       SWIFT_VERSION: "6.0"

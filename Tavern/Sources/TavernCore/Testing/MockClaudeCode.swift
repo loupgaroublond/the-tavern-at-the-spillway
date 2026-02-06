@@ -1,13 +1,13 @@
 import Foundation
-import ClaudeCodeSDK
+import ClodKit
 
-/// Mock helpers for testing with ClodeMonster SDK
-/// Since ClodeMonster uses static functions and AsyncSequence, mocking requires
+/// Mock helpers for testing with ClodKit
+/// Since ClodKit uses static functions and AsyncSequence, mocking requires
 /// different patterns than the old protocol-based SDK.
 ///
 /// For unit testing agents, consider:
 /// 1. Testing at a higher level (integration tests with real SDK)
-/// 2. Using ClodeMonster's MockTransport for transport-level mocking
+/// 2. Using ClodKit's MockTransport for transport-level mocking
 /// 3. Dependency injection with protocol wrappers if needed
 
 // MARK: - Test Response Helpers

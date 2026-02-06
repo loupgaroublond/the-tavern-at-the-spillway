@@ -5,7 +5,7 @@ import XCTest
 /// Run with: swift test --filter TavernStressTests
 ///
 /// NOTE: These tests previously used MockClaudeCode for mocking responses.
-/// With the new ClodeMonster SDK, agents call ClaudeCode.query() directly
+/// With ClodKit, agents call Clod.query() directly
 /// without dependency injection. These tests are skipped until a mocking
 /// strategy is implemented.
 final class ChatStressTests: XCTestCase {

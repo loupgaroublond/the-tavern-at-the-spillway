@@ -4,8 +4,8 @@
 /// and doc store functionality. It's designed to be testable
 /// without any UI dependencies.
 
-// Re-export ClaudeCodeSDK types from ClodeMonster
-@_exported import ClaudeCodeSDK
+// Re-export ClodKit types
+@_exported import ClodKit
 
 public enum TavernCore {
     public static let version = "0.1.0"

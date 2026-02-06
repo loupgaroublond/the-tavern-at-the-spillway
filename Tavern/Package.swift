@@ -12,15 +12,15 @@ let package = Package(
         .library(name: "TavernCore", targets: ["TavernCore"])
     ],
     dependencies: [
-        // ClodeMonster's native Swift SDK
-        .package(path: "/Users/yankee/Documents/Projects/ClodeMonster/NativeClaudeCodeSDK")
+        // ClodKit SDK
+        .package(path: "/Users/yankee/Documents/Projects/ClodKit")
     ],
     targets: [
         // Core library - all logic, testable without UI
         .target(
             name: "TavernCore",
             dependencies: [
-                .product(name: "ClaudeCodeSDK", package: "NativeClaudeCodeSDK")
+                .product(name: "ClodKit", package: "ClodKit")
             ]
         ),
 

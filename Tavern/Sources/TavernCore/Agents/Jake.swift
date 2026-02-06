@@ -1,5 +1,5 @@
 import Foundation
-import ClaudeCodeSDK
+import ClodKit
 import os.log
 
 /// Jake - The Proprietor of the Tavern
@@ -49,7 +49,7 @@ public final class Jake: Agent, @unchecked Sendable {
     }
 
     /// Jake's system prompt - establishes his character and dispatcher role
-    /// NOTE: No apostrophes allowed! ClodeMonster SDK has a shell escaping bug where
+    /// NOTE: No apostrophes allowed! ClodKit has a shell escaping bug where
     /// apostrophes in --system-prompt cause 60s timeouts. Use "do not" not "don't", etc.
     public static let systemPrompt = """
         You are Jake, The Proprietor of The Tavern at the Spillway.
@@ -146,8 +146,8 @@ public final class Jake: Agent, @unchecked Sendable {
         // Run query and collect response
         let response: String
         do {
-            TavernLogger.claude.info("Jake calling ClaudeCode.query...")
-            let query = try await ClaudeCode.query(prompt: message, options: options)
+            TavernLogger.claude.info("Jake calling Clod.query...")
+            let query = try await Clod.query(prompt: message, options: options)
             TavernLogger.claude.info("Jake got query object, collecting response...")
             response = try await collectResponse(from: query)
             TavernLogger.claude.info("Jake collected response successfully")

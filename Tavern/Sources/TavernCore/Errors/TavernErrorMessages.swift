@@ -1,5 +1,5 @@
 import Foundation
-import ClaudeCodeSDK
+import ClodKit
 
 /// Maps errors to informative, Jake-style messages for users
 /// Every error the user sees should be expected, specific, and actionable
@@ -14,22 +14,22 @@ public enum TavernErrorMessages {
             return message(for: tavernError)
         }
 
-        // Handle ClodeMonster QueryError
+        // Handle ClodKit QueryError
         if let queryError = error as? QueryError {
             return message(for: queryError)
         }
 
-        // Handle ClodeMonster SessionError
+        // Handle ClodKit SessionError
         if let sessionError = error as? SessionError {
             return message(for: sessionError)
         }
 
-        // Handle ClodeMonster ControlProtocolError
+        // Handle ClodKit ControlProtocolError
         if let controlError = error as? ControlProtocolError {
             return message(for: controlError)
         }
 
-        // Handle ClodeMonster TransportError
+        // Handle ClodKit TransportError
         if let transportError = error as? TransportError {
             return message(for: transportError)
         }
@@ -55,7 +55,7 @@ public enum TavernErrorMessages {
         return unknownErrorMessage(error: error)
     }
 
-    /// Convert ClodeMonster QueryError to an informative message
+    /// Convert ClodKit QueryError to an informative message
     public static func message(for error: QueryError) -> String {
         switch error {
         case .launchFailed(let reason):
@@ -86,7 +86,7 @@ public enum TavernErrorMessages {
         }
     }
 
-    /// Convert ClodeMonster SessionError to an informative message
+    /// Convert ClodKit SessionError to an informative message
     public static func message(for error: SessionError) -> String {
         switch error {
         case .sessionClosed:
@@ -109,7 +109,7 @@ public enum TavernErrorMessages {
         }
     }
 
-    /// Convert ClodeMonster ControlProtocolError to an informative message
+    /// Convert ClodKit ControlProtocolError to an informative message
     public static func message(for error: ControlProtocolError) -> String {
         switch error {
         case .timeout(let requestId):
@@ -146,7 +146,7 @@ public enum TavernErrorMessages {
         }
     }
 
-    /// Convert ClodeMonster TransportError to an informative message
+    /// Convert ClodKit TransportError to an informative message
     public static func message(for error: TransportError) -> String {
         switch error {
         case .notConnected:

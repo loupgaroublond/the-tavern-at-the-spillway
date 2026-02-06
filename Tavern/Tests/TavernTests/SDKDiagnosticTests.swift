@@ -1,7 +1,7 @@
 import XCTest
 import TavernCore
 
-/// Diagnostic tests for ClaudeCodeSDK integration
+/// Diagnostic tests for ClodKit integration
 /// Run these to verify the SDK is working correctly in your environment
 final class SDKDiagnosticTests: XCTestCase {
 
@@ -35,13 +35,13 @@ final class SDKDiagnosticTests: XCTestCase {
     }
 
     /// Test that SDK types are accessible
-    /// This verifies the ClodeMonster SDK is properly linked
+    /// This verifies ClodKit is properly linked
     func testSDKTypesAccessible() {
         // These types should be accessible via @_exported import in TavernCore
         // If they're not, the SDK isn't properly linked
         let options = QueryOptions()
         XCTAssertNotNil(options)
-        print("✓ QueryOptions accessible from ClodeMonster SDK")
+        print("✓ QueryOptions accessible from ClodKit")
     }
 
     // MARK: - Tests requiring network access (skipped in CI)
