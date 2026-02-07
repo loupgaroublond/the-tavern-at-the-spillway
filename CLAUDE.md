@@ -92,7 +92,7 @@ redo build
 ## Current State
 
 **Working:**
-- Jake responds using `.json` format (via ClodeMonster SDK)
+- Jake responds in plain text with MCP tools (via ClodeMonster SDK)
 - Multi-project support with per-project session persistence
 - Session history restoration from Claude's native storage
 - Multi-window architecture (welcome window + per-project windows)
