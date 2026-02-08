@@ -3,6 +3,7 @@ import XCTest
 /// Grade 4 E2E tests: full user journeys with real Claude.
 /// E2E tests NEVER mock — they validate the actual user experience.
 /// These steal focus — run via `redo Tavern/test-grade4` when user is not active.
+@MainActor
 final class E2ETests: XCTestCase {
 
     var app: XCUIApplication!
@@ -88,7 +89,7 @@ final class E2ETests: XCTestCase {
 
     /// Spawn a new agent via the toolbar button
     func testSpawnAgent() throws {
-        let spawnButton = app.buttons["spawnAgentButton"]
+        let spawnButton = app.buttons["spawnAgentButton"].firstMatch
         XCTAssertTrue(
             spawnButton.waitForExistence(timeout: 10),
             "Spawn agent button should exist"
@@ -115,7 +116,7 @@ final class E2ETests: XCTestCase {
     /// Switch between Jake and a spawned agent
     func testSwitchBetweenAgents() throws {
         // Spawn an agent first
-        let spawnButton = app.buttons["spawnAgentButton"]
+        let spawnButton = app.buttons["spawnAgentButton"].firstMatch
         XCTAssertTrue(spawnButton.waitForExistence(timeout: 10))
         spawnButton.click()
         sleep(2)
@@ -134,7 +135,7 @@ final class E2ETests: XCTestCase {
     /// Close a spawned agent
     func testCloseAgent() throws {
         // Spawn an agent
-        let spawnButton = app.buttons["spawnAgentButton"]
+        let spawnButton = app.buttons["spawnAgentButton"].firstMatch
         XCTAssertTrue(spawnButton.waitForExistence(timeout: 10))
         spawnButton.click()
         sleep(2)
@@ -150,8 +151,8 @@ final class E2ETests: XCTestCase {
         let secondCell = agentList.cells.element(boundBy: 1)
         secondCell.rightClick()
 
-        // Click "Close" in context menu
-        let closeMenuItem = app.menuItems["Close"]
+        // Click "Close" in context menu (use agentList scope to avoid File→Close ambiguity)
+        let closeMenuItem = agentList.menuItems["Close"]
         if closeMenuItem.waitForExistence(timeout: 5) {
             closeMenuItem.click()
             sleep(1)

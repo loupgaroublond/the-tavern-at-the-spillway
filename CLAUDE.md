@@ -120,7 +120,7 @@ redo build
 - Agent spawning with themed names + UI (toolbar + button)
 - Content block rendering infrastructure (MessageType enum)
 - Window restoration on app restart
-- 173 tests passing
+- 250 tests passing (Grade 1+2: 187, wiring+SDK: 31, Grade 3 integration: 32)
 
 **Not Implemented:**
 - Real verification logic (commitments use mock)

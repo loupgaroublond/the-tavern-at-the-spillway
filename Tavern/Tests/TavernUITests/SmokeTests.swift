@@ -2,6 +2,7 @@ import XCTest
 
 /// Grade 4 smoke tests: verify the app launches and renders basic UI.
 /// These steal focus — run via `redo Tavern/test-grade4` when user is not active.
+@MainActor
 final class SmokeTests: XCTestCase {
 
     var app: XCUIApplication!
