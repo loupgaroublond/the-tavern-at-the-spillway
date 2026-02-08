@@ -41,6 +41,7 @@ struct AgentListView: View {
             }
         }
         .listStyle(.sidebar)
+        .accessibilityIdentifier("agentList")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button(action: { onSpawnAgent?() }) {
@@ -48,6 +49,7 @@ struct AgentListView: View {
                 }
                 .help("New chat")
                 .disabled(onSpawnAgent == nil)
+                .accessibilityIdentifier("spawnAgentButton")
             }
         }
         .sheet(item: $editingDescriptionForAgentId) { agentId in

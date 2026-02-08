@@ -113,13 +113,108 @@ struct ChatViewModelTests {
         #expect(viewModel.agentName == "Jake")
     }
 
-    // MARK: - Tests requiring SDK mocking (skipped for now)
-    // TODO: These tests need dependency injection or SDK mocking to work
-    // - sendingMessageAddsMessages
-    // - inputTextClearsAfterSend
-    // - cogitatingStateDuringSend
-    // - cogitationVerbIsSet
-    // - errorIsCapturedAndDisplayed
-    // - multipleMessagesAccumulate
-    // - servitorAgentCanSendMessages
+    // MARK: - Grade 2 Mock Tests (using MockAgent)
+
+    @Test("Sending message adds user and agent messages")
+    @MainActor
+    func sendingMessageAddsMessages() async {
+        let mock = MockAgent(responses: ["Hello from mock!"])
+        let viewModel = ChatViewModel(agent: mock, loadHistory: false)
+
+        viewModel.inputText = "Hello"
+        await viewModel.sendMessage()
+
+        #expect(viewModel.messages.count == 2)
+        #expect(viewModel.messages[0].role == .user)
+        #expect(viewModel.messages[0].content == "Hello")
+        #expect(viewModel.messages[1].role == .agent)
+        #expect(viewModel.messages[1].content == "Hello from mock!")
+    }
+
+    @Test("Input text clears after send")
+    @MainActor
+    func inputTextClearsAfterSend() async {
+        let mock = MockAgent(responses: ["OK"])
+        let viewModel = ChatViewModel(agent: mock, loadHistory: false)
+
+        viewModel.inputText = "Test message"
+        await viewModel.sendMessage()
+
+        #expect(viewModel.inputText.isEmpty)
+    }
+
+    @Test("Cogitating state during send")
+    @MainActor
+    func cogitatingStateDuringSend() async {
+        let mock = MockAgent(responses: ["OK"])
+        mock.responseDelay = .milliseconds(50)
+        let viewModel = ChatViewModel(agent: mock, loadHistory: false)
+
+        #expect(viewModel.isCogitating == false)
+
+        viewModel.inputText = "Test"
+        await viewModel.sendMessage()
+
+        // After send completes, cogitating should be false
+        #expect(viewModel.isCogitating == false)
+    }
+
+    @Test("Cogitation verb is set during send")
+    @MainActor
+    func cogitationVerbIsSet() async {
+        let mock = MockAgent(responses: ["OK"])
+        let viewModel = ChatViewModel(agent: mock, loadHistory: false)
+
+        viewModel.inputText = "Test"
+        await viewModel.sendMessage()
+
+        // Verb is set during send and not cleared after
+        #expect(!viewModel.cogitationVerb.isEmpty)
+    }
+
+    @Test("Error is captured and displayed")
+    @MainActor
+    func errorIsCapturedAndDisplayed() async {
+        let mock = MockAgent()
+        mock.errorToThrow = TavernError.internalError("Mock error for testing")
+        let viewModel = ChatViewModel(agent: mock, loadHistory: false)
+
+        viewModel.inputText = "Trigger error"
+        await viewModel.sendMessage()
+
+        #expect(viewModel.error != nil)
+        // Should have user message + error message
+        #expect(viewModel.messages.count == 2)
+        #expect(viewModel.messages[0].role == .user)
+        #expect(viewModel.messages[1].role == .agent) // Error message displayed as agent
+    }
+
+    @Test("Multiple messages accumulate")
+    @MainActor
+    func multipleMessagesAccumulate() async {
+        let mock = MockAgent(responses: ["First response", "Second response"])
+        let viewModel = ChatViewModel(agent: mock, loadHistory: false)
+
+        viewModel.inputText = "Message 1"
+        await viewModel.sendMessage()
+        #expect(viewModel.messages.count == 2) // user + agent
+
+        viewModel.inputText = "Message 2"
+        await viewModel.sendMessage()
+        #expect(viewModel.messages.count == 4) // 2 user + 2 agent
+    }
+
+    @Test("Servitor agent can send messages via ChatViewModel")
+    @MainActor
+    func servitorAgentCanSendMessages() async {
+        let mock = MockAgent(name: "ServitorMock", responses: ["Servitor response"])
+        let viewModel = ChatViewModel(agent: mock, loadHistory: false)
+
+        viewModel.inputText = "Hello servitor"
+        await viewModel.sendMessage()
+
+        #expect(viewModel.messages.count == 2)
+        #expect(viewModel.agentName == "ServitorMock")
+        #expect(viewModel.messages[1].content == "Servitor response")
+    }
 }

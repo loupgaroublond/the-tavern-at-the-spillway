@@ -26,6 +26,7 @@ struct ChatView: View {
                         viewModel.startFreshSession()
                     }
                 )
+                .accessibilityIdentifier("sessionRecoveryBanner")
             }
 
             // Message list
@@ -43,6 +44,7 @@ struct ChatView: View {
                                 verb: viewModel.cogitationVerb
                             )
                             .id("cogitating")
+                            .accessibilityIdentifier("cogitatingIndicator")
                         }
                     }
                     .padding()
@@ -400,6 +402,7 @@ private struct InputBar: View {
             TextField("Message \(agentName)...", text: $text)
                 .textFieldStyle(.plain)
                 .disabled(!isEnabled)
+                .accessibilityIdentifier("chatInputField")
                 .onSubmit {
                     if isEnabled && !text.isEmpty {
                         onSend()
@@ -413,6 +416,7 @@ private struct InputBar: View {
             }
             .disabled(text.isEmpty || !isEnabled)
             .buttonStyle(.plain)
+            .accessibilityIdentifier("sendButton")
         }
         .padding()
     }

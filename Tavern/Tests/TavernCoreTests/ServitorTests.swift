@@ -11,6 +11,8 @@ struct ServitorTests {
             .appendingPathComponent("tavern-test-\(UUID().uuidString)")
     }
 
+    // MARK: - Grade 1 Property Tests (no mocks needed)
+
     @Test("Servitor has assignment")
     func servitorHasAssignment() {
         let servitor = Servitor(
@@ -170,20 +172,231 @@ struct ServitorTests {
         #expect(servitor.hasFailedCommitments == true)
     }
 
-    // Note: Servitor.projectURL is private, so we can't test it directly
-    // The project URL is used internally for session storage
+    // MARK: - Grade 2 Mock Tests (using MockMessenger)
 
-    // MARK: - Tests requiring SDK mocking (skipped for now)
-    // TODO: These tests need dependency injection or SDK mocking to work
-    // - servitorRespondsToMessages
-    // - servitorTracksWorkingState
-    // - servitorTransitionsToDone (via response)
-    // - servitorTransitionsToWaiting (via response)
-    // - servitorMaintainsConversation
-    // - servitorPropagatesErrors
-    // - servitorWithNoCommitmentsGoesToDone (via response)
-    // - doneTriggersVerification (via response)
-    // - verificationPassMarksDone (via response)
-    // - verificationFailContinuesWork (via response)
-    // - servitorNotDoneUntilAllCommitmentsVerified (via response)
+    @Test("Servitor responds to messages")
+    func servitorRespondsToMessages() async throws {
+        let mock = MockMessenger(responses: ["Task acknowledged"])
+        let servitor = Servitor(
+            name: "ResponseWorker",
+            assignment: "Handle messages",
+            projectURL: Self.testProjectURL(),
+            messenger: mock,
+            loadSavedSession: false
+        )
+
+        let response = try await servitor.send("Do the thing")
+
+        #expect(response == "Task acknowledged")
+        #expect(mock.queryCalls.count == 1)
+        #expect(mock.queryCalls[0] == "Do the thing")
+    }
+
+    @Test("Servitor tracks working state")
+    func servitorTracksWorkingState() async throws {
+        let mock = MockMessenger(responses: ["OK"])
+        mock.responseDelay = .milliseconds(100)
+        let servitor = Servitor(
+            name: "StateWorker",
+            assignment: "Task",
+            projectURL: Self.testProjectURL(),
+            messenger: mock,
+            loadSavedSession: false
+        )
+
+        #expect(servitor.state == .idle)
+
+        let task = Task {
+            try await servitor.send("Work")
+        }
+
+        try await Task.sleep(for: .milliseconds(50))
+        #expect(servitor.state == .working)
+
+        let _ = try await task.value
+        #expect(servitor.state == .idle)
+    }
+
+    @Test("Servitor transitions to done via response")
+    func servitorTransitionsToDone() async throws {
+        let mock = MockMessenger(responses: ["Assignment complete. DONE"])
+        let servitor = Servitor(
+            name: "DoneViaResponse",
+            assignment: "Finish up",
+            projectURL: Self.testProjectURL(),
+            messenger: mock,
+            loadSavedSession: false
+        )
+
+        let _ = try await servitor.send("Finish it")
+
+        #expect(servitor.state == .done)
+    }
+
+    @Test("Servitor transitions to waiting via response")
+    func servitorTransitionsToWaiting() async throws {
+        let mock = MockMessenger(responses: ["I need clarification. WAITING for your input."])
+        let servitor = Servitor(
+            name: "WaitViaResponse",
+            assignment: "Need info",
+            projectURL: Self.testProjectURL(),
+            messenger: mock,
+            loadSavedSession: false
+        )
+
+        let _ = try await servitor.send("Do the ambiguous thing")
+
+        #expect(servitor.state == .waiting)
+    }
+
+    @Test("Servitor maintains conversation via session ID")
+    func servitorMaintainsConversation() async throws {
+        let sessionId = UUID().uuidString
+        let mock = MockMessenger(responses: ["First", "Second"], sessionId: sessionId)
+        let servitor = Servitor(
+            name: "ConvoWorker",
+            assignment: "Chat",
+            projectURL: Self.testProjectURL(),
+            messenger: mock,
+            loadSavedSession: false
+        )
+
+        #expect(servitor.sessionId == nil)
+
+        let _ = try await servitor.send("Message 1")
+        #expect(servitor.sessionId == sessionId)
+
+        let _ = try await servitor.send("Message 2")
+        #expect(mock.queryOptions[1].resume == sessionId)
+    }
+
+    @Test("Servitor propagates errors")
+    func servitorPropagatesErrors() async throws {
+        let mock = MockMessenger()
+        mock.errorToThrow = TavernError.internalError("Servitor test error")
+        let servitor = Servitor(
+            name: "ErrorWorker",
+            assignment: "Fail",
+            projectURL: Self.testProjectURL(),
+            messenger: mock,
+            loadSavedSession: false
+        )
+
+        do {
+            let _ = try await servitor.send("Trigger error")
+            Issue.record("Expected error to be thrown")
+        } catch let error as TavernError {
+            if case .internalError(let message) = error {
+                #expect(message == "Servitor test error")
+            } else {
+                Issue.record("Expected internalError, got: \(error)")
+            }
+        }
+    }
+
+    @Test("Servitor with no commitments goes to done")
+    func servitorWithNoCommitmentsGoesToDone() async throws {
+        let mock = MockMessenger(responses: ["All DONE here!"])
+        let servitor = Servitor(
+            name: "NoPledgeWorker",
+            assignment: "Quick task",
+            projectURL: Self.testProjectURL(),
+            commitments: CommitmentList(),
+            messenger: mock,
+            loadSavedSession: false
+        )
+
+        #expect(servitor.commitments.count == 0)
+
+        let _ = try await servitor.send("Finish")
+
+        #expect(servitor.state == .done)
+    }
+
+    @Test("Done triggers verification when commitments exist")
+    func doneTriggersVerification() async throws {
+        let commitments = CommitmentList()
+        commitments.add(description: "Always passes", assertion: "true")
+
+        let mock = MockMessenger(responses: ["Task DONE"])
+        let servitor = Servitor(
+            name: "VerifyWorker",
+            assignment: "Verify task",
+            projectURL: Self.testProjectURL(),
+            commitments: commitments,
+            messenger: mock,
+            loadSavedSession: false
+        )
+
+        let _ = try await servitor.send("Complete the task")
+
+        // "DONE" in response triggers verification; "true" always passes
+        #expect(servitor.state == .done)
+        #expect(servitor.allCommitmentsPassed == true)
+    }
+
+    @Test("Verification pass marks done")
+    func verificationPassMarksDone() async throws {
+        let commitments = CommitmentList()
+        commitments.add(description: "Check 1", assertion: "true")
+        commitments.add(description: "Check 2", assertion: "echo pass")
+
+        let mock = MockMessenger(responses: ["DONE"])
+        let servitor = Servitor(
+            name: "PassVerifyWorker",
+            assignment: "Pass all checks",
+            projectURL: Self.testProjectURL(),
+            commitments: commitments,
+            messenger: mock,
+            loadSavedSession: false
+        )
+
+        let _ = try await servitor.send("Verify")
+
+        #expect(servitor.state == .done)
+    }
+
+    @Test("Verification fail continues work")
+    func verificationFailContinuesWork() async throws {
+        let commitments = CommitmentList()
+        commitments.add(description: "Always fails", assertion: "false")
+
+        let mock = MockMessenger(responses: ["DONE"])
+        let servitor = Servitor(
+            name: "FailVerifyWorker",
+            assignment: "Fail checks",
+            projectURL: Self.testProjectURL(),
+            commitments: commitments,
+            messenger: mock,
+            loadSavedSession: false
+        )
+
+        let _ = try await servitor.send("Try to finish")
+
+        // "false" always exits 1 → verification fails → back to idle
+        #expect(servitor.state == .idle)
+    }
+
+    @Test("Servitor not done until all commitments verified")
+    func servitorNotDoneUntilAllCommitmentsVerified() async throws {
+        let commitments = CommitmentList()
+        commitments.add(description: "Passes", assertion: "true")
+        commitments.add(description: "Fails", assertion: "false")
+
+        let mock = MockMessenger(responses: ["DONE"])
+        let servitor = Servitor(
+            name: "PartialVerifyWorker",
+            assignment: "Partial verification",
+            projectURL: Self.testProjectURL(),
+            commitments: commitments,
+            messenger: mock,
+            loadSavedSession: false
+        )
+
+        let _ = try await servitor.send("Complete")
+
+        // One commitment fails → not done
+        #expect(servitor.state != .done)
+        #expect(servitor.state == .idle)
+    }
 }

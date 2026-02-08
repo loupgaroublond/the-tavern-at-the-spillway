@@ -39,6 +39,7 @@ public final class Servitor: Agent, @unchecked Sendable {
     // MARK: - Private State
 
     private let projectURL: URL
+    private let messenger: AgentMessenger
     private let queue = DispatchQueue(label: "com.tavern.Servitor")
 
     private var _state: AgentState = .idle
@@ -114,6 +115,7 @@ public final class Servitor: Agent, @unchecked Sendable {
         projectURL: URL,
         commitments: CommitmentList = CommitmentList(),
         verifier: CommitmentVerifier = CommitmentVerifier(),
+        messenger: AgentMessenger = LiveMessenger(),
         loadSavedSession: Bool = true
     ) {
         self.id = id
@@ -123,6 +125,7 @@ public final class Servitor: Agent, @unchecked Sendable {
         self.projectURL = projectURL
         self.commitments = commitments
         self.verifier = verifier
+        self.messenger = messenger
 
         // Restore session from previous run (useful if servitor was persisted)
         if loadSavedSession, let savedSession = SessionStore.loadAgentSession(agentId: id) {
@@ -157,8 +160,17 @@ public final class Servitor: Agent, @unchecked Sendable {
         // Run query and collect response
         let response: String
         do {
-            let query = try await Clod.query(prompt: message, options: options)
-            response = try await collectResponse(from: query)
+            let result = try await messenger.query(prompt: message, options: options)
+            response = result.response
+
+            // Save session ID
+            if let newSessionId = result.sessionId {
+                queue.sync { _sessionId = newSessionId }
+                SessionStore.saveAgentSession(agentId: id, sessionId: newSessionId)
+                TavernLogger.agents.info("[\(self.name)] received response, length: \(response.count), sessionId: \(newSessionId)")
+            } else {
+                TavernLogger.agents.info("[\(self.name)] received response, length: \(response.count), no sessionId")
+            }
         } catch {
             TavernLogger.agents.error("[\(self.name)] send failed: \(error.localizedDescription)")
             throw error
@@ -166,35 +178,6 @@ public final class Servitor: Agent, @unchecked Sendable {
 
         await checkForCompletionSignal(in: response)
         return response
-    }
-
-    /// Collect the response from a ClaudeQuery stream
-    private func collectResponse(from query: ClaudeQuery) async throws -> String {
-        var responseText: String = ""
-
-        for try await message in query {
-            switch message {
-            case .regular(let sdkMessage):
-                if sdkMessage.type == "result" {
-                    if let content = sdkMessage.content?.stringValue {
-                        responseText = content
-                    }
-                }
-            case .controlRequest, .controlResponse, .controlCancelRequest, .keepAlive:
-                break
-            }
-        }
-
-        // Get session ID from the query
-        if let newSessionId = await query.sessionId {
-            queue.sync { _sessionId = newSessionId }
-            SessionStore.saveAgentSession(agentId: id, sessionId: newSessionId)
-            TavernLogger.agents.info("[\(self.name)] received response, length: \(responseText.count), sessionId: \(newSessionId)")
-        } else {
-            TavernLogger.agents.info("[\(self.name)] received response, length: \(responseText.count), no sessionId")
-        }
-
-        return responseText
     }
 
     /// Reset the servitor's conversation state

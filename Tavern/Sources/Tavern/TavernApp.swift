@@ -246,17 +246,44 @@ class TavernAppDelegate: NSObject, NSApplicationDelegate {
 
 // MARK: - App
 
+// MARK: - UI Testing Support
+
+/// Check if the app was launched with --ui-testing flag
+private let isUITesting = CommandLine.arguments.contains("--ui-testing")
+
+/// Get the project path from --project-path launch argument
+private var uiTestProjectPath: String? {
+    guard let index = CommandLine.arguments.firstIndex(of: "--project-path"),
+          index + 1 < CommandLine.arguments.count else {
+        return nil
+    }
+    return CommandLine.arguments[index + 1]
+}
+
 @main
 struct TavernApp: App {
     @NSApplicationDelegateAdaptor(TavernAppDelegate.self) var appDelegate
     @StateObject private var projectManager = ProjectManager.shared
 
     var body: some Scene {
-        // Welcome window (no project)
+        // Welcome window (no project) — skipped in UI testing mode
         WindowGroup(id: "welcome") {
-            WelcomeView()
-                .environmentObject(projectManager)
-                .registerWelcomeWindow()
+            if isUITesting, let path = uiTestProjectPath {
+                // In UI testing mode, bypass welcome and open project directly
+                Color.clear
+                    .onAppear {
+                        let url = URL(fileURLWithPath: path)
+                        // Ensure the sandbox directory exists
+                        try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+                        WindowOpeningService.shared.openProjectWindow(url: url)
+                    }
+                    .registerWelcomeWindow()
+                    .environmentObject(projectManager)
+            } else {
+                WelcomeView()
+                    .environmentObject(projectManager)
+                    .registerWelcomeWindow()
+            }
         }
         .windowStyle(.hiddenTitleBar)
         .commands {

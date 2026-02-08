@@ -13,7 +13,9 @@ let package = Package(
     ],
     dependencies: [
         // ClodKit SDK
-        .package(path: "/Users/yankee/Documents/Projects/ClodKit")
+        .package(path: "/Users/yankee/Documents/Projects/ClodKit"),
+        // ViewInspector for SwiftUI view-ViewModel wiring tests
+        .package(url: "https://github.com/nalexn/ViewInspector", from: "0.10.0")
     ],
     targets: [
         // Core library - all logic, testable without UI
@@ -40,15 +42,25 @@ let package = Package(
             dependencies: ["TavernCore"]
         ),
 
-        // App tests (UI tests if needed)
+        // App tests (UI wiring tests + integration tests)
         .testTarget(
             name: "TavernTests",
-            dependencies: ["Tavern", "TavernCore"]
+            dependencies: [
+                "Tavern",
+                "TavernCore",
+                .product(name: "ViewInspector", package: "ViewInspector")
+            ]
         ),
 
         // Stress tests (slow, run before releases)
         .testTarget(
             name: "TavernStressTests",
+            dependencies: ["TavernCore"]
+        ),
+
+        // Integration tests (Grade 3 - real Claude API, headless)
+        .testTarget(
+            name: "TavernIntegrationTests",
             dependencies: ["TavernCore"]
         )
     ]

@@ -20,6 +20,7 @@ public final class Jake: Agent, @unchecked Sendable {
     // MARK: - Properties
 
     private let projectURL: URL
+    private let messenger: AgentMessenger
     private let queue = DispatchQueue(label: "com.tavern.Jake")
 
     private var _sessionId: String?
@@ -95,10 +96,12 @@ public final class Jake: Agent, @unchecked Sendable {
     /// - Parameters:
     ///   - id: Unique identifier (auto-generated if not provided)
     ///   - projectURL: The project directory URL
+    ///   - messenger: The messenger for Claude communication (default: LiveMessenger)
     ///   - loadSavedSession: Whether to load a saved session from SessionStore (default true)
-    public init(id: UUID = UUID(), projectURL: URL, loadSavedSession: Bool = true) {
+    public init(id: UUID = UUID(), projectURL: URL, messenger: AgentMessenger = LiveMessenger(), loadSavedSession: Bool = true) {
         self.id = id
         self.projectURL = projectURL
+        self.messenger = messenger
 
         // Restore session from previous run (per-project)
         if loadSavedSession, let savedSession = SessionStore.loadJakeSession(projectPath: projectURL.path) {
@@ -146,11 +149,19 @@ public final class Jake: Agent, @unchecked Sendable {
         // Run query and collect response
         let response: String
         do {
-            TavernLogger.claude.info("Jake calling Clod.query...")
-            let query = try await Clod.query(prompt: message, options: options)
-            TavernLogger.claude.info("Jake got query object, collecting response...")
-            response = try await collectResponse(from: query)
-            TavernLogger.claude.info("Jake collected response successfully")
+            TavernLogger.claude.info("Jake calling messenger.query...")
+            let result = try await messenger.query(prompt: message, options: options)
+            response = result.response
+            TavernLogger.claude.info("Jake collected response successfully, length=\(response.count)")
+
+            // Save session ID
+            if let newSessionId = result.sessionId {
+                queue.sync { _sessionId = newSessionId }
+                SessionStore.saveJakeSession(newSessionId, projectPath: projectURL.path)
+                TavernLogger.agents.info("Jake received response, sessionId: \(newSessionId)")
+            } else {
+                TavernLogger.agents.info("Jake received response, no sessionId")
+            }
         } catch {
             // If resuming failed with a session ID, it's likely corrupt/stale
             if let sessionId = currentSessionId {
@@ -162,55 +173,6 @@ public final class Jake: Agent, @unchecked Sendable {
         }
 
         return response
-    }
-
-    // MARK: - Private Helpers
-
-    /// Collect the response from a ClaudeQuery stream
-    private func collectResponse(from query: ClaudeQuery) async throws -> String {
-        var responseText: String = ""
-        var messageCount = 0
-
-        for try await message in query {
-            messageCount += 1
-            switch message {
-            case .regular(let sdkMessage):
-                TavernLogger.claude.debug("Jake received message #\(messageCount): type=\(sdkMessage.type), hasContent=\(sdkMessage.content != nil)")
-                // Look for result message with the final response
-                if sdkMessage.type == "result" {
-                    // The result content is typically a string
-                    if let content = sdkMessage.content?.stringValue {
-                        responseText = content
-                        TavernLogger.claude.debug("Jake extracted result content, length=\(content.count)")
-                    } else {
-                        TavernLogger.claude.warning("Jake result message had no stringValue content")
-                    }
-                } else if sdkMessage.type == "assistant" {
-                    // Also try to get content from assistant messages
-                    if let content = sdkMessage.content?.stringValue, responseText.isEmpty {
-                        responseText = content
-                        TavernLogger.claude.debug("Jake extracted assistant content, length=\(content.count)")
-                    }
-                }
-            case .controlRequest, .controlResponse, .controlCancelRequest, .keepAlive:
-                // Control messages handled internally by SDK
-                TavernLogger.claude.debug("Jake received control message #\(messageCount)")
-                break
-            }
-        }
-
-        TavernLogger.claude.info("Jake finished collecting, total messages=\(messageCount), responseLength=\(responseText.count)")
-
-        // Get session ID from the query
-        if let newSessionId = await query.sessionId {
-            queue.sync { _sessionId = newSessionId }
-            SessionStore.saveJakeSession(newSessionId, projectPath: projectURL.path)
-            TavernLogger.agents.info("Jake received response, length: \(responseText.count), sessionId: \(newSessionId)")
-        } else {
-            TavernLogger.agents.info("Jake received response, length: \(responseText.count), no sessionId")
-        }
-
-        return responseText
     }
 
     /// Reset Jake's conversation (start fresh)

@@ -61,12 +61,30 @@ targets:
       properties:
         com.apple.security.app-sandbox: false
 
+  TavernUITests:
+    type: bundle.ui-testing
+    platform: macOS
+    sources:
+      - path: Tests/TavernUITests
+    dependencies:
+      - target: Tavern
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.tavern.uitests
+      SWIFT_VERSION: "6.0"
+      GENERATE_INFOPLIST_FILE: YES
+      TEST_TARGET_NAME: Tavern
+
 schemes:
   Tavern:
     build:
       targets:
         Tavern: all
         TavernCore: all
+        TavernUITests: [test]
     run:
       executable: Tavern
       config: Debug
+    test:
+      config: Debug
+      targets:
+        - TavernUITests
