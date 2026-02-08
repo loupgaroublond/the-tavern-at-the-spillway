@@ -518,6 +518,14 @@ struct ProjectView: View {
 struct ProjectContentView: View {
     @ObservedObject var project: TavernProject
     @ObservedObject var coordinator: TavernCoordinator
+    @SceneStorage("resourcePanelVisible") private var isResourcePanelVisible: Bool = false
+    @StateObject private var resourcePanelViewModel: ResourcePanelViewModel
+
+    init(project: TavernProject, coordinator: TavernCoordinator) {
+        self.project = project
+        self.coordinator = coordinator
+        self._resourcePanelViewModel = StateObject(wrappedValue: ResourcePanelViewModel(rootURL: project.rootURL))
+    }
 
     var body: some View {
         let coord = coordinator  // Capture for closures
@@ -553,10 +561,25 @@ struct ProjectContentView: View {
             }
             .frame(minWidth: 200)
         } detail: {
-            // Detail view with selected agent's chat
-            ChatView(viewModel: coordinator.activeChatViewModel)
+            // Detail: Chat + optional Resource Panel
+            HSplitView {
+                ChatView(viewModel: coordinator.activeChatViewModel)
+
+                if isResourcePanelVisible {
+                    ResourcePanelView(viewModel: resourcePanelViewModel)
+                        .frame(minWidth: 250, idealWidth: 350, maxWidth: 600)
+                }
+            }
         }
         .frame(minWidth: 800, minHeight: 500)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button(action: { isResourcePanelVisible.toggle() }) {
+                    Image(systemName: "sidebar.right")
+                }
+                .help(isResourcePanelVisible ? "Hide Resources" : "Show Resources")
+            }
+        }
     }
 }
 

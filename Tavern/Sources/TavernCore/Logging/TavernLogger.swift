@@ -29,6 +29,9 @@ public enum TavernLogger {
 
     /// SDK calls, API interactions, responses
     public static let claude = Logger(subsystem: subsystem, category: "claude")
+
+    /// Resource panel, file tree scanning, file content loading
+    public static let resources = Logger(subsystem: subsystem, category: "resources")
 }
 
 // MARK: - Debug-Only Public Logging
