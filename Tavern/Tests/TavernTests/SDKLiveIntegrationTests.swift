@@ -722,61 +722,6 @@ final class SDKLiveIntegrationTests: XCTestCase {
         }
     }
 
-    /// Isolate what phrase causes the timeout
-    func testIsolateTimeoutPhrase() async throws {
-        print("\n=== testIsolateTimeoutPhrase ===")
-
-        let testServer = SDKMCPServer(
-            name: "tavern",
-            version: "1.0.0",
-            tools: [
-                MCPTool(
-                    name: "summon_servitor",
-                    description: "Test tool",
-                    inputSchema: JSONSchema(properties: [:]),
-                    handler: { _ in return .text("OK") }
-                )
-            ]
-        )
-
-        // Test different prompts to isolate the issue
-        let prompts = [
-            "Say OK.",               // Control - should work
-            "Do not",                // No apostrophe - should work
-            "Don't",                 // Apostrophe - times out
-            "It's fine.",            // Different apostrophe word
-            "Test'test",             // Apostrophe in middle
-        ]
-
-        for prompt in prompts {
-            var options = QueryOptions()
-            options.maxTurns = 1
-            options.systemPrompt = prompt
-            options.workingDirectory = URL(fileURLWithPath: NSTemporaryDirectory())
-            options.sdkMcpServers["tavern"] = testServer
-
-            print("\nTesting: '\(prompt)'")
-            let startTime = Date()
-            do {
-                let query = try await Clod.query(prompt: "Say TEST", options: options)
-                let elapsed = Date().timeIntervalSince(startTime)
-                print("  ✓ Created in \(String(format: "%.2f", elapsed))s")
-
-                for try await message in query {
-                    if case .regular(let sdkMessage) = message {
-                        if sdkMessage.type == "result" {
-                            print("  ✓ Got result")
-                            break
-                        }
-                    }
-                }
-            } catch {
-                let elapsed = Date().timeIntervalSince(startTime)
-                print("  ✗ Timeout after \(String(format: "%.2f", elapsed))s")
-            }
-        }
-    }
-
     /// Test the exact configuration that Tavern uses
     func testTavernMCPServerConfiguration() async throws {
         print("\n=== testTavernMCPServerConfiguration ===")
