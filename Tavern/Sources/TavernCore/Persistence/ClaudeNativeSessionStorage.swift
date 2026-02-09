@@ -11,7 +11,7 @@ import OSLog
 import Darwin
 
 /// Implementation of Claude's native session storage that reads from ~/.claude/projects/
-public class ClaudeNativeSessionStorage: ClaudeSessionStorageProtocol {
+public class ClaudeNativeSessionStorage {
     private let basePath: String
     private let fileManager = FileManager.default
     private let logger = Logger(subsystem: "com.tavern.spillway", category: "SessionStorage")

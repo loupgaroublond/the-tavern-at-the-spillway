@@ -15,7 +15,6 @@ public final class PermissionManager: @unchecked Sendable {
     // MARK: - Properties
 
     private let store: PermissionStore
-    private let queue = DispatchQueue(label: "com.tavern.PermissionManager")
 
     /// Tool name patterns considered "edit" operations for acceptEdits mode
     private static let editToolPatterns: Set<String> = [
