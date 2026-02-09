@@ -213,7 +213,7 @@ struct ServitorSpawnerTests {
             registry: registry,
             nameGenerator: nameGenerator,
             projectURL: Self.testProjectURL(),
-            messengerFactory: {
+            messengerFactory: { _ in
                 counter.increment()
                 return MockMessenger(responses: ["Factory response"])
             }
@@ -234,7 +234,7 @@ struct ServitorSpawnerTests {
             registry: registry,
             nameGenerator: nameGenerator,
             projectURL: Self.testProjectURL(),
-            messengerFactory: { MockMessenger(responses: ["Mock response"]) }
+            messengerFactory: { _ in MockMessenger(responses: ["Mock response"]) }
         )
 
         let servitor = try spawner.summon(assignment: "Task")
@@ -251,7 +251,7 @@ struct ServitorSpawnerTests {
             registry: registry,
             nameGenerator: nameGenerator,
             projectURL: Self.testProjectURL(),
-            messengerFactory: { MockMessenger(responses: ["Response A", "Response B"]) }
+            messengerFactory: { _ in MockMessenger(responses: ["Response A", "Response B"]) }
         )
 
         let s1 = try spawner.summon(assignment: "Task 1")
@@ -274,7 +274,7 @@ struct ServitorSpawnerTests {
             registry: registry,
             nameGenerator: nameGenerator,
             projectURL: Self.testProjectURL(),
-            messengerFactory: {
+            messengerFactory: { _ in
                 counter.increment()
                 return MockMessenger(responses: ["Named response"])
             }
@@ -296,7 +296,7 @@ struct ServitorSpawnerTests {
             registry: registry,
             nameGenerator: nameGenerator,
             projectURL: Self.testProjectURL(),
-            messengerFactory: {
+            messengerFactory: { _ in
                 counter.increment()
                 return MockMessenger(responses: ["User response"])
             }
