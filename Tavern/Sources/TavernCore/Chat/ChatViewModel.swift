@@ -6,28 +6,27 @@ import os.log
 @MainActor
 public final class ChatViewModel: ObservableObject {
 
+    // MARK: - Agent Activity
+
+    /// The agent's current activity state — single source of truth for UI indicators.
+    /// Eliminates impossible state combinations (e.g. cogitating + tool running).
+    public enum AgentActivity: Equatable {
+        case idle
+        case cogitating(verb: String)
+        case streaming
+        case toolRunning(name: String, startTime: Date)
+    }
+
     // MARK: - Published State
 
     /// All messages in the conversation
     @Published public private(set) var messages: [ChatMessage] = []
 
-    /// Whether the agent is currently processing
-    @Published public private(set) var isCogitating: Bool = false
+    /// The agent's current activity (drives all status indicators)
+    @Published public private(set) var agentActivity: AgentActivity = .idle
 
     /// Current input text (bound to text field)
     @Published public var inputText: String = ""
-
-    /// The current cogitation verb (for UI display)
-    @Published public private(set) var cogitationVerb: String = "Cogitating"
-
-    /// Whether the agent is currently streaming a response
-    @Published public private(set) var isStreaming: Bool = false
-
-    /// Name of the currently executing tool (nil when no tool is active)
-    @Published public private(set) var currentToolName: String?
-
-    /// When the current tool started executing (nil when no tool is active)
-    @Published public private(set) var toolStartTime: Date?
 
     /// Cumulative input tokens for this session
     @Published public private(set) var totalInputTokens: Int = 0
@@ -68,6 +67,37 @@ public final class ChatViewModel: ObservableObject {
 
     /// The agent's name
     public var agentName: String { agent.name }
+
+    // MARK: - Derived Activity Properties
+
+    /// Whether the agent is currently processing (not idle)
+    public var isCogitating: Bool { agentActivity != .idle }
+
+    /// The current cogitation verb (for UI display)
+    public var cogitationVerb: String {
+        if case .cogitating(let verb) = agentActivity { return verb }
+        return "Cogitating"
+    }
+
+    /// Whether the agent is currently streaming a response
+    public var isStreaming: Bool {
+        switch agentActivity {
+        case .streaming, .toolRunning: return true
+        default: return false
+        }
+    }
+
+    /// Name of the currently executing tool (nil when no tool is active)
+    public var currentToolName: String? {
+        if case .toolRunning(let name, _) = agentActivity { return name }
+        return nil
+    }
+
+    /// When the current tool started executing (nil when no tool is active)
+    public var toolStartTime: Date? {
+        if case .toolRunning(_, let startTime) = agentActivity { return startTime }
+        return nil
+    }
 
     /// Whether there is any token usage data to display
     public var hasUsageData: Bool { totalInputTokens > 0 || totalOutputTokens > 0 }
@@ -260,10 +290,9 @@ public final class ChatViewModel: ObservableObject {
         TavernLogger.chat.debug("[\(self.agentName)] user message added to history, total: \(self.messages.count)")
 
         // Set cogitating state with random verb
-        isCogitating = true
-        isStreaming = false
-        cogitationVerb = Self.cogitationVerbs.randomElement() ?? "Cogitating"
-        TavernLogger.chat.info("[\(self.agentName)] cogitating state set, verb: \(self.cogitationVerb)")
+        let verb = Self.cogitationVerbs.randomElement() ?? "Cogitating"
+        agentActivity = .cogitating(verb: verb)
+        TavernLogger.chat.info("[\(self.agentName)] cogitating state set, verb: \(verb)")
 
         // Yield to let UI update before starting stream
         await Task.yield()
@@ -282,7 +311,7 @@ public final class ChatViewModel: ObservableObject {
         // Start streaming
         let (stream, cancel) = agent.sendStreaming(text)
         streamCancelHandle = cancel
-        isStreaming = true
+        agentActivity = .streaming
 
         TavernLogger.chat.debug("[\(self.agentName)] streaming started")
 
@@ -294,20 +323,16 @@ public final class ChatViewModel: ObservableObject {
                     messages[streamingIndex].content += delta
 
                 case .toolUseStarted(let toolName):
-                    currentToolName = toolName
-                    toolStartTime = Date()
+                    agentActivity = .toolRunning(name: toolName, startTime: Date())
                     TavernLogger.chat.debug("[\(self.agentName)] tool started: \(toolName)")
 
                 case .toolUseFinished(let toolName):
                     TavernLogger.chat.debug("[\(self.agentName)] tool finished: \(toolName)")
-                    currentToolName = nil
-                    toolStartTime = nil
+                    agentActivity = .streaming
 
                 case .completed(_, let usage):
                     // Mark streaming complete
                     messages[streamingIndex].isStreaming = false
-                    currentToolName = nil
-                    toolStartTime = nil
                     if let usage {
                         totalInputTokens += usage.inputTokens
                         totalOutputTokens += usage.outputTokens
@@ -360,8 +385,7 @@ public final class ChatViewModel: ObservableObject {
             messages.append(errorMessage)
         }
 
-        isCogitating = false
-        isStreaming = false
+        agentActivity = .idle
         streamCancelHandle = nil
     }
 
@@ -373,10 +397,7 @@ public final class ChatViewModel: ObservableObject {
 
         streamCancelHandle?()
         streamCancelHandle = nil
-        isStreaming = false
-        isCogitating = false
-        currentToolName = nil
-        toolStartTime = nil
+        agentActivity = .idle
 
         // Mark the last message as no longer streaming
         if let lastIndex = messages.indices.last, messages[lastIndex].isStreaming {
