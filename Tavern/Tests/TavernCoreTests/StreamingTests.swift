@@ -368,6 +368,165 @@ struct StreamingTests {
         #expect(agentContent == messengerContent)
     }
 
+    // MARK: - Streaming Cancellation Race Condition Regression Tests
+
+    @Test("Jake state is idle after rapid cancel during streaming")
+    func jakeStateIdleAfterRapidCancel() async throws {
+        let mock = MockMessenger(responses: [String(repeating: "x", count: 200)])
+        mock.streamingChunkSize = 1
+        mock.responseDelay = .milliseconds(10)
+
+        let jake = Jake(
+            projectURL: Self.testProjectURL(),
+            messenger: mock,
+            loadSavedSession: false
+        )
+
+        let (stream, cancel) = jake.sendStreaming("Test")
+
+        // Read a few events then cancel immediately
+        var eventCount = 0
+        for try await _ in stream {
+            eventCount += 1
+            if eventCount >= 3 {
+                cancel()
+                break
+            }
+        }
+
+        // State must be idle after cancel regardless of timing
+        #expect(jake.state == .idle)
+        #expect(jake.isCogitating == false)
+    }
+
+    @Test("Servitor state is idle after rapid cancel during streaming")
+    func servitorStateIdleAfterRapidCancel() async throws {
+        let mock = MockMessenger(responses: [String(repeating: "x", count: 200)])
+        mock.streamingChunkSize = 1
+        mock.responseDelay = .milliseconds(10)
+
+        let servitor = Servitor(
+            name: "CancelTest",
+            assignment: "Test",
+            projectURL: Self.testProjectURL(),
+            messenger: mock,
+            loadSavedSession: false
+        )
+
+        let (stream, cancel) = servitor.sendStreaming("Test")
+
+        var eventCount = 0
+        for try await _ in stream {
+            eventCount += 1
+            if eventCount >= 3 {
+                cancel()
+                break
+            }
+        }
+
+        // State must be idle after cancel
+        #expect(servitor.state == .idle)
+    }
+
+    @Test("Jake cancel and completion do not produce inconsistent state")
+    func jakeCancelCompletionConsistency() async throws {
+        // Run multiple cancel/complete cycles to shake out races
+        for _ in 0..<10 {
+            let mock = MockMessenger(responses: ["Short"])
+            mock.streamingChunkSize = 5
+
+            let jake = Jake(
+                projectURL: Self.testProjectURL(),
+                messenger: mock,
+                loadSavedSession: false
+            )
+
+            let (stream, cancel) = jake.sendStreaming("Test")
+
+            // Race: consume stream while calling cancel
+            let consumeTask = Task {
+                for try await _ in stream {}
+            }
+
+            // Small delay then cancel
+            try? await Task.sleep(for: .milliseconds(1))
+            cancel()
+
+            try? await consumeTask.value
+
+            // Regardless of who wins, state must be idle
+            #expect(jake.state == .idle)
+            #expect(jake.isCogitating == false)
+        }
+    }
+
+    @Test("Servitor cancel and completion do not produce inconsistent state")
+    func servitorCancelCompletionConsistency() async throws {
+        for _ in 0..<10 {
+            let mock = MockMessenger(responses: ["Short"])
+            mock.streamingChunkSize = 5
+
+            let servitor = Servitor(
+                name: "RaceTest-\(UUID().uuidString.prefix(4))",
+                projectURL: Self.testProjectURL(),
+                messenger: mock,
+                loadSavedSession: false
+            )
+
+            let (stream, cancel) = servitor.sendStreaming("Test")
+
+            let consumeTask = Task {
+                for try await _ in stream {}
+            }
+
+            try? await Task.sleep(for: .milliseconds(1))
+            cancel()
+
+            try? await consumeTask.value
+
+            #expect(servitor.state == .idle)
+        }
+    }
+
+    @Test("ChatViewModel tool state is nil after streaming completes")
+    @MainActor
+    func viewModelToolStateNilAfterStreamComplete() async {
+        let mock = MockAgent(responses: ["Done"])
+        let viewModel = ChatViewModel(agent: mock, loadHistory: false)
+
+        viewModel.inputText = "Test"
+        await viewModel.sendMessage()
+
+        #expect(viewModel.currentToolName == nil)
+        #expect(viewModel.toolStartTime == nil)
+    }
+
+    @Test("ChatViewModel cancelStreaming clears tool state")
+    @MainActor
+    func viewModelCancelClearsToolState() async {
+        let mock = MockAgent(responses: [String(repeating: "x", count: 1000)])
+        mock.streamingChunkSize = 1
+        mock.responseDelay = .milliseconds(50)
+        let viewModel = ChatViewModel(agent: mock, loadHistory: false)
+
+        viewModel.inputText = "Long response"
+
+        let task = Task {
+            await viewModel.sendMessage()
+        }
+
+        try? await Task.sleep(for: .milliseconds(100))
+
+        viewModel.cancelStreaming()
+
+        await task.value
+
+        #expect(viewModel.currentToolName == nil)
+        #expect(viewModel.toolStartTime == nil)
+        #expect(viewModel.isStreaming == false)
+        #expect(viewModel.isCogitating == false)
+    }
+
     @Test("Batch and streaming produce same content")
     func batchAndStreamingProduceSameContent() async throws {
         let response = "Hello from Claude"
