@@ -25,7 +25,7 @@ final class E2ETests: XCTestCase {
 
     /// Wait for the chat input field to appear and return it
     private func waitForInputField() -> XCUIElement {
-        let inputField = app.textFields["chatInputField"]
+        let inputField = app.textViews["chatInputField"]
         XCTAssertTrue(
             inputField.waitForExistence(timeout: 10),
             "Chat input field should appear"

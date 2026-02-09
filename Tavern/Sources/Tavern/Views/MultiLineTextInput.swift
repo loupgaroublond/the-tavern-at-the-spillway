@@ -48,6 +48,7 @@ struct MultiLineTextInput: NSViewRepresentable {
         textView.textContainer?.widthTracksTextView = true
         textView.textContainer?.lineFragmentPadding = 0
         textView.setAccessibilityIdentifier("chatInputField")
+        textView.setAccessibilityEnabled(true)
 
         scrollView.documentView = textView
         context.coordinator.textView = textView

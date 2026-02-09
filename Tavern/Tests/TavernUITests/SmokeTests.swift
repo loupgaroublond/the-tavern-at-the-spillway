@@ -38,7 +38,7 @@ final class SmokeTests: XCTestCase {
 
     /// Chat input field exists and is enabled
     func testInputFieldExists() throws {
-        let inputField = app.textFields["chatInputField"]
+        let inputField = app.textViews["chatInputField"]
         XCTAssertTrue(
             inputField.waitForExistence(timeout: 10),
             "Chat input field should exist"
@@ -48,7 +48,7 @@ final class SmokeTests: XCTestCase {
 
     /// Can type text into the input field
     func testCanTypeInput() throws {
-        let inputField = app.textFields["chatInputField"]
+        let inputField = app.textViews["chatInputField"]
         XCTAssertTrue(
             inputField.waitForExistence(timeout: 10),
             "Chat input field should exist"
