@@ -9,7 +9,7 @@
 import Foundation
 
 /// Represents a stored Claude session from the native CLI storage
-public struct ClaudeStoredSession: Identifiable, Codable {
+public struct ClaudeStoredSession: Identifiable, Codable, Sendable {
     public let id: String
     public let projectPath: String
     public let createdAt: Date
@@ -57,7 +57,7 @@ public enum StoredContentBlock: Codable, Equatable, Sendable {
 }
 
 /// Represents a message in a Claude session
-public struct ClaudeStoredMessage: Identifiable, Codable {
+public struct ClaudeStoredMessage: Identifiable, Codable, Sendable {
     public let id: String // UUID from the jsonl file
     public let parentId: String?
     public let sessionId: String
@@ -68,7 +68,7 @@ public struct ClaudeStoredMessage: Identifiable, Codable {
     public let cwd: String?
     public let version: String?
 
-    public enum MessageRole: String, Codable {
+    public enum MessageRole: String, Codable, Sendable {
         case user
         case assistant
         case system

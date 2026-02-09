@@ -208,7 +208,7 @@ public final class ChatViewModel: ObservableObject {
     }
 
     /// Convert stored messages to chat messages. Runs on any thread — pure transformation.
-    private static func convertStoredMessages(_ storedMessages: [ClaudeStoredMessage]) -> [ChatMessage] {
+    private nonisolated static func convertStoredMessages(_ storedMessages: [ClaudeStoredMessage]) -> [ChatMessage] {
         var loadedMessages: [ChatMessage] = []
 
         for stored in storedMessages {

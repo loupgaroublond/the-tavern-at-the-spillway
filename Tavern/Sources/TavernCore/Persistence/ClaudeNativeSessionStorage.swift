@@ -161,24 +161,17 @@ public class ClaudeNativeSessionStorage: ClaudeSessionStorageProtocol {
             return nil
         }
 
-        // Move CPU-intensive JSONL parsing off the calling thread
-        let decoder = self.decoder
-        let logger = self.logger
-        let result = await Task.detached(priority: .userInitiated) {
-            return Self.parseJSONLData(
-                data,
-                sessionId: sessionId,
-                projectPath: projectPath,
-                decoder: decoder,
-                logger: logger
-            )
-        }.value
-
-        return result
+        // Parse JSONL data synchronously — callers handle thread management.
+        return Self.parseJSONLData(
+            data,
+            sessionId: sessionId,
+            projectPath: projectPath,
+            decoder: decoder,
+            logger: logger
+        )
     }
 
-    /// Pure parsing function that runs on a background thread.
-    /// All parameters are value types or Sendable — no shared mutable state.
+    /// Pure parsing function — synchronous transformation with no side effects beyond logging.
     private static func parseJSONLData(
         _ data: Data,
         sessionId: String,
