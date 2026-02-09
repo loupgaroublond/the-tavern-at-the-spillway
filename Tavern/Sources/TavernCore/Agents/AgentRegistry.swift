@@ -16,7 +16,7 @@ public final class AgentRegistry: @unchecked Sendable {
 
     // MARK: - State
 
-    private var _agents: [UUID: AnyAgent] = [:]
+    private var _agents: [UUID: any Agent] = [:]
     private var _nameToId: [String: UUID] = [:]
 
     // MARK: - Initialization
@@ -28,15 +28,14 @@ public final class AgentRegistry: @unchecked Sendable {
     /// Register an agent with the registry
     /// - Parameter agent: The agent to register
     /// - Throws: `AgentRegistryError.nameAlreadyExists` if an agent with this name exists
-    public func register<A: Agent>(_ agent: A) throws {
+    public func register(_ agent: some Agent) throws {
         try queue.sync {
             // Check for name uniqueness
             if _nameToId[agent.name] != nil {
                 throw AgentRegistryError.nameAlreadyExists(agent.name)
             }
 
-            let wrapped = AnyAgent(agent)
-            _agents[agent.id] = wrapped
+            _agents[agent.id] = agent
             _nameToId[agent.name] = agent.id
         }
     }
@@ -60,14 +59,14 @@ public final class AgentRegistry: @unchecked Sendable {
     /// Get an agent by ID
     /// - Parameter id: The agent's unique ID
     /// - Returns: The agent if found, nil otherwise
-    public func agent(id: UUID) -> AnyAgent? {
+    public func agent(id: UUID) -> (any Agent)? {
         queue.sync { _agents[id] }
     }
 
     /// Get an agent by name
     /// - Parameter name: The agent's display name
     /// - Returns: The agent if found, nil otherwise
-    public func agent(named name: String) -> AnyAgent? {
+    public func agent(named name: String) -> (any Agent)? {
         queue.sync {
             guard let id = _nameToId[name] else { return nil }
             return _agents[id]
@@ -76,7 +75,7 @@ public final class AgentRegistry: @unchecked Sendable {
 
     /// List all registered agents
     /// - Returns: Array of all agents in the registry
-    public func allAgents() -> [AnyAgent] {
+    public func allAgents() -> [any Agent] {
         queue.sync { Array(_agents.values) }
     }
 

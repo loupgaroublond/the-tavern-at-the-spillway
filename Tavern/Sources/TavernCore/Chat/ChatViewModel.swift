@@ -54,7 +54,7 @@ public final class ChatViewModel: ObservableObject {
 
     // MARK: - Dependencies
 
-    private let agent: AnyAgent
+    private let agent: any Agent
     private let isJake: Bool
     private let projectPath: String?
 
@@ -146,7 +146,7 @@ public final class ChatViewModel: ObservableObject {
     /// - Parameter jake: The Jake agent
     /// - Parameter loadHistory: Whether to load session history from disk (default true)
     public init(jake: Jake, loadHistory: Bool = true) {
-        self.agent = AnyAgent(jake)
+        self.agent = jake
         self.isJake = true
         self.projectPath = jake.projectPath
 
@@ -163,7 +163,7 @@ public final class ChatViewModel: ObservableObject {
     ///   - projectPath: The project path (needed for session history restoration)
     ///   - loadHistory: Whether to load session history from disk (default true)
     public init(agent: some Agent, projectPath: String? = nil, loadHistory: Bool = true) {
-        self.agent = AnyAgent(agent)
+        self.agent = agent
         self.isJake = agent is Jake
         self.projectPath = (agent as? Jake)?.projectPath ?? projectPath
 

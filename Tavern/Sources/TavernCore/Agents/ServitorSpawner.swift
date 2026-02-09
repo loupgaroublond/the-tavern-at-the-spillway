@@ -171,7 +171,7 @@ public final class ServitorSpawner: @unchecked Sendable {
     // MARK: - Queries
 
     /// Get all active servitors (excluding Jake)
-    public var activeServitors: [AnyAgent] {
+    public var activeServitors: [any Agent] {
         registry.allAgents()
     }
 
