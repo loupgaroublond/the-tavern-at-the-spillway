@@ -72,6 +72,7 @@ public final class TavernCoordinator: ObservableObject {
 
         // Post-init setup (all stored properties must be initialized above)
         registerCoreCommands()
+        loadCustomCommands()
         setupMCPServer()
         restoreServitors()
     }
@@ -312,9 +313,31 @@ public final class TavernCoordinator: ObservableObject {
             StatusCommand(context: commandContext),
             ContextCommand(context: commandContext),
             StatsCommand(context: commandContext),
-            ThinkingCommand(context: commandContext)
+            ThinkingCommand(context: commandContext),
+            AgentsCommand(agentListProvider: { [weak self] in
+                self?.agentListViewModel.items ?? []
+            }),
+            HooksCommand(projectPath: projectURL.path),
+            MCPCommand(projectPath: projectURL.path)
         ])
         TavernLogger.coordination.info("Registered \(self.commandDispatcher.commands.count) core slash commands")
+    }
+
+    /// Load custom commands from .claude/commands/ directories
+    private func loadCustomCommands() {
+        let customCommands = CustomCommandLoader.loadCommands(projectPath: projectURL.path)
+        commandDispatcher.registerAll(customCommands)
+        if !customCommands.isEmpty {
+            TavernLogger.coordination.info("Loaded \(customCommands.count) custom commands for project")
+        }
+    }
+
+    /// Reload custom commands (e.g., after file changes)
+    public func reloadCustomCommands() {
+        // Remove existing custom commands (keep built-in ones)
+        commandDispatcher.removeAll { $0 is CustomCommand }
+        loadCustomCommands()
+        TavernLogger.coordination.info("Reloaded custom commands")
     }
 
     // MARK: - Refresh

@@ -65,6 +65,13 @@ public final class SlashCommandDispatcher: ObservableObject {
         return result
     }
 
+    /// Remove all commands that satisfy a predicate
+    /// - Parameter predicate: Closure that returns true for commands to remove
+    public func removeAll(where predicate: (any SlashCommand) -> Bool) {
+        commands.removeAll(where: predicate)
+        TavernLogger.commands.debug("Removed commands matching predicate, \(self.commands.count) remaining")
+    }
+
     /// Filter commands matching a partial name (for autocomplete)
     /// - Parameter prefix: Partial command name (without slash)
     /// - Returns: Matching commands sorted by name
