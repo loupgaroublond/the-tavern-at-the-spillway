@@ -26,6 +26,9 @@ public final class TavernCoordinator: ObservableObject {
     /// Slash command dispatcher (shared across all chats in this project)
     public let commandDispatcher: SlashCommandDispatcher
 
+    /// Shared command context (model settings, usage tracking)
+    public let commandContext: CommandContext
+
     // MARK: - Private State
 
     /// Chat view models keyed by agent ID
@@ -52,6 +55,7 @@ public final class TavernCoordinator: ObservableObject {
         self.spawner = spawner
         self.projectURL = projectURL
         self.commandDispatcher = SlashCommandDispatcher()
+        self.commandContext = CommandContext()
 
         // Create Jake's chat view model
         self.jakeChatViewModel = ChatViewModel(jake: jake)
@@ -66,10 +70,9 @@ public final class TavernCoordinator: ObservableObject {
         // Create the agent list view model
         self.agentListViewModel = AgentListViewModel(jake: jake, spawner: spawner)
 
-        // Setup MCP server for Jake's tools (must be after all stored properties initialized)
+        // Post-init setup (all stored properties must be initialized above)
+        registerCoreCommands()
         setupMCPServer()
-
-        // Restore persisted servitors
         restoreServitors()
     }
 
@@ -295,6 +298,23 @@ public final class TavernCoordinator: ObservableObject {
         )
         SessionStore.addAgent(persisted)
         TavernLogger.coordination.debug("Persisted servitor: \(servitor.name) (id: \(servitor.id))")
+    }
+
+    // MARK: - Commands
+
+    /// Register the core slash commands with the dispatcher
+    private func registerCoreCommands() {
+        commandDispatcher.registerAll([
+            HelpCommand(dispatcher: commandDispatcher),
+            CompactCommand(context: commandContext),
+            CostCommand(context: commandContext),
+            ModelCommand(context: commandContext),
+            StatusCommand(context: commandContext),
+            ContextCommand(context: commandContext),
+            StatsCommand(context: commandContext),
+            ThinkingCommand(context: commandContext)
+        ])
+        TavernLogger.coordination.info("Registered \(self.commandDispatcher.commands.count) core slash commands")
     }
 
     // MARK: - Refresh
