@@ -1,4 +1,5 @@
 import Foundation
+import os.log
 
 /// Protocol for running assertions to verify commitments
 /// Allows injection of mock runners for testing
@@ -23,65 +24,117 @@ public struct AssertionResult: Sendable {
     /// Exit code
     public let exitCode: Int32
 
-    public init(passed: Bool, output: String, errorOutput: String, exitCode: Int32) {
+    /// Whether the process was terminated due to timeout
+    public let timedOut: Bool
+
+    public init(passed: Bool, output: String, errorOutput: String, exitCode: Int32, timedOut: Bool = false) {
         self.passed = passed
         self.output = output
         self.errorOutput = errorOutput
         self.exitCode = exitCode
+        self.timedOut = timedOut
+    }
+}
+
+/// Error thrown when an assertion times out
+public struct AssertionTimeoutError: Error, CustomStringConvertible {
+    public let command: String
+    public let timeout: Duration
+
+    public var description: String {
+        "Assertion timed out after \(timeout): \(command)"
     }
 }
 
 /// Default shell-based assertion runner
-/// Runs commands in /bin/bash
+/// Runs commands in /bin/bash with optional timeout
 public final class ShellAssertionRunner: AssertionRunner, @unchecked Sendable {
+
+    private static let logger = Logger(subsystem: "com.tavern.spillway", category: "commitments")
 
     /// Working directory for running commands
     public let workingDirectory: URL?
 
+    /// Maximum time to wait for an assertion before terminating
+    /// nil means no timeout (wait indefinitely)
+    public let timeout: Duration?
+
     /// Create a shell runner
-    /// - Parameter workingDirectory: Optional directory to run commands in
-    public init(workingDirectory: URL? = nil) {
+    /// - Parameters:
+    ///   - workingDirectory: Optional directory to run commands in
+    ///   - timeout: Maximum time to wait for assertions (default: 30 seconds)
+    public init(workingDirectory: URL? = nil, timeout: Duration? = .seconds(30)) {
         self.workingDirectory = workingDirectory
+        self.timeout = timeout
     }
 
     public func run(_ command: String) async throws -> AssertionResult {
-        try await withCheckedThrowingContinuation { continuation in
-            DispatchQueue.global().async {
-                let process = Process()
-                let outputPipe = Pipe()
-                let errorPipe = Pipe()
+        Self.logger.info("Running assertion: \(command)")
 
-                process.executableURL = URL(fileURLWithPath: "/bin/bash")
-                process.arguments = ["-c", command]
+        let process = Process()
+        let outputPipe = Pipe()
+        let errorPipe = Pipe()
 
-                if let workDir = self.workingDirectory {
-                    process.currentDirectoryURL = workDir
-                }
+        process.executableURL = URL(fileURLWithPath: "/bin/bash")
+        process.arguments = ["-c", command]
 
-                process.standardOutput = outputPipe
-                process.standardError = errorPipe
+        if let workDir = workingDirectory {
+            process.currentDirectoryURL = workDir
+        }
 
+        process.standardOutput = outputPipe
+        process.standardError = errorPipe
+
+        return try await withCheckedThrowingContinuation { continuation in
+            DispatchQueue.global().async { [timeout] in
                 do {
                     try process.run()
-                    process.waitUntilExit()
-
-                    let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
-                    let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
-
-                    let output = String(data: outputData, encoding: .utf8) ?? ""
-                    let errorOutput = String(data: errorData, encoding: .utf8) ?? ""
-
-                    let result = AssertionResult(
-                        passed: process.terminationStatus == 0,
-                        output: output,
-                        errorOutput: errorOutput,
-                        exitCode: process.terminationStatus
-                    )
-
-                    continuation.resume(returning: result)
                 } catch {
+                    Self.logger.error("Failed to launch assertion process: \(error.localizedDescription)")
                     continuation.resume(throwing: error)
+                    return
                 }
+
+                // Set up timeout if configured
+                var timeoutWorkItem: DispatchWorkItem?
+                var didTimeout = false
+
+                if let timeout {
+                    let timeoutSeconds = Double(timeout.components.seconds) + Double(timeout.components.attoseconds) / 1e18
+                    let workItem = DispatchWorkItem {
+                        didTimeout = true
+                        Self.logger.warning("Assertion timed out after \(timeoutSeconds)s, terminating: \(command)")
+                        process.terminate()
+                    }
+                    timeoutWorkItem = workItem
+                    DispatchQueue.global().asyncAfter(
+                        deadline: .now() + timeoutSeconds,
+                        execute: workItem
+                    )
+                }
+
+                process.waitUntilExit()
+                timeoutWorkItem?.cancel()
+
+                let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
+                let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+
+                let output = String(data: outputData, encoding: .utf8) ?? ""
+                let errorOutput = String(data: errorData, encoding: .utf8) ?? ""
+
+                let passed = !didTimeout && process.terminationStatus == 0
+
+                Self.logger.info("Assertion finished: passed=\(passed), exitCode=\(process.terminationStatus), timedOut=\(didTimeout)")
+
+                let result = AssertionResult(
+                    passed: passed,
+                    output: output,
+                    errorOutput: didTimeout ? "Assertion timed out" : errorOutput,
+                    exitCode: process.terminationStatus,
+                    timedOut: didTimeout
+                )
+
+                continuation.resume(returning: result)
             }
         }
     }
@@ -138,6 +191,17 @@ public final class MockAssertionRunner: AssertionRunner, @unchecked Sendable {
         ), for: command)
     }
 
+    /// Configure a timeout result for a command
+    public func setTimeout(for command: String) {
+        setResult(AssertionResult(
+            passed: false,
+            output: "",
+            errorOutput: "Assertion timed out",
+            exitCode: 15, // SIGTERM
+            timedOut: true
+        ), for: command)
+    }
+
     public func run(_ command: String) async throws -> AssertionResult {
         queue.sync {
             _ranCommands.append(command)
@@ -156,6 +220,8 @@ public final class MockAssertionRunner: AssertionRunner, @unchecked Sendable {
 
 /// Verifies commitments by running their assertions
 public final class CommitmentVerifier: @unchecked Sendable {
+
+    private static let logger = Logger(subsystem: "com.tavern.spillway", category: "commitments")
 
     // MARK: - Dependencies
 
@@ -178,20 +244,37 @@ public final class CommitmentVerifier: @unchecked Sendable {
     /// - Returns: true if the commitment passed verification
     @discardableResult
     public func verify(_ commitment: inout Commitment, in list: CommitmentList? = nil) async throws -> Bool {
+        // Capture values from inout parameter before using in logger (autoclosures can't capture inout)
+        let desc = commitment.description
+        let assertion = commitment.assertion
+        let commitmentId = commitment.id
+
+        Self.logger.info("Verifying commitment '\(desc)': \(assertion)")
+
         // Mark as verifying
         commitment.markVerifying()
-        list?.updateStatus(id: commitment.id, status: .verifying)
+        list?.updateStatus(id: commitmentId, status: .verifying)
 
         // Run the assertion
-        let result = try await runner.run(commitment.assertion)
+        let result = try await runner.run(assertion)
 
         if result.passed {
+            Self.logger.info("Commitment passed: '\(desc)'")
             commitment.markPassed()
-            list?.markPassed(id: commitment.id)
+            list?.markPassed(id: commitmentId)
         } else {
-            let message = result.errorOutput.isEmpty ? "Assertion failed with exit code \(result.exitCode)" : result.errorOutput
+            let message: String
+            if result.timedOut {
+                message = "Assertion timed out"
+                Self.logger.warning("Commitment timed out: '\(desc)'")
+            } else if result.errorOutput.isEmpty {
+                message = "Assertion failed with exit code \(result.exitCode)"
+            } else {
+                message = result.errorOutput
+            }
+            Self.logger.error("Commitment failed: '\(desc)' - \(message)")
             commitment.markFailed(message: message)
-            list?.markFailed(id: commitment.id, message: message)
+            list?.markFailed(id: commitmentId, message: message)
         }
 
         return result.passed

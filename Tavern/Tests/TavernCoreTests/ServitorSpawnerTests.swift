@@ -185,4 +185,144 @@ struct ServitorSpawnerTests {
         _ = try spawner.summon(assignment: "Task 2")
         #expect(spawner.servitorCount == 2)
     }
+
+    // MARK: - MessengerFactory Tests (Bead 96m + p70)
+
+    @Test("Spawner uses default LiveMessenger factory")
+    func spawnerUsesDefaultFactory() throws {
+        // Default init should not crash — uses LiveMessenger
+        let registry = AgentRegistry()
+        let nameGenerator = NameGenerator(theme: .lotr)
+        let spawner = ServitorSpawner(
+            registry: registry,
+            nameGenerator: nameGenerator,
+            projectURL: Self.testProjectURL()
+        )
+
+        // Can summon successfully
+        let servitor = try spawner.summon(assignment: "Test")
+        #expect(!servitor.name.isEmpty)
+    }
+
+    @Test("Spawner uses injected messenger factory")
+    func spawnerUsesInjectedMessengerFactory() throws {
+        let counter = CallCounter()
+        let registry = AgentRegistry()
+        let nameGenerator = NameGenerator(theme: .lotr)
+        let spawner = ServitorSpawner(
+            registry: registry,
+            nameGenerator: nameGenerator,
+            projectURL: Self.testProjectURL(),
+            messengerFactory: {
+                counter.increment()
+                return MockMessenger(responses: ["Factory response"])
+            }
+        )
+
+        _ = try spawner.summon(assignment: "Task 1")
+        #expect(counter.value == 1)
+
+        _ = try spawner.summon(assignment: "Task 2")
+        #expect(counter.value == 2)
+    }
+
+    @Test("Spawned servitor with mock factory can respond")
+    func spawnedServitorWithMockFactoryCanRespond() async throws {
+        let registry = AgentRegistry()
+        let nameGenerator = NameGenerator(theme: .lotr)
+        let spawner = ServitorSpawner(
+            registry: registry,
+            nameGenerator: nameGenerator,
+            projectURL: Self.testProjectURL(),
+            messengerFactory: { MockMessenger(responses: ["Mock response"]) }
+        )
+
+        let servitor = try spawner.summon(assignment: "Task")
+        let response = try await servitor.send("Hello")
+
+        #expect(response == "Mock response")
+    }
+
+    @Test("Each spawned servitor gets its own messenger instance")
+    func eachSpawnedServitorGetsOwnMessenger() async throws {
+        let registry = AgentRegistry()
+        let nameGenerator = NameGenerator(theme: .lotr)
+        let spawner = ServitorSpawner(
+            registry: registry,
+            nameGenerator: nameGenerator,
+            projectURL: Self.testProjectURL(),
+            messengerFactory: { MockMessenger(responses: ["Response A", "Response B"]) }
+        )
+
+        let s1 = try spawner.summon(assignment: "Task 1")
+        let s2 = try spawner.summon(assignment: "Task 2")
+
+        // Each should get "Response A" as their first response (separate messenger instances)
+        let r1 = try await s1.send("Hello")
+        let r2 = try await s2.send("Hello")
+
+        #expect(r1 == "Response A")
+        #expect(r2 == "Response A")
+    }
+
+    @Test("Summon with name uses messenger factory")
+    func summonWithNameUsesMessengerFactory() async throws {
+        let counter = CallCounter()
+        let registry = AgentRegistry()
+        let nameGenerator = NameGenerator(theme: .lotr)
+        let spawner = ServitorSpawner(
+            registry: registry,
+            nameGenerator: nameGenerator,
+            projectURL: Self.testProjectURL(),
+            messengerFactory: {
+                counter.increment()
+                return MockMessenger(responses: ["Named response"])
+            }
+        )
+
+        let servitor = try spawner.summon(name: "CustomAgent", assignment: "Task")
+        let response = try await servitor.send("Hello")
+
+        #expect(counter.value == 1)
+        #expect(response == "Named response")
+    }
+
+    @Test("User-spawned servitor (no assignment) uses messenger factory")
+    func userSpawnedServitorUsesMessengerFactory() async throws {
+        let counter = CallCounter()
+        let registry = AgentRegistry()
+        let nameGenerator = NameGenerator(theme: .lotr)
+        let spawner = ServitorSpawner(
+            registry: registry,
+            nameGenerator: nameGenerator,
+            projectURL: Self.testProjectURL(),
+            messengerFactory: {
+                counter.increment()
+                return MockMessenger(responses: ["User response"])
+            }
+        )
+
+        let servitor = try spawner.summon()
+        let response = try await servitor.send("Hello")
+
+        #expect(counter.value == 1)
+        #expect(response == "User response")
+        #expect(servitor.assignment == nil)
+    }
+}
+
+// MARK: - Test Helpers
+
+/// Thread-safe call counter for use in @Sendable closures
+private final class CallCounter: @unchecked Sendable {
+    private let queue = DispatchQueue(label: "com.tavern.test.CallCounter")
+    private var _value = 0
+
+    var value: Int {
+        queue.sync { _value }
+    }
+
+    func increment() {
+        queue.sync { _value += 1 }
+    }
 }

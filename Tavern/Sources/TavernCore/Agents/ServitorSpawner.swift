@@ -1,6 +1,10 @@
 import Foundation
 import os.log
 
+/// Factory type for creating AgentMessenger instances.
+/// Returns a new messenger for each spawned servitor.
+public typealias MessengerFactory = @Sendable () -> AgentMessenger
+
 /// Spawns and manages servitors for the Tavern
 /// This is Jake's way of delegating work to the Slop Squad
 public final class ServitorSpawner: @unchecked Sendable {
@@ -10,6 +14,7 @@ public final class ServitorSpawner: @unchecked Sendable {
     private let registry: AgentRegistry
     private let nameGenerator: NameGenerator
     private let projectURL: URL
+    private let messengerFactory: MessengerFactory
 
     // MARK: - Initialization
 
@@ -18,14 +23,17 @@ public final class ServitorSpawner: @unchecked Sendable {
     ///   - registry: The agent registry to add spawned servitors to
     ///   - nameGenerator: The name generator for themed names
     ///   - projectURL: The project directory URL for spawned servitors
+    ///   - messengerFactory: Factory for creating messengers for spawned servitors (default: LiveMessenger)
     public init(
         registry: AgentRegistry,
         nameGenerator: NameGenerator,
-        projectURL: URL
+        projectURL: URL,
+        messengerFactory: @escaping MessengerFactory = { LiveMessenger() }
     ) {
         self.registry = registry
         self.nameGenerator = nameGenerator
         self.projectURL = projectURL
+        self.messengerFactory = messengerFactory
     }
 
     // MARK: - Summoning
@@ -44,7 +52,8 @@ public final class ServitorSpawner: @unchecked Sendable {
         let servitor = Servitor(
             name: name,
             assignment: nil,
-            projectURL: projectURL
+            projectURL: projectURL,
+            messenger: messengerFactory()
         )
 
         try registry.register(servitor)
@@ -67,7 +76,8 @@ public final class ServitorSpawner: @unchecked Sendable {
         let servitor = Servitor(
             name: name,
             assignment: assignment,
-            projectURL: projectURL
+            projectURL: projectURL,
+            messenger: messengerFactory()
         )
 
         try registry.register(servitor)
@@ -95,7 +105,8 @@ public final class ServitorSpawner: @unchecked Sendable {
         let servitor = Servitor(
             name: name,
             assignment: assignment,
-            projectURL: projectURL
+            projectURL: projectURL,
+            messenger: messengerFactory()
         )
 
         do {

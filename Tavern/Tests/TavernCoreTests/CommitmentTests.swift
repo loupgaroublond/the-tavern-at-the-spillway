@@ -438,4 +438,140 @@ struct CommitmentVerifierTests {
 
         #expect(runner.ranCommands.isEmpty)
     }
+
+    @Test("MockAssertionRunner setTimeout produces timeout result")
+    func mockRunnerSetTimeoutProducesTimeoutResult() async throws {
+        let runner = MockAssertionRunner()
+        runner.setTimeout(for: "slow-cmd")
+
+        let result = try await runner.run("slow-cmd")
+
+        #expect(result.passed == false)
+        #expect(result.timedOut == true)
+        #expect(result.errorOutput == "Assertion timed out")
+    }
+
+    @Test("Verifier handles timeout result")
+    func verifierHandlesTimeoutResult() async throws {
+        let mockRunner = MockAssertionRunner()
+        mockRunner.setTimeout(for: "slow-test")
+
+        let verifier = CommitmentVerifier(runner: mockRunner)
+
+        var commitment = Commitment(
+            description: "Slow test",
+            assertion: "slow-test"
+        )
+
+        let passed = try await verifier.verify(&commitment)
+
+        #expect(passed == false)
+        #expect(commitment.status == .failed)
+        #expect(commitment.failureMessage == "Assertion timed out")
+    }
+}
+
+// MARK: - ShellAssertionRunner Real Execution Tests
+
+@Suite("ShellAssertionRunner Tests")
+struct ShellAssertionRunnerTests {
+
+    @Test("Shell runner executes passing command")
+    func shellRunnerExecutesPassingCommand() async throws {
+        let runner = ShellAssertionRunner(timeout: .seconds(5))
+
+        let result = try await runner.run("echo hello")
+
+        #expect(result.passed == true)
+        #expect(result.output.trimmingCharacters(in: .whitespacesAndNewlines) == "hello")
+        #expect(result.exitCode == 0)
+        #expect(result.timedOut == false)
+    }
+
+    @Test("Shell runner executes failing command")
+    func shellRunnerExecutesFailingCommand() async throws {
+        let runner = ShellAssertionRunner(timeout: .seconds(5))
+
+        let result = try await runner.run("exit 1")
+
+        #expect(result.passed == false)
+        #expect(result.exitCode == 1)
+        #expect(result.timedOut == false)
+    }
+
+    @Test("Shell runner captures stderr")
+    func shellRunnerCapturesStderr() async throws {
+        let runner = ShellAssertionRunner(timeout: .seconds(5))
+
+        let result = try await runner.run("echo error-msg >&2; exit 1")
+
+        #expect(result.passed == false)
+        #expect(result.errorOutput.contains("error-msg"))
+    }
+
+    @Test("Shell runner captures exit code")
+    func shellRunnerCapturesExitCode() async throws {
+        let runner = ShellAssertionRunner(timeout: .seconds(5))
+
+        let result = try await runner.run("exit 42")
+
+        #expect(result.passed == false)
+        #expect(result.exitCode == 42)
+    }
+
+    @Test("Shell runner uses working directory")
+    func shellRunnerUsesWorkingDirectory() async throws {
+        let tmpDir = URL(fileURLWithPath: NSTemporaryDirectory())
+        let runner = ShellAssertionRunner(workingDirectory: tmpDir, timeout: .seconds(5))
+
+        let result = try await runner.run("pwd")
+
+        // The resolved path may differ from the symbolic path due to /private/var symlinks on macOS
+        let output = result.output.trimmingCharacters(in: .whitespacesAndNewlines)
+        let resolvedTmp = tmpDir.standardizedFileURL.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        let resolvedOutput = URL(fileURLWithPath: output).standardizedFileURL.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+
+        #expect(result.passed == true)
+        #expect(resolvedOutput == resolvedTmp)
+    }
+
+    @Test("Shell runner terminates on timeout")
+    func shellRunnerTerminatesOnTimeout() async throws {
+        let runner = ShellAssertionRunner(timeout: .milliseconds(500))
+
+        let result = try await runner.run("sleep 60")
+
+        #expect(result.passed == false)
+        #expect(result.timedOut == true)
+        #expect(result.errorOutput == "Assertion timed out")
+    }
+
+    @Test("Shell runner no timeout with nil")
+    func shellRunnerNoTimeoutWithNil() async throws {
+        // nil timeout means no timeout — use a fast command to verify
+        let runner = ShellAssertionRunner(timeout: nil)
+
+        let result = try await runner.run("echo fast")
+
+        #expect(result.passed == true)
+        #expect(result.timedOut == false)
+    }
+
+    @Test("Shell runner runs test -f assertion")
+    func shellRunnerTestFileAssertion() async throws {
+        // Create a temp file, verify it exists, then verify missing file fails
+        let tmpFile = NSTemporaryDirectory() + "tavern-test-\(UUID().uuidString).txt"
+        let runner = ShellAssertionRunner(timeout: .seconds(5))
+
+        // File doesn't exist yet
+        let failResult = try await runner.run("test -f '\(tmpFile)'")
+        #expect(failResult.passed == false)
+
+        // Create the file
+        FileManager.default.createFile(atPath: tmpFile, contents: nil)
+        defer { try? FileManager.default.removeItem(atPath: tmpFile) }
+
+        let passResult = try await runner.run("test -f '\(tmpFile)'")
+        #expect(passResult.passed == true)
+    }
 }
