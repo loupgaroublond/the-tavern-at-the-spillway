@@ -20,6 +20,9 @@ public final class ChatViewModel: ObservableObject {
     /// The current cogitation verb (for UI display)
     @Published public private(set) var cogitationVerb: String = "Cogitating"
 
+    /// Whether the agent is currently streaming a response
+    @Published public private(set) var isStreaming: Bool = false
+
     /// Any error that occurred
     @Published public private(set) var error: Error?
 
@@ -34,6 +37,10 @@ public final class ChatViewModel: ObservableObject {
     private let agent: AnyAgent
     private let isJake: Bool
     private let projectPath: String?
+
+    /// Cancellation handle for the current streaming response.
+    /// Called by `cancelStreaming()` to interrupt mid-stream.
+    private var streamCancelHandle: (@Sendable () -> Void)?
 
     /// Slash command dispatcher (injected, shared per project)
     public var commandDispatcher: SlashCommandDispatcher?
@@ -196,7 +203,8 @@ public final class ChatViewModel: ObservableObject {
 
     // MARK: - Actions
 
-    /// Send the current input text as a message
+    /// Send the current input text as a message.
+    /// Uses streaming by default — tokens appear as they arrive.
     public func sendMessage() async {
         let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
@@ -239,52 +247,108 @@ public final class ChatViewModel: ObservableObject {
 
         // Set cogitating state with random verb
         isCogitating = true
+        isStreaming = false
         cogitationVerb = Self.cogitationVerbs.randomElement() ?? "Cogitating"
         TavernLogger.chat.info("[\(self.agentName)] cogitating state set, verb: \(self.cogitationVerb)")
 
-        // Yield to let UI update before potentially blocking call
+        // Yield to let UI update before starting stream
         await Task.yield()
 
-        do {
-            // Get response from agent
-            let response = try await agent.send(text)
+        // Create placeholder message for streaming content
+        let placeholderId = UUID()
+        var streamingMessage = ChatMessage(
+            id: placeholderId,
+            role: .agent,
+            content: "",
+            isStreaming: true
+        )
+        messages.append(streamingMessage)
+        let streamingIndex = messages.count - 1
 
-            // Add agent message
-            let agentMessage = ChatMessage(role: .agent, content: response)
-            messages.append(agentMessage)
-            TavernLogger.chat.info("[\(self.agentName)] agent response received and added, total messages: \(self.messages.count)")
+        // Start streaming
+        let (stream, cancel) = agent.sendStreaming(text)
+        streamCancelHandle = cancel
+        isStreaming = true
+
+        TavernLogger.chat.debug("[\(self.agentName)] streaming started")
+
+        do {
+            for try await event in stream {
+                switch event {
+                case .textDelta(let delta):
+                    // Append delta to the streaming message in place
+                    messages[streamingIndex].content += delta
+
+                case .completed:
+                    // Mark streaming complete
+                    messages[streamingIndex].isStreaming = false
+                    TavernLogger.chat.info("[\(self.agentName)] streaming completed, total messages: \(self.messages.count)")
+
+                case .error(let errorDescription):
+                    TavernLogger.chat.debugError("[\(self.agentName)] stream error event: \(errorDescription)")
+                }
+            }
+
+            // If the message ended up empty (unusual), remove the placeholder
+            if messages[streamingIndex].content.isEmpty {
+                messages.remove(at: streamingIndex)
+            }
 
         } catch let error as TavernError {
             self.error = error
+            // Remove empty streaming placeholder and add error message
+            if messages[streamingIndex].content.isEmpty {
+                messages.remove(at: streamingIndex)
+            } else {
+                messages[streamingIndex].isStreaming = false
+            }
+
             switch error {
             case .sessionCorrupt(let sessionId, _):
-                // Set special state for corrupt session UI
                 self.corruptSessionId = sessionId
                 self.showSessionRecoveryOptions = true
                 TavernLogger.chat.debugError("[\(self.agentName)] session '\(sessionId)' is corrupt")
             case .internalError(let message):
                 TavernLogger.chat.debugError("[\(self.agentName)] internal error: \(message)")
             }
-            // Add informative error message to chat
             let errorContent = TavernErrorMessages.message(for: error)
-            let errorMessage = ChatMessage(
-                role: .agent,
-                content: errorContent
-            )
+            let errorMessage = ChatMessage(role: .agent, content: errorContent)
             messages.append(errorMessage)
+
         } catch {
             self.error = error
-            TavernLogger.chat.debugError("[\(self.agentName)] sendMessage failed: \(error.localizedDescription)")
-            // Add informative error message to chat
+            if messages[streamingIndex].content.isEmpty {
+                messages.remove(at: streamingIndex)
+            } else {
+                messages[streamingIndex].isStreaming = false
+            }
+
+            TavernLogger.chat.debugError("[\(self.agentName)] sendMessage streaming failed: \(error.localizedDescription)")
             let errorContent = TavernErrorMessages.message(for: error)
-            let errorMessage = ChatMessage(
-                role: .agent,
-                content: errorContent
-            )
+            let errorMessage = ChatMessage(role: .agent, content: errorContent)
             messages.append(errorMessage)
         }
 
         isCogitating = false
+        isStreaming = false
+        streamCancelHandle = nil
+    }
+
+    /// Cancel the current streaming response.
+    /// The partial message is kept in the chat as-is.
+    public func cancelStreaming() {
+        guard isStreaming else { return }
+        TavernLogger.chat.info("[\(self.agentName)] streaming cancelled by user")
+
+        streamCancelHandle?()
+        streamCancelHandle = nil
+        isStreaming = false
+        isCogitating = false
+
+        // Mark the last message as no longer streaming
+        if let lastIndex = messages.indices.last, messages[lastIndex].isStreaming {
+            messages[lastIndex].isStreaming = false
+        }
     }
 
     /// Clear the conversation and reset the agent's session

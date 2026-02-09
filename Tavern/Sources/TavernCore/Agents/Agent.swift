@@ -30,10 +30,15 @@ public protocol Agent: AnyObject, Identifiable, Sendable {
     /// Current state of the agent
     var state: AgentState { get }
 
-    /// Send a message to this agent and get a response
+    /// Send a message to this agent and get a response (batch mode)
     /// - Parameter message: The message to send
     /// - Returns: The agent's response
     func send(_ message: String) async throws -> String
+
+    /// Send a message and receive a stream of events (streaming mode)
+    /// - Parameter message: The message to send
+    /// - Returns: Tuple of (event stream, cancel closure)
+    func sendStreaming(_ message: String) -> (stream: AsyncThrowingStream<StreamEvent, Error>, cancel: @Sendable () -> Void)
 
     /// Reset the agent's conversation state
     func resetConversation()
@@ -45,6 +50,7 @@ public final class AnyAgent: Agent, @unchecked Sendable {
     private let _name: String
     private let _getState: () -> AgentState
     private let _send: (String) async throws -> String
+    private let _sendStreaming: (String) -> (stream: AsyncThrowingStream<StreamEvent, Error>, cancel: @Sendable () -> Void)
     private let _resetConversation: () -> Void
 
     public var id: UUID { _id }
@@ -56,11 +62,16 @@ public final class AnyAgent: Agent, @unchecked Sendable {
         self._name = agent.name
         self._getState = { agent.state }
         self._send = { try await agent.send($0) }
+        self._sendStreaming = { agent.sendStreaming($0) }
         self._resetConversation = { agent.resetConversation() }
     }
 
     public func send(_ message: String) async throws -> String {
         try await _send(message)
+    }
+
+    public func sendStreaming(_ message: String) -> (stream: AsyncThrowingStream<StreamEvent, Error>, cancel: @Sendable () -> Void) {
+        _sendStreaming(message)
     }
 
     public func resetConversation() {

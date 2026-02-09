@@ -184,6 +184,84 @@ public final class Jake: Agent, @unchecked Sendable {
         return response
     }
 
+    /// Send a message to Jake and receive a stream of events
+    /// - Parameter message: The user's message
+    /// - Returns: Tuple of (event stream, cancel closure)
+    public func sendStreaming(_ message: String) -> (stream: AsyncThrowingStream<StreamEvent, Error>, cancel: @Sendable () -> Void) {
+        TavernLogger.agents.info("Jake.sendStreaming called, prompt length: \(message.count)")
+        TavernLogger.agents.debug("Jake state: idle -> working")
+
+        queue.sync { _isCogitating = true }
+
+        let currentSessionId: String? = queue.sync { _sessionId }
+        let currentMcpServer: SDKMCPServer? = queue.sync { _mcpServer }
+
+        // Build query options
+        var options = QueryOptions()
+        options.systemPrompt = Self.systemPrompt
+        options.workingDirectory = projectURL
+        if let sessionId = currentSessionId {
+            options.resume = sessionId
+            TavernLogger.claude.info("Jake streaming, resuming session: \(sessionId)")
+        } else {
+            TavernLogger.claude.info("Jake streaming, starting new conversation")
+        }
+
+        // Add MCP server if available
+        if let server = currentMcpServer {
+            options.sdkMcpServers["tavern"] = server
+            TavernLogger.claude.debug("Jake streaming with MCP server 'tavern'")
+        }
+
+        let (innerStream, innerCancel) = messenger.queryStreaming(prompt: message, options: options)
+
+        // Wrap the stream to handle session persistence and state cleanup
+        let wrappedStream = AsyncThrowingStream<StreamEvent, Error> { continuation in
+            let task = Task { [weak self] in
+                do {
+                    for try await event in innerStream {
+                        switch event {
+                        case .completed(let sessionId):
+                            if let sessionId, let self {
+                                self.queue.sync { self._sessionId = sessionId }
+                                SessionStore.saveJakeSession(sessionId, projectPath: self.projectURL.path)
+                                TavernLogger.agents.info("Jake streaming completed, sessionId: \(sessionId)")
+                            }
+                            self?.queue.sync { self?._isCogitating = false }
+                            TavernLogger.agents.debug("Jake state: working -> idle")
+                            continuation.yield(event)
+                        default:
+                            continuation.yield(event)
+                        }
+                    }
+                    continuation.finish()
+                } catch {
+                    self?.queue.sync { self?._isCogitating = false }
+                    TavernLogger.agents.debug("Jake state: working -> idle (error)")
+
+                    if let sessionId = currentSessionId {
+                        TavernLogger.agents.debugError("Jake streaming session '\(sessionId)' error: \(error.localizedDescription)")
+                        continuation.finish(throwing: TavernError.sessionCorrupt(sessionId: sessionId, underlyingError: error))
+                    } else {
+                        continuation.finish(throwing: error)
+                    }
+                }
+            }
+
+            continuation.onTermination = { @Sendable _ in
+                task.cancel()
+            }
+        }
+
+        let cancel: @Sendable () -> Void = { [weak self] in
+            innerCancel()
+            self?.queue.sync { self?._isCogitating = false }
+            TavernLogger.agents.debug("Jake streaming cancelled by user")
+        }
+
+        return (stream: wrappedStream, cancel: cancel)
+    }
+
     /// Reset Jake's conversation (start fresh)
     public func resetConversation() {
         TavernLogger.agents.info("Jake conversation reset")

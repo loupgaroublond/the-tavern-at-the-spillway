@@ -180,6 +180,83 @@ public final class Servitor: Agent, @unchecked Sendable {
         return response
     }
 
+    /// Send a message and receive a stream of events (streaming mode)
+    /// - Parameter message: The message to send
+    /// - Returns: Tuple of (event stream, cancel closure)
+    public func sendStreaming(_ message: String) -> (stream: AsyncThrowingStream<StreamEvent, Error>, cancel: @Sendable () -> Void) {
+        TavernLogger.agents.info("[\(self.name)] sendStreaming called, prompt length: \(message.count)")
+        TavernLogger.agents.debug("[\(self.name)] state: \(self._state.rawValue) -> working")
+
+        queue.sync { _state = .working }
+
+        let currentSessionId: String? = queue.sync { _sessionId }
+
+        // Build query options
+        var options = QueryOptions()
+        options.systemPrompt = systemPrompt
+        options.workingDirectory = projectURL
+        if let sessionId = currentSessionId {
+            options.resume = sessionId
+            TavernLogger.claude.info("[\(self.name)] streaming, resuming session: \(sessionId)")
+        } else {
+            TavernLogger.claude.info("[\(self.name)] streaming, starting new conversation")
+        }
+
+        let (innerStream, innerCancel) = messenger.queryStreaming(prompt: message, options: options)
+
+        // Accumulate full response text for completion signal detection
+        let responseAccumulator = UnsafeSendableBox("")
+
+        // Wrap the stream to handle session persistence and state cleanup
+        let wrappedStream = AsyncThrowingStream<StreamEvent, Error> { continuation in
+            let task = Task { [weak self] in
+                do {
+                    for try await event in innerStream {
+                        switch event {
+                        case .textDelta(let delta):
+                            responseAccumulator.value += delta
+                            continuation.yield(event)
+
+                        case .completed(let sessionId):
+                            if let sessionId, let self {
+                                self.queue.sync { self._sessionId = sessionId }
+                                SessionStore.saveAgentSession(agentId: self.id, sessionId: sessionId)
+                                TavernLogger.agents.info("[\(self.name)] streaming completed, sessionId: \(sessionId)")
+                            }
+                            self?.updateStateAfterResponse()
+                            // Check for done/waiting signals in accumulated response
+                            if let self {
+                                await self.checkForCompletionSignal(in: responseAccumulator.value)
+                            }
+                            continuation.yield(event)
+
+                        case .error:
+                            self?.updateStateAfterResponse()
+                            continuation.yield(event)
+                        }
+                    }
+                    continuation.finish()
+                } catch {
+                    self?.updateStateAfterResponse()
+                    TavernLogger.agents.error("[\(self?.name ?? "??")] streaming error: \(error.localizedDescription)")
+                    continuation.finish(throwing: error)
+                }
+            }
+
+            continuation.onTermination = { @Sendable _ in
+                task.cancel()
+            }
+        }
+
+        let cancel: @Sendable () -> Void = { [weak self] in
+            innerCancel()
+            self?.updateStateAfterResponse()
+            TavernLogger.agents.debug("[\(self?.name ?? "??")] streaming cancelled by user")
+        }
+
+        return (stream: wrappedStream, cancel: cancel)
+    }
+
     /// Reset the servitor's conversation state
     public func resetConversation() {
         TavernLogger.agents.info("[\(self.name)] conversation reset")

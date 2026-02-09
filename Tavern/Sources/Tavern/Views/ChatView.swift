@@ -38,14 +38,21 @@ struct ChatView: View {
                             MessageRowView(message: message, agentName: viewModel.agentName)
                         }
 
-                        // Cogitating indicator
-                        if viewModel.isCogitating {
+                        // Cogitating indicator (shown before streaming starts)
+                        if viewModel.isCogitating && !viewModel.isStreaming {
                             CogitatingIndicator(
                                 agentName: viewModel.agentName,
                                 verb: viewModel.cogitationVerb
                             )
                             .id("cogitating")
                             .accessibilityIdentifier("cogitatingIndicator")
+                        }
+
+                        // Streaming indicator (shown while tokens are arriving)
+                        if viewModel.isStreaming {
+                            StreamingIndicator()
+                                .id("streaming")
+                                .accessibilityIdentifier("streamingIndicator")
                         }
                     }
                     .padding()
@@ -62,6 +69,13 @@ struct ChatView: View {
                     if viewModel.isCogitating {
                         withAnimation {
                             proxy.scrollTo("cogitating", anchor: .bottom)
+                        }
+                    }
+                }
+                .onChange(of: viewModel.isStreaming) {
+                    if viewModel.isStreaming {
+                        withAnimation {
+                            proxy.scrollTo("streaming", anchor: .bottom)
                         }
                     }
                 }
@@ -86,11 +100,15 @@ struct ChatView: View {
                 agentName: viewModel.agentName,
                 text: $viewModel.inputText,
                 isEnabled: !viewModel.isCogitating,
+                isStreaming: viewModel.isStreaming,
                 autocomplete: autocomplete,
                 onSend: {
                     Task {
                         await viewModel.sendMessage()
                     }
+                },
+                onCancel: {
+                    viewModel.cancelStreaming()
                 }
             )
         }
@@ -228,6 +246,33 @@ private struct CogitatingIndicator: View {
     }
 }
 
+// MARK: - Streaming Indicator
+
+/// A pulsing dot indicator shown while tokens are arriving
+private struct StreamingIndicator: View {
+    @State private var opacity: Double = 0.3
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(Color.blue)
+                .frame(width: 8, height: 8)
+                .opacity(opacity)
+
+            Text("Generating...")
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+        .padding(.leading, 44) // Align with message content (past avatar)
+        .padding(.vertical, 2)
+        .onAppear {
+            withAnimation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) {
+                opacity = 1.0
+            }
+        }
+    }
+}
+
 // MARK: - Slash Command Autocomplete Popup
 
 private struct SlashCommandAutocompletePopup: View {
@@ -272,8 +317,10 @@ private struct InputBar: View {
     let agentName: String
     @Binding var text: String
     let isEnabled: Bool
+    let isStreaming: Bool
     @ObservedObject var autocomplete: SlashCommandAutocomplete
     let onSend: () -> Void
+    let onCancel: () -> Void
 
     var body: some View {
         HStack(spacing: 12) {
@@ -311,19 +358,36 @@ private struct InputBar: View {
                     return .handled
                 }
                 .onKeyPress(.escape) {
+                    if isStreaming {
+                        onCancel()
+                        return .handled
+                    }
                     guard autocomplete.isVisible else { return .ignored }
                     autocomplete.hide()
                     return .handled
                 }
 
-            Button(action: onSend) {
-                Image(systemName: "arrow.up.circle.fill")
-                    .font(.system(size: 24))
-                    .foregroundColor(text.isEmpty || !isEnabled ? .gray : .blue)
+            if isStreaming {
+                // Stop button while streaming
+                Button(action: onCancel) {
+                    Image(systemName: "stop.circle.fill")
+                        .font(.system(size: 24))
+                        .foregroundColor(.red)
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("stopStreamingButton")
+                .help("Stop generating")
+            } else {
+                // Send button
+                Button(action: onSend) {
+                    Image(systemName: "arrow.up.circle.fill")
+                        .font(.system(size: 24))
+                        .foregroundColor(text.isEmpty || !isEnabled ? .gray : .blue)
+                }
+                .disabled(text.isEmpty || !isEnabled)
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("sendButton")
             }
-            .disabled(text.isEmpty || !isEnabled)
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("sendButton")
         }
         .padding()
     }

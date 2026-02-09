@@ -101,6 +101,69 @@ public final class MockAgent: Agent, @unchecked Sendable {
         }
     }
 
+    /// Number of characters per streaming chunk (default 5).
+    public var streamingChunkSize: Int = 5
+
+    public func sendStreaming(_ message: String) -> (stream: AsyncThrowingStream<StreamEvent, Error>, cancel: @Sendable () -> Void) {
+        let cancelled = UnsafeSendableBox(false)
+
+        let response: String = queue.sync {
+            sendCalls.append(message)
+            _state = .working
+            if !responses.isEmpty {
+                return responses.removeFirst()
+            }
+            return defaultResponse
+        }
+        let error = errorToThrow
+        let delay = responseDelay
+        let chunkSize = streamingChunkSize
+
+        let stream = AsyncThrowingStream<StreamEvent, Error> { continuation in
+            let task = Task { [weak self] in
+                defer {
+                    self?.queue.sync { self?._state = .idle }
+                }
+
+                if let delay {
+                    try await Task.sleep(for: delay)
+                }
+
+                if let error {
+                    continuation.yield(.error(error.localizedDescription))
+                    continuation.finish(throwing: error)
+                    return
+                }
+
+                // Yield in chunks
+                var index = response.startIndex
+                while index < response.endIndex {
+                    if cancelled.value {
+                        continuation.finish()
+                        return
+                    }
+                    let end = response.index(index, offsetBy: chunkSize, limitedBy: response.endIndex) ?? response.endIndex
+                    continuation.yield(.textDelta(String(response[index..<end])))
+                    index = end
+                    await Task.yield()
+                }
+
+                continuation.yield(.completed(sessionId: nil))
+                continuation.finish()
+            }
+
+            continuation.onTermination = { @Sendable _ in
+                task.cancel()
+            }
+        }
+
+        let cancel: @Sendable () -> Void = {
+            cancelled.value = true
+        }
+
+        return (stream: stream, cancel: cancel)
+    }
+
     public func resetConversation() {
         queue.sync {
             resetCalled = true

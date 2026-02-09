@@ -21,7 +21,7 @@ public struct ChatMessage: Identifiable, Equatable, Sendable {
 
     public let id: UUID
     public let role: Role
-    public let content: String
+    public var content: String
     public let timestamp: Date
 
     /// Type of content for block rendering (defaults to .text)
@@ -33,6 +33,9 @@ public struct ChatMessage: Identifiable, Equatable, Sendable {
     /// Whether this is an error result (for toolResult/toolError types)
     public let isError: Bool
 
+    /// Whether this message is still being streamed (tokens arriving)
+    public var isStreaming: Bool
+
     public init(
         id: UUID = UUID(),
         role: Role,
@@ -40,7 +43,8 @@ public struct ChatMessage: Identifiable, Equatable, Sendable {
         timestamp: Date = Date(),
         messageType: MessageType = .text,
         toolName: String? = nil,
-        isError: Bool = false
+        isError: Bool = false,
+        isStreaming: Bool = false
     ) {
         self.id = id
         self.role = role
@@ -49,6 +53,7 @@ public struct ChatMessage: Identifiable, Equatable, Sendable {
         self.messageType = messageType
         self.toolName = toolName
         self.isError = isError
+        self.isStreaming = isStreaming
     }
 
     /// Convenience initializer for simple text messages (backward compatible)

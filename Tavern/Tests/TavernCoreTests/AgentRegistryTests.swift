@@ -21,6 +21,16 @@ final class TestAgent: Agent, @unchecked Sendable {
         return "Response to: \(message)"
     }
 
+    func sendStreaming(_ message: String) -> (stream: AsyncThrowingStream<StreamEvent, Error>, cancel: @Sendable () -> Void) {
+        let response = "Response to: \(message)"
+        let stream = AsyncThrowingStream<StreamEvent, Error> { continuation in
+            continuation.yield(.textDelta(response))
+            continuation.yield(.completed(sessionId: nil))
+            continuation.finish()
+        }
+        return (stream: stream, cancel: {})
+    }
+
     func resetConversation() {
         state = .idle
     }
