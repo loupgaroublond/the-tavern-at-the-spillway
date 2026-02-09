@@ -26,6 +26,7 @@ struct MultiLineTextInput: NSViewRepresentable {
     }
 
     func makeNSView(context: Context) -> NSScrollView {
+        Self.logger.debug("[MultiLineTextInput] makeNSView - placeholder: \(placeholder), isEnabled: \(isEnabled), maxHeight: \(maxHeight)")
         let scrollView = NSScrollView()
         scrollView.hasVerticalScroller = false
         scrollView.hasHorizontalScroller = false
@@ -62,6 +63,7 @@ struct MultiLineTextInput: NSViewRepresentable {
 
         // Sync text from SwiftUI -> NSTextView (only if different to avoid cursor jump)
         if textView.string != text {
+            Self.logger.debug("[MultiLineTextInput] updateNSView - syncing text, length: \(text.count)")
             textView.string = text
             context.coordinator.updateHeight()
         }
@@ -76,6 +78,8 @@ struct MultiLineTextInput: NSViewRepresentable {
     // MARK: - Coordinator
 
     final class Coordinator: NSObject, NSTextViewDelegate {
+        nonisolated static let logger = Logger(subsystem: "com.tavern.spillway", category: "chat")
+
         var parent: MultiLineTextInput
         weak var textView: InputTextView?
         weak var scrollView: NSScrollView?
@@ -87,21 +91,25 @@ struct MultiLineTextInput: NSViewRepresentable {
         func textDidChange(_ notification: Notification) {
             guard let textView = textView else { return }
             let newText = textView.string
+            Self.logger.debug("[MultiLineTextInput] textDidChange - length: \(newText.count)")
             parent.text = newText
             parent.onTextChange(newText)
             updateHeight()
         }
 
         func textView(_ textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
+            Self.logger.debug("[MultiLineTextInput] doCommandBy: \(commandSelector)")
             // Enter key (insertNewline:) — send message
             if commandSelector == #selector(NSResponder.insertNewline(_:)) {
                 // Check for Shift modifier — Shift+Enter inserts newline
                 if let event = NSApp.currentEvent, event.modifierFlags.contains(.shift) {
+                    Self.logger.debug("[MultiLineTextInput] Shift+Enter - inserting newline")
                     textView.insertNewlineIgnoringFieldEditor(nil)
                     return true
                 }
                 // Plain Enter — send
                 if !parent.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Self.logger.debug("[MultiLineTextInput] Enter - sending message")
                     parent.onSend()
                 }
                 return true
@@ -110,7 +118,7 @@ struct MultiLineTextInput: NSViewRepresentable {
         }
 
         /// Recalculate scroll view height based on text content
-        func updateHeight() {
+        @MainActor func updateHeight() {
             guard let textView = textView, let scrollView = scrollView else { return }
             guard let layoutManager = textView.layoutManager,
                   let textContainer = textView.textContainer else { return }
@@ -119,9 +127,12 @@ struct MultiLineTextInput: NSViewRepresentable {
             let contentHeight = layoutManager.usedRect(for: textContainer).height
                 + textView.textContainerInset.height * 2
             let singleLineHeight: CGFloat = 28
-            let desiredHeight = max(singleLineHeight, min(contentHeight, parent.maxHeight))
+            let maxH = parent.maxHeight
+            let desiredHeight = max(singleLineHeight, min(contentHeight, maxH))
 
-            if abs(scrollView.frame.height - desiredHeight) > 1 {
+            let currentHeight = scrollView.frame.height
+            if abs(currentHeight - desiredHeight) > 1 {
+                Self.logger.debug("[MultiLineTextInput] updateHeight - \(currentHeight) -> \(desiredHeight) (content: \(contentHeight), max: \(maxH))")
                 scrollView.frame.size.height = desiredHeight
                 scrollView.invalidateIntrinsicContentSize()
             }

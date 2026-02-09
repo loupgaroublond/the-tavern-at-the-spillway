@@ -1,7 +1,10 @@
 import SwiftUI
+import os.log
 
 /// Displays text content with line numbers in a scrollable monospace view
 struct LineNumberedText: View {
+    private static let logger = Logger(subsystem: "com.tavern.spillway", category: "sidepane")
+
     let content: String
 
     private var lines: [String] {
@@ -15,6 +18,8 @@ struct LineNumberedText: View {
     }
 
     var body: some View {
+        let _ = Self.logger.debug("[LineNumberedText] body - lines: \(lines.count), gutterWidth: \(gutterWidth)")
+
         ScrollView([.horizontal, .vertical]) {
             LazyVStack(alignment: .leading, spacing: 0) {
                 ForEach(Array(lines.enumerated()), id: \.offset) { index, line in
