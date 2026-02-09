@@ -41,6 +41,9 @@ public final class ChatViewModel: ObservableObject {
     /// Whether the scroll-to-bottom button should be visible
     @Published public var showScrollToBottom: Bool = false
 
+    /// Whether session history is currently loading from disk
+    @Published public private(set) var isLoadingHistory: Bool = false
+
     /// Whether to show session recovery options (corrupt session detected)
     @Published public private(set) var showSessionRecoveryOptions: Bool = false
 
@@ -138,7 +141,8 @@ public final class ChatViewModel: ObservableObject {
     // MARK: - Session History
 
     /// Load session history from Claude's native storage
-    /// Works for both Jake and servitors
+    /// Works for both Jake and servitors.
+    /// Parsing and conversion run on a background thread to keep the UI responsive.
     public func loadSessionHistory() async {
         TavernLogger.chat.info("loadSessionHistory called, isJake=\(self.isJake), agentId=\(self.agentId)")
 
@@ -146,6 +150,8 @@ public final class ChatViewModel: ObservableObject {
             TavernLogger.chat.info("loadSessionHistory: no project path, skipping")
             return
         }
+
+        isLoadingHistory = true
 
         let storedMessages: [ClaudeStoredMessage]
         if isJake {
@@ -155,44 +161,34 @@ public final class ChatViewModel: ObservableObject {
         }
         TavernLogger.chat.info("Got \(storedMessages.count) stored messages for agent \(self.agentName)")
 
-        guard !storedMessages.isEmpty else { return }
-
-        // Debug logging
-        let debugPath = "/tmp/tavern_chat_debug.log"
-        func debugLog(_ msg: String) {
-            let line = "\(msg)\n"
-            if let data = line.data(using: .utf8) {
-                if FileManager.default.fileExists(atPath: debugPath) {
-                    if let handle = FileHandle(forWritingAtPath: debugPath) {
-                        handle.seekToEndOfFile()
-                        handle.write(data)
-                        handle.closeFile()
-                    }
-                } else {
-                    FileManager.default.createFile(atPath: debugPath, contents: data)
-                }
-            }
+        guard !storedMessages.isEmpty else {
+            isLoadingHistory = false
+            return
         }
-        try? FileManager.default.removeItem(atPath: debugPath)
-        debugLog("Loading \(storedMessages.count) stored messages")
 
-        // Convert ClaudeStoredMessage to ChatMessage(s)
-        // Each content block becomes a separate ChatMessage
+        // Convert ClaudeStoredMessage to ChatMessage(s) on a background thread.
+        // This is CPU-intensive for large sessions — keep it off @MainActor.
+        let loadedMessages = await Task.detached(priority: .userInitiated) {
+            Self.convertStoredMessages(storedMessages)
+        }.value
+
+        TavernLogger.chat.info("Converted \(loadedMessages.count) chat messages for agent \(self.agentName)")
+        self.messages = loadedMessages
+        isLoadingHistory = false
+    }
+
+    /// Convert stored messages to chat messages. Runs on any thread — pure transformation.
+    private static func convertStoredMessages(_ storedMessages: [ClaudeStoredMessage]) -> [ChatMessage] {
         var loadedMessages: [ChatMessage] = []
 
-        for (i, stored) in storedMessages.enumerated() {
+        for stored in storedMessages {
             let role: ChatMessage.Role = stored.role == .user ? .user : .agent
-            debugLog("Message \(i): role=\(stored.role), blocks=\(stored.contentBlocks.count), content=\"\(stored.content.prefix(30))...\"")
 
-            for (j, block) in stored.contentBlocks.enumerated() {
-                debugLog("  Block \(j): \(block)")
+            for block in stored.contentBlocks {
                 let chatMessage: ChatMessage
                 switch block {
                 case .text(let text):
-                    guard !text.isEmpty else {
-                        debugLog("  -> Skipping empty text")
-                        continue
-                    }
+                    guard !text.isEmpty else { continue }
                     chatMessage = ChatMessage(role: role, content: text, messageType: .text)
 
                 case .toolUse(_, let name, let input):
@@ -204,10 +200,7 @@ public final class ChatViewModel: ObservableObject {
                     )
 
                 case .toolResult(_, let content, let isError):
-                    guard !content.isEmpty else {
-                        debugLog("  -> Skipping empty tool result")
-                        continue
-                    }
+                    guard !content.isEmpty else { continue }
                     chatMessage = ChatMessage(
                         role: role,
                         content: content,
@@ -216,12 +209,10 @@ public final class ChatViewModel: ObservableObject {
                     )
                 }
                 loadedMessages.append(chatMessage)
-                debugLog("  -> Created ChatMessage: \(chatMessage.messageType)")
             }
         }
 
-        debugLog("Created \(loadedMessages.count) chat messages")
-        self.messages = loadedMessages
+        return loadedMessages
     }
 
     // MARK: - Actions

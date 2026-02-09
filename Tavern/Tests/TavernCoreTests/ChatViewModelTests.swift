@@ -21,6 +21,7 @@ struct ChatViewModelTests {
         #expect(viewModel.isCogitating == false)
         #expect(viewModel.inputText.isEmpty)
         #expect(viewModel.error == nil)
+        #expect(viewModel.isLoadingHistory == false)
     }
 
     @Test("Empty input does not send message")
@@ -111,6 +112,31 @@ struct ChatViewModelTests {
 
         #expect(viewModel.agentId == jake.id)
         #expect(viewModel.agentName == "Jake")
+    }
+
+    @Test("isLoadingHistory is false when no project path")
+    @MainActor
+    func isLoadingHistoryFalseWithNoProject() async {
+        let mock = MockAgent()
+        let viewModel = ChatViewModel(agent: mock, projectPath: nil, loadHistory: false)
+
+        await viewModel.loadSessionHistory()
+
+        #expect(viewModel.isLoadingHistory == false)
+    }
+
+    @Test("isLoadingHistory is false after loading completes with no matching session")
+    @MainActor
+    func isLoadingHistoryFalseAfterLoad() async {
+        let mock = MockAgent()
+        // Use a path that won't have any matching sessions
+        let viewModel = ChatViewModel(agent: mock, projectPath: "/nonexistent/project", loadHistory: false)
+
+        await viewModel.loadSessionHistory()
+
+        // After loading completes (even with no results), isLoadingHistory should be false
+        #expect(viewModel.isLoadingHistory == false)
+        #expect(viewModel.messages.isEmpty)
     }
 
     // MARK: - Grade 2 Mock Tests (using MockAgent)

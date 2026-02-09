@@ -37,6 +37,12 @@ struct ChatView: View {
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 12) {
+                            // Loading indicator while session history restores
+                            if viewModel.isLoadingHistory {
+                                HistoryLoadingIndicator()
+                                    .accessibilityIdentifier("historyLoadingIndicator")
+                            }
+
                             ForEach(viewModel.messages) { message in
                                 MessageRowView(message: message, agentName: viewModel.agentName)
                             }
@@ -306,6 +312,24 @@ private struct CogitatingIndicator: View {
                 dotCount = (dotCount + 1) % 3
             }
         }
+    }
+}
+
+// MARK: - History Loading Indicator
+
+/// Placeholder shown while session history loads from disk
+private struct HistoryLoadingIndicator: View {
+    var body: some View {
+        HStack(spacing: 8) {
+            ProgressView()
+                .controlSize(.small)
+
+            Text("Restoring session history...")
+                .font(.callout)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .center)
+        .padding(.vertical, 20)
     }
 }
 

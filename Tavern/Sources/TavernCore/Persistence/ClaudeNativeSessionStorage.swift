@@ -161,7 +161,31 @@ public class ClaudeNativeSessionStorage: ClaudeSessionStorageProtocol {
             return nil
         }
 
-        // Parse JSONL file (each line is a separate JSON object)
+        // Move CPU-intensive JSONL parsing off the calling thread
+        let decoder = self.decoder
+        let logger = self.logger
+        let result = await Task.detached(priority: .userInitiated) {
+            return Self.parseJSONLData(
+                data,
+                sessionId: sessionId,
+                projectPath: projectPath,
+                decoder: decoder,
+                logger: logger
+            )
+        }.value
+
+        return result
+    }
+
+    /// Pure parsing function that runs on a background thread.
+    /// All parameters are value types or Sendable — no shared mutable state.
+    private static func parseJSONLData(
+        _ data: Data,
+        sessionId: String,
+        projectPath: String,
+        decoder: JSONDecoder,
+        logger: Logger
+    ) -> ClaudeStoredSession? {
         let lines = String(data: data, encoding: .utf8)?.components(separatedBy: .newlines) ?? []
 
         var messages: [ClaudeStoredMessage] = []
@@ -191,7 +215,7 @@ public class ClaudeNativeSessionStorage: ClaudeSessionStorageProtocol {
                    let role = message.role,
                    let uuid = entry.uuid {
 
-                    let timestamp = parseTimestamp(entry.timestamp)
+                    let timestamp = parseTimestampValue(entry.timestamp)
 
                     // Track first and last timestamps
                     if let ts = timestamp {
@@ -241,6 +265,22 @@ public class ClaudeNativeSessionStorage: ClaudeSessionStorageProtocol {
             gitBranch: gitBranch,
             messages: messages
         )
+    }
+
+    /// Static version of parseTimestamp for use in detached tasks
+    private static func parseTimestampValue(_ timestamp: String?) -> Date? {
+        guard let timestamp = timestamp else { return nil }
+
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+
+        if let date = formatter.date(from: timestamp) {
+            return date
+        }
+
+        // Try without fractional seconds
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter.date(from: timestamp)
     }
 
     private func parseTimestamp(_ timestamp: String?) -> Date? {
