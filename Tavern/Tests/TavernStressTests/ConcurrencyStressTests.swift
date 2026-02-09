@@ -130,6 +130,69 @@ final class ConcurrencyStressTests: XCTestCase {
         print("testRegistryThreadSafety: completed in \(String(format: "%.2f", duration))s")
     }
 
+    // MARK: - Test: Concurrent Commitment Verification
+
+    /// Tests that 20+ concurrent commitment verifications complete without deadlock.
+    /// Validates that ShellAssertionRunner's terminationHandler-based implementation
+    /// does not exhaust the cooperative thread pool under concurrent load.
+    func testConcurrentVerificationDoesNotBlockThreadPool() async throws {
+        let concurrentCount = 25
+        let runner = ShellAssertionRunner(timeout: .seconds(10))
+        let list = CommitmentList()
+
+        // Add 25 commitments with lightweight shell commands
+        var commitments: [(Commitment, CommitmentVerifier)] = []
+        for i in 0..<concurrentCount {
+            let commitment = list.add(
+                description: "Concurrent test \(i)",
+                assertion: "echo 'verification \(i)'"
+            )
+            let verifier = CommitmentVerifier(runner: runner)
+            commitments.append((commitment, verifier))
+        }
+
+        let startTime = Date()
+
+        // Run all verifications concurrently
+        let results = await withTaskGroup(of: (Int, Bool).self, returning: [(Int, Bool)].self) { group in
+            for (index, (commitment, verifier)) in commitments.enumerated() {
+                var mutableCommitment = commitment
+                group.addTask {
+                    do {
+                        let passed = try await verifier.verify(&mutableCommitment, in: list)
+                        return (index, passed)
+                    } catch {
+                        return (index, false)
+                    }
+                }
+            }
+
+            var collected: [(Int, Bool)] = []
+            for await result in group {
+                collected.append(result)
+            }
+            return collected
+        }
+
+        let duration = Date().timeIntervalSince(startTime)
+
+        // All 25 should complete
+        XCTAssertEqual(results.count, concurrentCount,
+            "All \(concurrentCount) verifications should complete")
+
+        // All should pass (they're just echo commands)
+        let passedCount = results.filter { $0.1 }.count
+        XCTAssertEqual(passedCount, concurrentCount,
+            "All verifications should pass")
+
+        // Should complete within a reasonable time (not hanging from pool exhaustion).
+        // 25 echo commands should finish well under 10 seconds even with process overhead.
+        XCTAssertLessThan(duration, 10.0,
+            "25 concurrent verifications should complete within 10 seconds, took \(String(format: "%.2f", duration))s")
+
+        print("testConcurrentVerification: \(concurrentCount) concurrent verifications in \(String(format: "%.2f", duration))s")
+    }
+
     // MARK: - Tests requiring SDK mocking (skipped)
     // TODO: These tests need dependency injection or SDK mocking to work
     // - testConcurrentAgentMessages
