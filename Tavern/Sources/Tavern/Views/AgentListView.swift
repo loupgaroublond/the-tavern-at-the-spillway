@@ -1,8 +1,11 @@
 import SwiftUI
 import TavernCore
+import os.log
 
 /// A list view showing all agents in the Tavern
 struct AgentListView: View {
+    private static let logger = Logger(subsystem: "com.tavern.spillway", category: "agents")
+
     @ObservedObject var viewModel: AgentListViewModel
     var onSpawnAgent: (() -> Void)?
     var onCloseAgent: ((UUID) -> Void)?
@@ -13,6 +16,8 @@ struct AgentListView: View {
     @State private var editedDescription: String = ""
 
     var body: some View {
+        let _ = Self.logger.debug("[AgentListView] body - items: \(viewModel.items.count), selected: \(viewModel.selectedAgentId?.uuidString ?? "nil")")
+
         List(selection: $viewModel.selectedAgentId) {
             ForEach(viewModel.items) { item in
                 AgentListRow(
@@ -51,6 +56,18 @@ struct AgentListView: View {
                 .disabled(onSpawnAgent == nil)
                 .accessibilityIdentifier("spawnAgentButton")
             }
+        }
+        .onAppear {
+            Self.logger.debug("[AgentListView] onAppear - items: \(viewModel.items.count)")
+        }
+        .onDisappear {
+            Self.logger.debug("[AgentListView] onDisappear")
+        }
+        .onChange(of: viewModel.selectedAgentId) {
+            Self.logger.debug("[AgentListView] selectedAgentId changed: \(viewModel.selectedAgentId?.uuidString ?? "nil")")
+        }
+        .onChange(of: editingDescriptionForAgentId) {
+            Self.logger.debug("[AgentListView] editingDescriptionForAgentId changed: \(editingDescriptionForAgentId?.uuidString ?? "nil")")
         }
         .sheet(item: $editingDescriptionForAgentId) { agentId in
             EditDescriptionSheet(
@@ -136,6 +153,8 @@ extension UUID: @retroactive Identifiable {
 // MARK: - Agent Row
 
 private struct AgentListRow: View {
+    private static let logger = Logger(subsystem: "com.tavern.spillway", category: "agents")
+
     let item: AgentListItem
     let isSelected: Bool
     var onClose: (() -> Void)?
@@ -143,6 +162,8 @@ private struct AgentListRow: View {
     @State private var isHovered = false
 
     var body: some View {
+        let _ = Self.logger.debug("[AgentListRow] body - name: \(item.name), isJake: \(item.isJake), state: \(String(describing: item.state)), selected: \(isSelected)")
+
         HStack(spacing: 12) {
             // State indicator
             StateIndicator(state: item.state, isJake: item.isJake)
