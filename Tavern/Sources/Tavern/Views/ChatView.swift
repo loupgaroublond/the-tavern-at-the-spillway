@@ -1,13 +1,17 @@
 import SwiftUI
 import TavernCore
+import os.log
 
 /// A chat interface for conversing with an agent
 struct ChatView: View {
+    private static let logger = Logger(subsystem: "com.tavern.spillway", category: "chat")
+
     @ObservedObject var viewModel: ChatViewModel
     @ObservedObject var autocomplete: SlashCommandAutocomplete
     @ObservedObject var fileMention: FileMentionAutocomplete
 
     var body: some View {
+        let _ = Self.logger.debug("[ChatView] body - messages: \(viewModel.messages.count), cogitating: \(viewModel.isCogitating), streaming: \(viewModel.isStreaming)")
         VStack(spacing: 0) {
             // Header with agent name, token display, and new conversation button
             ChatHeader(
@@ -168,6 +172,12 @@ struct ChatView: View {
                     viewModel.cancelStreaming()
                 }
             )
+        }
+        .onAppear {
+            Self.logger.debug("[ChatView] onAppear - agent: \(viewModel.agentName), messages: \(viewModel.messages.count)")
+        }
+        .onDisappear {
+            Self.logger.debug("[ChatView] onDisappear - agent: \(viewModel.agentName)")
         }
         .onChange(of: viewModel.inputText) {
             autocomplete.update(for: viewModel.inputText)

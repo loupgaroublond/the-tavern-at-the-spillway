@@ -98,6 +98,12 @@ struct CollapsibleBlockView: View {
         .padding(8)
         .background(blockType.accentColor.opacity(0.06))
         .cornerRadius(8)
+        .onAppear {
+            Self.logger.debug("[CollapsibleBlockView] onAppear - type: \(blockType.label), expanded: \(isExpanded)")
+        }
+        .onChange(of: isExpanded) {
+            Self.logger.debug("[CollapsibleBlockView] isExpanded changed: \(isExpanded) for type: \(blockType.label)")
+        }
     }
 
     @ViewBuilder

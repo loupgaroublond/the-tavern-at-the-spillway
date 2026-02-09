@@ -14,19 +14,26 @@ struct DiffView: View {
         let lines = parseDiffLines(content)
         let _ = Self.logger.debug("[DiffView] body - \(lines.count) lines, isDiff: \(isDiffContent(content))")
 
-        if isDiffContent(content) {
-            VStack(alignment: .leading, spacing: 0) {
-                ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
-                    DiffLineView(line: line)
+        Group {
+            if isDiffContent(content) {
+                let _ = Self.logger.debug("[DiffView] SHOWING DIFF")
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
+                        DiffLineView(line: line)
+                    }
                 }
+                .font(.system(.body, design: .monospaced))
+                .textSelection(.enabled)
+                .padding(8)
+                .background(Color(NSColor.textBackgroundColor))
+                .cornerRadius(6)
+            } else {
+                let _ = Self.logger.debug("[DiffView] SHOWING CODE BLOCK (not a diff)")
+                CodeBlockView(content: content, style: .monospaced)
             }
-            .font(.system(.body, design: .monospaced))
-            .textSelection(.enabled)
-            .padding(8)
-            .background(Color(NSColor.textBackgroundColor))
-            .cornerRadius(6)
-        } else {
-            CodeBlockView(content: content, style: .monospaced)
+        }
+        .onAppear {
+            Self.logger.debug("[DiffView] onAppear - lines: \(lines.count), isDiff: \(isDiffContent(content))")
         }
     }
 

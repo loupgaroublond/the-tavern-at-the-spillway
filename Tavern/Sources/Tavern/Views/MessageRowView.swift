@@ -15,24 +15,29 @@ struct MessageRowView: View {
     var body: some View {
         let _ = Self.logger.debug("[MessageRowView] body - type: \(message.messageType.rawValue), role: \(message.role.rawValue)")
 
-        switch message.messageType {
-        case .text:
-            textMessageRow
+        Group {
+            switch message.messageType {
+            case .text:
+                textMessageRow
 
-        case .toolUse:
-            collapsibleRow(blockType: .toolUse(name: message.toolName))
+            case .toolUse:
+                collapsibleRow(blockType: .toolUse(name: message.toolName))
 
-        case .toolResult:
-            collapsibleRow(blockType: .toolResult)
+            case .toolResult:
+                collapsibleRow(blockType: .toolResult)
 
-        case .toolError:
-            collapsibleRow(blockType: .toolError)
+            case .toolError:
+                collapsibleRow(blockType: .toolError)
 
-        case .thinking:
-            collapsibleRow(blockType: .thinking)
+            case .thinking:
+                collapsibleRow(blockType: .thinking)
 
-        case .webSearch:
-            webSearchRow
+            case .webSearch:
+                webSearchRow
+            }
+        }
+        .onAppear {
+            Self.logger.debug("[MessageRowView] onAppear - type: \(message.messageType.rawValue), id: \(message.id)")
         }
     }
 

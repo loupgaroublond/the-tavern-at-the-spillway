@@ -74,6 +74,12 @@ struct TodoListView: View {
                 .listStyle(.sidebar)
             }
         }
+        .onAppear {
+            Self.logger.debug("[TodoListView] onAppear - items: \(viewModel.items.count)")
+        }
+        .onDisappear {
+            Self.logger.debug("[TodoListView] onDisappear")
+        }
     }
 }
 

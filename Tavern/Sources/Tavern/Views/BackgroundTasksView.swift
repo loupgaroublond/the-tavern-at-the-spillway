@@ -12,6 +12,7 @@ struct BackgroundTasksView: View {
         let _ = Self.logger.debug("[BackgroundTasksView] body - tasks: \(viewModel.tasks.count), running: \(viewModel.runningCount)")
         VStack(spacing: 0) {
             if viewModel.tasks.isEmpty {
+                let _ = Self.logger.debug("[BackgroundTasksView] SHOWING EMPTY STATE")
                 Spacer()
                 VStack(spacing: 8) {
                     Image(systemName: "terminal")
@@ -22,6 +23,7 @@ struct BackgroundTasksView: View {
                 }
                 Spacer()
             } else {
+                let _ = Self.logger.debug("[BackgroundTasksView] SHOWING TASK LIST")
                 // Task list + optional output viewer
                 VSplitView {
                     taskList
@@ -33,6 +35,12 @@ struct BackgroundTasksView: View {
                     }
                 }
             }
+        }
+        .onAppear {
+            Self.logger.debug("[BackgroundTasksView] onAppear - tasks: \(viewModel.tasks.count)")
+        }
+        .onDisappear {
+            Self.logger.debug("[BackgroundTasksView] onDisappear")
         }
     }
 

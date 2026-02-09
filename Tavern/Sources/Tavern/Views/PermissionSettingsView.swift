@@ -110,7 +110,13 @@ struct PermissionSettingsView: View {
         .padding()
         .frame(minWidth: 500, minHeight: 300)
         .onAppear {
-            Self.logger.info("[PermissionSettingsView] appeared")
+            Self.logger.info("[PermissionSettingsView] onAppear - mode: \(viewModel.currentMode.rawValue), rules: \(viewModel.rules.count)")
+        }
+        .onDisappear {
+            Self.logger.debug("[PermissionSettingsView] onDisappear")
+        }
+        .onChange(of: viewModel.currentMode) {
+            Self.logger.info("[PermissionSettingsView] currentMode changed: \(viewModel.currentMode.rawValue)")
         }
     }
 }

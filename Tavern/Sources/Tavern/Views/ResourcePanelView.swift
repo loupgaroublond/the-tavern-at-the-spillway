@@ -30,12 +30,24 @@ struct ResourcePanelView: View {
             // Tab content
             switch selectedTab {
             case .files:
+                let _ = Self.logger.debug("[ResourcePanelView] SHOWING FILES TAB")
                 FilesTabContent(viewModel: resourceViewModel)
             case .tasks:
+                let _ = Self.logger.debug("[ResourcePanelView] SHOWING TASKS TAB")
                 BackgroundTasksView(viewModel: taskViewModel)
             case .todos:
+                let _ = Self.logger.debug("[ResourcePanelView] SHOWING TODOS TAB")
                 TodoListView(viewModel: todoViewModel)
             }
+        }
+        .onAppear {
+            Self.logger.debug("[ResourcePanelView] onAppear - tab: \(selectedTab.rawValue)")
+        }
+        .onDisappear {
+            Self.logger.debug("[ResourcePanelView] onDisappear")
+        }
+        .onChange(of: selectedTab) {
+            Self.logger.debug("[ResourcePanelView] selectedTab changed: \(selectedTab.rawValue)")
         }
     }
 }

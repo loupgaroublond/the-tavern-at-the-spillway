@@ -35,6 +35,12 @@ struct CodeBlockView: View {
                 isHovered = hovering
             }
         }
+        .onAppear {
+            Self.logger.debug("[CodeBlockView] onAppear - style: \(String(describing: style)), length: \(content.count)")
+        }
+        .onChange(of: isHovered) {
+            Self.logger.debug("[CodeBlockView] isHovered changed: \(isHovered)")
+        }
     }
 
     @ViewBuilder
