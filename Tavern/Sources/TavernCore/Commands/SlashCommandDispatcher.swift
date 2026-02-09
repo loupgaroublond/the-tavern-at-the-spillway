@@ -11,6 +11,8 @@ public final class SlashCommandDispatcher: ObservableObject {
     /// All registered commands, sorted by name for autocomplete
     @Published public private(set) var commands: [any SlashCommand] = []
 
+    public init() {}
+
     /// Register a slash command
     /// - Parameter command: The command to register
     public func register(_ command: any SlashCommand) {

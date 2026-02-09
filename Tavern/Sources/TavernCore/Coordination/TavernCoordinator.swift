@@ -23,6 +23,9 @@ public final class TavernCoordinator: ObservableObject {
     /// Spawner for servitors
     public let spawner: ServitorSpawner
 
+    /// Slash command dispatcher (shared across all chats in this project)
+    public let commandDispatcher: SlashCommandDispatcher
+
     // MARK: - Private State
 
     /// Chat view models keyed by agent ID
@@ -48,6 +51,7 @@ public final class TavernCoordinator: ObservableObject {
         self.jake = jake
         self.spawner = spawner
         self.projectURL = projectURL
+        self.commandDispatcher = SlashCommandDispatcher()
 
         // Create Jake's chat view model
         self.jakeChatViewModel = ChatViewModel(jake: jake)
@@ -55,6 +59,9 @@ public final class TavernCoordinator: ObservableObject {
 
         // Start with Jake's chat as active
         self.activeChatViewModel = jakeChatViewModel
+
+        // Wire up command dispatcher to Jake's chat
+        self.jakeChatViewModel.commandDispatcher = commandDispatcher
 
         // Create the agent list view model
         self.agentListViewModel = AgentListViewModel(jake: jake, spawner: spawner)
@@ -155,6 +162,7 @@ public final class TavernCoordinator: ObservableObject {
                 TavernLogger.coordination.info("updateActiveChatViewModel: creating new viewModel for \(anyAgent.name)")
                 // Pass project path so servitors can load their session history
                 let viewModel = ChatViewModel(agent: anyAgent, projectPath: jake.projectPath)
+                viewModel.commandDispatcher = commandDispatcher
                 chatViewModels[selectedId] = viewModel
                 activeChatViewModel = viewModel
             } else {

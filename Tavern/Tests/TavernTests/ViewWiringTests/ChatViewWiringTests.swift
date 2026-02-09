@@ -15,12 +15,16 @@ final class ChatViewWiringTests: XCTestCase {
         return ChatViewModel(agent: mock, loadHistory: false)
     }
 
+    private func makeAutocomplete() -> SlashCommandAutocomplete {
+        SlashCommandAutocomplete(dispatcher: SlashCommandDispatcher())
+    }
+
     // MARK: - Input Bar Wiring
 
     /// InputBar text field exists and is bound to viewModel.inputText
     func testInputFieldExists() throws {
         let viewModel = makeViewModel()
-        let view = ChatView(viewModel: viewModel)
+        let view = ChatView(viewModel: viewModel, autocomplete: makeAutocomplete())
 
         let sut = try view.inspect()
         // Verify the view renders without crashing
@@ -32,7 +36,7 @@ final class ChatViewWiringTests: XCTestCase {
         let viewModel = makeViewModel()
         viewModel.inputText = ""
 
-        let view = ChatView(viewModel: viewModel)
+        let view = ChatView(viewModel: viewModel, autocomplete: makeAutocomplete())
         let sut = try view.inspect()
 
         let sendButton = try sut.find(viewWithAccessibilityIdentifier: "sendButton")
@@ -48,7 +52,7 @@ final class ChatViewWiringTests: XCTestCase {
         // This test verifies the binding exists — the functional behavior
         // is tested in ChatViewModelTests
 
-        let view = ChatView(viewModel: viewModel)
+        let view = ChatView(viewModel: viewModel, autocomplete: makeAutocomplete())
         let sut = try view.inspect()
 
         let sendButton = try sut.find(viewWithAccessibilityIdentifier: "sendButton")
@@ -60,7 +64,7 @@ final class ChatViewWiringTests: XCTestCase {
     /// Cogitation indicator is hidden when not cogitating
     func testCogitatingIndicatorHiddenWhenNotCogitating() throws {
         let viewModel = makeViewModel()
-        let view = ChatView(viewModel: viewModel)
+        let view = ChatView(viewModel: viewModel, autocomplete: makeAutocomplete())
 
         let sut = try view.inspect()
 
@@ -76,7 +80,7 @@ final class ChatViewWiringTests: XCTestCase {
     /// ForEach renders correct number of message rows
     func testMessageCountMatchesViewModel() throws {
         let viewModel = makeViewModel()
-        let view = ChatView(viewModel: viewModel)
+        let view = ChatView(viewModel: viewModel, autocomplete: makeAutocomplete())
 
         // With empty messages, the view should still render
         let sut = try view.inspect()
@@ -88,7 +92,7 @@ final class ChatViewWiringTests: XCTestCase {
     /// Recovery banner is hidden when no session corruption
     func testSessionRecoveryBannerHiddenByDefault() throws {
         let viewModel = makeViewModel()
-        let view = ChatView(viewModel: viewModel)
+        let view = ChatView(viewModel: viewModel, autocomplete: makeAutocomplete())
 
         let sut = try view.inspect()
 
@@ -103,7 +107,7 @@ final class ChatViewWiringTests: XCTestCase {
     /// Header displays the agent name from the view model
     func testHeaderDisplaysAgentName() throws {
         let viewModel = makeViewModel()
-        let view = ChatView(viewModel: viewModel)
+        let view = ChatView(viewModel: viewModel, autocomplete: makeAutocomplete())
 
         let sut = try view.inspect()
         // The header should contain the agent name text

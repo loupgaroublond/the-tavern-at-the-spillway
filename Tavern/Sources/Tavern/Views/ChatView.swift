@@ -4,6 +4,7 @@ import TavernCore
 /// A chat interface for conversing with an agent
 struct ChatView: View {
     @ObservedObject var viewModel: ChatViewModel
+    @ObservedObject var autocomplete: SlashCommandAutocomplete
 
     var body: some View {
         VStack(spacing: 0) {
@@ -68,17 +69,33 @@ struct ChatView: View {
 
             Divider()
 
+            // Autocomplete popup (appears above input bar)
+            if autocomplete.isVisible {
+                SlashCommandAutocompletePopup(
+                    autocomplete: autocomplete,
+                    onSelect: { commandText in
+                        viewModel.inputText = commandText
+                        autocomplete.hide()
+                    }
+                )
+                .accessibilityIdentifier("autocompletePopup")
+            }
+
             // Input area
             InputBar(
                 agentName: viewModel.agentName,
                 text: $viewModel.inputText,
                 isEnabled: !viewModel.isCogitating,
+                autocomplete: autocomplete,
                 onSend: {
                     Task {
                         await viewModel.sendMessage()
                     }
                 }
             )
+        }
+        .onChange(of: viewModel.inputText) {
+            autocomplete.update(for: viewModel.inputText)
         }
     }
 }
@@ -389,12 +406,51 @@ private struct CogitatingIndicator: View {
     }
 }
 
+// MARK: - Slash Command Autocomplete Popup
+
+private struct SlashCommandAutocompletePopup: View {
+    @ObservedObject var autocomplete: SlashCommandAutocomplete
+    let onSelect: (String) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(Array(autocomplete.suggestions.enumerated()), id: \.offset) { index, command in
+                HStack(spacing: 8) {
+                    Text("/\(command.name)")
+                        .font(.system(.body, design: .monospaced))
+                        .fontWeight(.medium)
+
+                    Text(command.description)
+                        .font(.callout)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+
+                    Spacer()
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(index == autocomplete.selectedIndex ? Color.accentColor.opacity(0.15) : Color.clear)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    onSelect("/\(command.name) ")
+                }
+            }
+        }
+        .background(.regularMaterial)
+        .cornerRadius(8)
+        .shadow(color: .black.opacity(0.15), radius: 4, y: -2)
+        .padding(.horizontal, 12)
+        .padding(.bottom, 4)
+    }
+}
+
 // MARK: - Input Bar
 
 private struct InputBar: View {
     let agentName: String
     @Binding var text: String
     let isEnabled: Bool
+    @ObservedObject var autocomplete: SlashCommandAutocomplete
     let onSend: () -> Void
 
     var body: some View {
@@ -404,9 +460,38 @@ private struct InputBar: View {
                 .disabled(!isEnabled)
                 .accessibilityIdentifier("chatInputField")
                 .onSubmit {
+                    // If autocomplete is showing, Enter selects the completion
+                    if autocomplete.isVisible, let completion = autocomplete.selectedCompletion() {
+                        text = completion
+                        autocomplete.hide()
+                        return
+                    }
                     if isEnabled && !text.isEmpty {
                         onSend()
                     }
+                }
+                .onKeyPress(.upArrow) {
+                    guard autocomplete.isVisible else { return .ignored }
+                    autocomplete.moveUp()
+                    return .handled
+                }
+                .onKeyPress(.downArrow) {
+                    guard autocomplete.isVisible else { return .ignored }
+                    autocomplete.moveDown()
+                    return .handled
+                }
+                .onKeyPress(.tab) {
+                    guard autocomplete.isVisible, let completion = autocomplete.selectedCompletion() else {
+                        return .ignored
+                    }
+                    text = completion
+                    autocomplete.hide()
+                    return .handled
+                }
+                .onKeyPress(.escape) {
+                    guard autocomplete.isVisible else { return .ignored }
+                    autocomplete.hide()
+                    return .handled
                 }
 
             Button(action: onSend) {
@@ -429,7 +514,9 @@ private struct InputBar: View {
     let projectURL = URL(fileURLWithPath: "/tmp/tavern-preview")
     let jake = Jake(projectURL: projectURL, loadSavedSession: false)
     let viewModel = ChatViewModel(jake: jake, loadHistory: false)
+    let dispatcher = SlashCommandDispatcher()
+    let autocomplete = SlashCommandAutocomplete(dispatcher: dispatcher)
 
-    ChatView(viewModel: viewModel)
+    ChatView(viewModel: viewModel, autocomplete: autocomplete)
         .frame(width: 400, height: 600)
 }
