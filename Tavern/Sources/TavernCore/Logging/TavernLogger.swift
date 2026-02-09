@@ -35,6 +35,9 @@ public enum TavernLogger {
 
     /// Permission checks, rule evaluation, mode changes
     public static let permissions = Logger(subsystem: subsystem, category: "permissions")
+
+    /// Slash command parsing, dispatch, execution
+    public static let commands = Logger(subsystem: subsystem, category: "commands")
 }
 
 // MARK: - Debug-Only Public Logging

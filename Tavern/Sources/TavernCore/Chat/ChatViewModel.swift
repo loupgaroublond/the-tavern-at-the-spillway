@@ -35,6 +35,9 @@ public final class ChatViewModel: ObservableObject {
     private let isJake: Bool
     private let projectPath: String?
 
+    /// Slash command dispatcher (injected, shared per project)
+    public var commandDispatcher: SlashCommandDispatcher?
+
     /// The agent's ID (for identification)
     public var agentId: UUID { agent.id }
 
@@ -199,6 +202,31 @@ public final class ChatViewModel: ObservableObject {
         guard !text.isEmpty else { return }
 
         TavernLogger.chat.info("[\(self.agentName)] sendMessage initiated, text length: \(text.count)")
+
+        // Check for slash command before sending to agent
+        let parseResult = SlashCommandParser.parse(text)
+        if case .command(let name, let arguments) = parseResult, let dispatcher = commandDispatcher {
+            TavernLogger.chat.info("[\(self.agentName)] detected slash command: /\(name)")
+            inputText = ""
+            error = nil
+
+            // Show the command as a user message
+            let userMessage = ChatMessage(role: .user, content: text)
+            messages.append(userMessage)
+
+            let result = await dispatcher.dispatch(name: name, arguments: arguments)
+            switch result {
+            case .message(let output):
+                let responseMessage = ChatMessage(role: .agent, content: output, messageType: .text)
+                messages.append(responseMessage)
+            case .silent:
+                break
+            case .error(let errorText):
+                let errorMessage = ChatMessage(role: .agent, content: errorText, messageType: .text)
+                messages.append(errorMessage)
+            }
+            return
+        }
 
         // Clear input immediately
         inputText = ""
