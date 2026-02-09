@@ -118,7 +118,7 @@ From the PRD — these rules cannot be violated under any circumstances:
 UI Layer (thin, dumb)           ← layout + gestures + bindings only
 ViewModel Layer                 ← all UX logic (@MainActor)
 Application Layer               ← TavernCoordinator, ServitorSpawner
-Agent Layer                     ← Jake, Servitor, Sidecar
+Agent Layer                     ← Jake, Servitor
 Domain Layer                    ← Commitment, Assignment
 Infrastructure Layer            ← DocStore, SessionStore, SDK
 ```
@@ -132,7 +132,7 @@ See `docs/3-adr/ADR-001-shape-selection.md` for full rationale (49 proposals acr
 
 1. **Thin UI / Fat ViewModel** — SwiftUI views are dumb: layout, styling, gestures, bindings. All UX logic lives in ViewModels. Goal: 90%+ of UX workflows testable via ViewModel unit tests without touching SwiftUI.
 
-2. **Sidecar Pattern for I/O** — Main agent actors manage tree structure (fast, never block). Separate sidecar actors handle slow Anthropic I/O. Prevents thread pool starvation with many concurrent agents.
+2. **Async/Await for I/O** — Agents call `messenger.query()` directly using Swift concurrency (async/await). Serial `DispatchQueue`s protect mutable state within each agent. A global semaphore limits concurrent Anthropic calls (~10) to prevent thread pool starvation. The original design specified a sidecar actor pattern (separate actors for I/O), but async/await made this unnecessary — agents remain responsive because `await` suspends without blocking.
 
 3. **Shared Workspace** — Doc store is the blackboard. Agents communicate primarily through shared state in files. If it's not in a file, it doesn't exist.
 
@@ -145,7 +145,7 @@ See `docs/3-adr/ADR-001-shape-selection.md` for full rationale (49 proposals acr
 
 - Global semaphore for concurrent Anthropic calls (max ~10)
 - `@MainActor` on all ViewModels
-- Never block the cooperative thread pool (`Thread.sleep`, `DispatchSemaphore.wait`, sync file I/O) — this is why sidecars exist
+- Never block the cooperative thread pool (`Thread.sleep`, `DispatchSemaphore.wait`, sync file I/O) — async/await suspends without blocking, keeping the pool available
 - UI updates via Combine, never block main thread
 
 
