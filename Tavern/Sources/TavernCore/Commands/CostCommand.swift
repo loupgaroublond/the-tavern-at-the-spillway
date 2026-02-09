@@ -28,18 +28,18 @@ public struct CostCommand: SlashCommand {
         var lines: [String] = []
         lines.append("Token Usage (this session)")
         lines.append(String(repeating: "\u{2500}", count: 25))
-        lines.append("Input tokens:    \(formatTokens(snapshot.input))")
-        lines.append("Output tokens:   \(formatTokens(snapshot.output))")
+        lines.append("Input tokens:    \(CommandFormatting.formatTokens(snapshot.input))")
+        lines.append("Output tokens:   \(CommandFormatting.formatTokens(snapshot.output))")
 
         if snapshot.cacheRead > 0 {
-            lines.append("Cache reads:     \(formatTokens(snapshot.cacheRead))")
+            lines.append("Cache reads:     \(CommandFormatting.formatTokens(snapshot.cacheRead))")
         }
         if snapshot.cacheCreate > 0 {
-            lines.append("Cache writes:    \(formatTokens(snapshot.cacheCreate))")
+            lines.append("Cache writes:    \(CommandFormatting.formatTokens(snapshot.cacheCreate))")
         }
 
         let total = snapshot.input + snapshot.output
-        lines.append("Total tokens:    \(formatTokens(total))")
+        lines.append("Total tokens:    \(CommandFormatting.formatTokens(total))")
         lines.append("")
         lines.append("Messages:        \(snapshot.messages)")
 
@@ -55,12 +55,4 @@ public struct CostCommand: SlashCommand {
         return .message(lines.joined(separator: "\n"))
     }
 
-    private func formatTokens(_ count: Int) -> String {
-        if count >= 1_000_000 {
-            return String(format: "%.1fM", Double(count) / 1_000_000)
-        } else if count >= 1_000 {
-            return String(format: "%.1fK", Double(count) / 1_000)
-        }
-        return "\(count)"
-    }
 }

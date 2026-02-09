@@ -31,46 +31,31 @@ public struct ContextCommand: SlashCommand {
 
         if snapshot.window > 0 {
             let pct = Double(totalUsed) / Double(snapshot.window) * 100
-            let bar = makeBar(filled: pct, width: 30)
+            let bar = CommandFormatting.makeBar(filled: pct, width: 30)
             lines.append("\(bar) \(String(format: "%.1f", pct))%")
             lines.append("")
-            lines.append("Used:         \(formatTokens(totalUsed)) / \(formatTokens(snapshot.window))")
-            lines.append("Remaining:    \(formatTokens(snapshot.window - totalUsed))")
+            lines.append("Used:         \(CommandFormatting.formatTokens(totalUsed)) / \(CommandFormatting.formatTokens(snapshot.window))")
+            lines.append("Remaining:    \(CommandFormatting.formatTokens(snapshot.window - totalUsed))")
         } else {
-            lines.append("Used:         \(formatTokens(totalUsed))")
+            lines.append("Used:         \(CommandFormatting.formatTokens(totalUsed))")
             lines.append("Window size:  (not yet reported)")
         }
 
         lines.append("")
         lines.append("Breakdown:")
-        lines.append("  Input:      \(formatTokens(snapshot.input))")
-        lines.append("  Output:     \(formatTokens(snapshot.output))")
+        lines.append("  Input:      \(CommandFormatting.formatTokens(snapshot.input))")
+        lines.append("  Output:     \(CommandFormatting.formatTokens(snapshot.output))")
 
         if snapshot.cacheRead > 0 {
-            lines.append("  Cache:      \(formatTokens(snapshot.cacheRead)) (read)")
+            lines.append("  Cache:      \(CommandFormatting.formatTokens(snapshot.cacheRead)) (read)")
         }
 
         if snapshot.maxOutput > 0 {
-            lines.append("  Max output: \(formatTokens(snapshot.maxOutput))")
+            lines.append("  Max output: \(CommandFormatting.formatTokens(snapshot.maxOutput))")
         }
 
         TavernLogger.commands.info("/context: used=\(totalUsed)/\(snapshot.window)")
         return .message(lines.joined(separator: "\n"))
     }
 
-    private func makeBar(filled: Double, width: Int) -> String {
-        let clamped = min(max(filled, 0), 100)
-        let filledCount = Int(clamped / 100 * Double(width))
-        let emptyCount = width - filledCount
-        return "[\(String(repeating: "=", count: filledCount))\(String(repeating: " ", count: emptyCount))]"
-    }
-
-    private func formatTokens(_ count: Int) -> String {
-        if count >= 1_000_000 {
-            return String(format: "%.1fM", Double(count) / 1_000_000)
-        } else if count >= 1_000 {
-            return String(format: "%.1fK", Double(count) / 1_000)
-        }
-        return "\(count)"
-    }
 }

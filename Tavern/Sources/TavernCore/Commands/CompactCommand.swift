@@ -23,7 +23,7 @@ public struct CompactCommand: SlashCommand {
         var report = "Context compaction requested."
         if window > 0 {
             let pct = Double(used) / Double(window) * 100
-            report += "\nCurrent usage: \(formatTokens(used)) / \(formatTokens(window)) (\(String(format: "%.1f", pct))%)"
+            report += "\nCurrent usage: \(CommandFormatting.formatTokens(used)) / \(CommandFormatting.formatTokens(window)) (\(String(format: "%.1f", pct))%)"
         }
         report += "\nCompaction will take effect on your next message."
 
@@ -31,12 +31,4 @@ public struct CompactCommand: SlashCommand {
         return .message(report)
     }
 
-    private func formatTokens(_ count: Int) -> String {
-        if count >= 1_000_000 {
-            return String(format: "%.1fM", Double(count) / 1_000_000)
-        } else if count >= 1_000 {
-            return String(format: "%.1fK", Double(count) / 1_000)
-        }
-        return "\(count)"
-    }
 }

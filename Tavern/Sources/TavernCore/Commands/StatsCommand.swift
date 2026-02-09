@@ -39,9 +39,9 @@ public struct StatsCommand: SlashCommand {
         let outputPct = Double(snapshot.output) / Double(total) * 100
 
         lines.append("Token Distribution:")
-        lines.append("  Input  \(makeBar(filled: inputPct, width: 20)) \(formatTokens(snapshot.input))")
-        lines.append("  Output \(makeBar(filled: outputPct, width: 20)) \(formatTokens(snapshot.output))")
-        lines.append("  Total:  \(formatTokens(total))")
+        lines.append("  Input  \(CommandFormatting.makeBar(filled: inputPct, width: 20)) \(CommandFormatting.formatTokens(snapshot.input))")
+        lines.append("  Output \(CommandFormatting.makeBar(filled: outputPct, width: 20)) \(CommandFormatting.formatTokens(snapshot.output))")
+        lines.append("  Total:  \(CommandFormatting.formatTokens(total))")
 
         if snapshot.cost > 0 {
             lines.append("")
@@ -63,22 +63,6 @@ public struct StatsCommand: SlashCommand {
         }
 
         return .message(lines.joined(separator: "\n"))
-    }
-
-    private func makeBar(filled: Double, width: Int) -> String {
-        let clamped = min(max(filled, 0), 100)
-        let filledCount = Int(clamped / 100 * Double(width))
-        let emptyCount = width - filledCount
-        return "[\(String(repeating: "=", count: filledCount))\(String(repeating: " ", count: emptyCount))]"
-    }
-
-    private func formatTokens(_ count: Int) -> String {
-        if count >= 1_000_000 {
-            return String(format: "%.1fM", Double(count) / 1_000_000)
-        } else if count >= 1_000 {
-            return String(format: "%.1fK", Double(count) / 1_000)
-        }
-        return "\(count)"
     }
 
     private func formatDuration(_ seconds: TimeInterval) -> String {

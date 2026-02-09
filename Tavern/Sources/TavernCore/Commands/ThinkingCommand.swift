@@ -43,7 +43,7 @@ public struct ThinkingCommand: SlashCommand {
             }
             await MainActor.run { context.maxThinkingTokens = tokens }
             TavernLogger.commands.info("/thinking: set to \(tokens)")
-            return .message("Max thinking tokens set to \(formatTokens(tokens)).\nTakes effect on your next message.")
+            return .message("Max thinking tokens set to \(CommandFormatting.formatTokens(tokens)).\nTakes effect on your next message.")
         }
     }
 
@@ -51,7 +51,7 @@ public struct ThinkingCommand: SlashCommand {
         let current = await MainActor.run { context.maxThinkingTokens }
         let display: String
         if let tokens = current {
-            display = tokens == 0 ? "disabled" : formatTokens(tokens)
+            display = tokens == 0 ? "disabled" : CommandFormatting.formatTokens(tokens)
         } else {
             display = "(SDK default)"
         }
@@ -67,12 +67,4 @@ public struct ThinkingCommand: SlashCommand {
         return .message(lines.joined(separator: "\n"))
     }
 
-    private func formatTokens(_ count: Int) -> String {
-        if count >= 1_000_000 {
-            return String(format: "%.1fM", Double(count) / 1_000_000)
-        } else if count >= 1_000 {
-            return String(format: "%.1fK", Double(count) / 1_000)
-        }
-        return "\(count)"
-    }
 }
