@@ -519,9 +519,19 @@ struct ProjectContentView: View {
     @ObservedObject var project: TavernProject
     @ObservedObject var coordinator: TavernCoordinator
     @SceneStorage("resourcePanelVisible") private var isResourcePanelVisible: Bool = false
+    @SceneStorage("sidePaneTab") private var selectedTabRaw: String = SidePaneTab.files.rawValue
     @StateObject private var resourcePanelViewModel: ResourcePanelViewModel
+    @StateObject private var backgroundTaskViewModel = BackgroundTaskViewModel()
+    @StateObject private var todoListViewModel = TodoListViewModel()
     @StateObject private var autocomplete: SlashCommandAutocomplete
     @StateObject private var fileMention: FileMentionAutocomplete
+
+    private var selectedTab: Binding<SidePaneTab> {
+        Binding(
+            get: { SidePaneTab(rawValue: selectedTabRaw) ?? .files },
+            set: { selectedTabRaw = $0.rawValue }
+        )
+    }
 
     init(project: TavernProject, coordinator: TavernCoordinator) {
         self.project = project
@@ -565,13 +575,18 @@ struct ProjectContentView: View {
             }
             .frame(minWidth: 200)
         } detail: {
-            // Detail: Chat + optional Resource Panel
+            // Detail: Chat + optional Side Pane
             HSplitView {
                 ChatView(viewModel: coordinator.activeChatViewModel, autocomplete: autocomplete, fileMention: fileMention)
 
                 if isResourcePanelVisible {
-                    ResourcePanelView(viewModel: resourcePanelViewModel)
-                        .frame(minWidth: 250, idealWidth: 350, maxWidth: 600)
+                    ResourcePanelView(
+                        resourceViewModel: resourcePanelViewModel,
+                        taskViewModel: backgroundTaskViewModel,
+                        todoViewModel: todoListViewModel,
+                        selectedTab: selectedTab
+                    )
+                    .frame(minWidth: 250, idealWidth: 350, maxWidth: 600)
                 }
             }
         }
@@ -581,7 +596,7 @@ struct ProjectContentView: View {
                 Button(action: { isResourcePanelVisible.toggle() }) {
                     Image(systemName: "sidebar.right")
                 }
-                .help(isResourcePanelVisible ? "Hide Resources" : "Show Resources")
+                .help(isResourcePanelVisible ? "Hide Side Pane" : "Show Side Pane")
             }
         }
     }
