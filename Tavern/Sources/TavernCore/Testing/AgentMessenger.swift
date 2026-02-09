@@ -2,6 +2,16 @@ import Foundation
 import ClodKit
 import os.log
 
+// MARK: - Tool Approval Handler
+
+/// Async callback invoked when PermissionManager cannot auto-decide (returns nil)
+/// and the user must be prompted. The handler should present ToolApprovalView,
+/// wait for the user's decision, and return the response.
+///
+/// Called from LiveMessenger's canUseTool closure. The closure suspends until
+/// the user approves or denies the tool.
+public typealias ToolApprovalHandler = @Sendable (ToolApprovalRequest) async -> ToolApprovalResponse
+
 // MARK: - Stream Event
 
 /// Events yielded during a streaming response from Claude.
@@ -66,11 +76,81 @@ public protocol AgentMessenger: Sendable {
 /// Production messenger that calls real Claude via ClodKit SDK.
 /// Extracts response text from the ClaudeQuery stream, handling both
 /// "result" and "assistant" message types.
+///
+/// When a `PermissionManager` is provided, tool execution is gated by
+/// permission checks. Auto-decisions (allow/deny) are applied immediately.
+/// When the manager returns nil (prompt user), the `approvalHandler` is
+/// called to get the user's async decision.
 public struct LiveMessenger: AgentMessenger {
 
-    public init() {}
+    private let permissionManager: PermissionManager?
+    private let approvalHandler: ToolApprovalHandler?
+    private let agentName: String
+
+    /// Create a LiveMessenger with optional permission enforcement.
+    /// - Parameters:
+    ///   - permissionManager: Permission manager for tool checks (nil disables checks)
+    ///   - approvalHandler: Async callback for user prompting (required when manager is non-nil)
+    ///   - agentName: Name of the agent using this messenger (for approval request context)
+    public init(
+        permissionManager: PermissionManager? = nil,
+        approvalHandler: ToolApprovalHandler? = nil,
+        agentName: String = ""
+    ) {
+        self.permissionManager = permissionManager
+        self.approvalHandler = approvalHandler
+        self.agentName = agentName
+    }
+
+    /// Build the canUseTool callback from the permission manager and approval handler.
+    /// Returns nil if no permission manager is configured.
+    private func buildCanUseToolCallback() -> CanUseToolCallback? {
+        guard let manager = permissionManager else { return nil }
+
+        let handler = approvalHandler
+        let name = agentName
+
+        return { toolName, input, context in
+            TavernLogger.permissions.info("canUseTool called for '\(toolName)' (agent: \(name))")
+
+            let decision = manager.evaluateTool(toolName)
+
+            switch decision {
+            case .allow:
+                return .allowTool(toolUseID: context.toolUseID)
+
+            case .deny:
+                return .denyTool("Permission denied for tool '\(toolName)'", toolUseID: context.toolUseID)
+
+            case nil:
+                // User must decide — invoke the approval handler
+                guard let handler else {
+                    TavernLogger.permissions.error("No approval handler configured, denying tool '\(toolName)'")
+                    return .denyTool("No approval handler available", toolUseID: context.toolUseID)
+                }
+
+                let request = ToolApprovalRequest(
+                    toolName: toolName,
+                    toolDescription: input.description,
+                    agentName: name
+                )
+
+                let response = await handler(request)
+                manager.processApprovalResponse(for: request, response: response)
+
+                if response.approved {
+                    return .allowTool(toolUseID: context.toolUseID)
+                } else {
+                    return .denyTool("User denied tool '\(toolName)'", toolUseID: context.toolUseID)
+                }
+            }
+        }
+    }
 
     public func query(prompt: String, options: QueryOptions) async throws -> (response: String, sessionId: String?) {
+        var options = options
+        options.canUseTool = buildCanUseToolCallback()
+
         let query = try await Clod.query(prompt: prompt, options: options)
         var responseText = ""
         var messageCount = 0
@@ -100,6 +180,10 @@ public struct LiveMessenger: AgentMessenger {
     }
 
     public func queryStreaming(prompt: String, options: QueryOptions) -> (stream: AsyncThrowingStream<StreamEvent, Error>, cancel: @Sendable () -> Void) {
+        var opts = options
+        opts.canUseTool = buildCanUseToolCallback()
+        let options = opts
+
         // Shared cancellation state
         let cancelled = UnsafeSendableBox(false)
         // Hold query reference for interrupt support
