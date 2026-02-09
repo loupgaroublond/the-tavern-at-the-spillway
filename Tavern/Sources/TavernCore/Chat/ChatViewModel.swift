@@ -49,6 +49,9 @@ public final class ChatViewModel: ObservableObject {
     /// The corrupt session ID (if recovery options are shown)
     @Published public private(set) var corruptSessionId: String?
 
+    /// Current tool approval request waiting for user decision (nil when none pending)
+    @Published public private(set) var pendingApproval: ToolApprovalRequest?
+
     // MARK: - Dependencies
 
     private let agent: AnyAgent
@@ -58,6 +61,9 @@ public final class ChatViewModel: ObservableObject {
     /// Cancellation handle for the current streaming response.
     /// Called by `cancelStreaming()` to interrupt mid-stream.
     private var streamCancelHandle: (@Sendable () -> Void)?
+
+    /// Continuation for pending tool approval. Resumed when user responds.
+    private var approvalContinuation: CheckedContinuation<ToolApprovalResponse, Never>?
 
     /// Slash command dispatcher (injected, shared per project)
     public var commandDispatcher: SlashCommandDispatcher?
@@ -425,6 +431,43 @@ public final class ChatViewModel: ObservableObject {
         corruptSessionId = nil
         totalInputTokens = 0
         totalOutputTokens = 0
+    }
+
+    /// Respond to a pending tool approval request.
+    /// Resumes the suspended canUseTool callback with the user's decision.
+    /// - Parameter response: The user's approval or denial
+    public func respondToApproval(_ response: ToolApprovalResponse) {
+        TavernLogger.permissions.info("[\(self.agentName)] tool approval response: approved=\(response.approved), alwaysAllow=\(response.alwaysAllow)")
+
+        guard let continuation = approvalContinuation else {
+            TavernLogger.permissions.error("[\(self.agentName)] respondToApproval called with no pending continuation")
+            return
+        }
+
+        approvalContinuation = nil
+        pendingApproval = nil
+        continuation.resume(returning: response)
+    }
+
+    /// Create a ToolApprovalHandler that surfaces requests through this view model.
+    /// The handler suspends until the user responds via `respondToApproval`.
+    public func makeApprovalHandler() -> ToolApprovalHandler {
+        // Capture self weakly. The handler runs on arbitrary threads
+        // but publishes UI state on MainActor via the continuation bridge.
+        return { [weak self] request in
+            guard let self else {
+                TavernLogger.permissions.error("ChatViewModel deallocated, denying tool '\(request.toolName)'")
+                return ToolApprovalResponse(approved: false)
+            }
+
+            return await withCheckedContinuation { continuation in
+                Task { @MainActor in
+                    self.approvalContinuation = continuation
+                    self.pendingApproval = request
+                    TavernLogger.permissions.info("[\(self.agentName)] showing approval for tool '\(request.toolName)'")
+                }
+            }
+        }
     }
 
     /// Start fresh after a corrupt session

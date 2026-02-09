@@ -186,6 +186,23 @@ struct ChatView: View {
                 fileMention.update(for: viewModel.inputText)
             }
         }
+        .sheet(isPresented: Binding(
+            get: { viewModel.pendingApproval != nil },
+            set: { show in
+                if !show {
+                    viewModel.respondToApproval(ToolApprovalResponse(approved: false))
+                }
+            }
+        )) {
+            if let request = viewModel.pendingApproval {
+                ToolApprovalView(
+                    request: request,
+                    onResponse: { response in
+                        viewModel.respondToApproval(response)
+                    }
+                )
+            }
+        }
     }
 }
 
