@@ -1,7 +1,7 @@
 # Formal Specification Index
 
-**Status:** skeleton
-**Last Updated:** 2026-02-07
+**Status:** complete
+**Last Updated:** 2026-02-08
 
 ## Purpose
 
@@ -11,55 +11,55 @@ Traceability matrix mapping every PRD section to its spec module(s). Every requi
 
 | PRD Section | Title | Spec Module(s) | Status |
 |-------------|-------|----------------|--------|
-| §1 | Executive Summary | (context — informs all) | — |
-| §2 | Invariants (Hard-Enforced) | invariants.md | skeleton |
-| §3 | Problem Statement / Goals | (context — informs all) | — |
-| §4.1 | Agent Types | agents.md | skeleton |
-| §4.2 | Agent States | agents.md | skeleton |
-| §4.3 | Task Modes | agents.md | skeleton |
-| §4.4 | Operating Modes | operating-modes.md | skeleton |
-| §4.5 | The Document Store | doc-store.md | skeleton |
-| §4.6 | Sandbox Primitives | sandbox.md | skeleton |
-| §4.7 | Deterministic Shell | deterministic-shell.md | skeleton |
-| §5.1 | The Core Loop | user-experience.md | skeleton |
-| §5.2 | Attention Model | operating-modes.md | skeleton |
-| §5.3 | Bubbling | communication.md | skeleton |
-| §5.4 | UI Principles | user-experience.md | skeleton |
-| §5.5 | Question Triage | communication.md | skeleton |
-| §6.1 | Tech Stack | system-architecture.md | skeleton |
-| §6.2 | Agent Spawn Configuration | spawning.md | skeleton |
-| §6.3 | Work Queues | spawning.md | skeleton |
-| §6.4 | Preflight Checks | sandbox.md | skeleton |
-| §6.5 | Merge Queue | workflows.md | skeleton |
-| §6.6 | Hygiene | doc-store.md | skeleton |
-| §7 | Agent Naming | spawning.md | skeleton |
-| §8 | Progressive Unlocks | user-experience.md | skeleton |
-| §8.1 | Concept | user-experience.md | skeleton |
-| §8.2 | Open Questions | user-experience.md | skeleton |
-| §9 | Metrics | observability.md | skeleton |
-| §9.1 | Starter Templates | observability.md | skeleton |
-| §9.2 | Meta Process | observability.md | skeleton |
-| §9.3 | Discovery Sharing | observability.md | skeleton |
-| §10 | Workflows | workflows.md | skeleton |
-| §11 | Gang of Experts | workflows.md | skeleton |
-| §12 | Fish or Cut Bait | lifecycle.md | skeleton |
-| §13 | Rewind and Branch | lifecycle.md | skeleton |
-| §14 | Open Items / TBD | (context — informs all) | — |
-| §15 | Day 1 Questions | (context — informs all) | — |
-| §16 | Violation Monitoring | observability.md | skeleton |
-| §17 | Testability Requirements | quality.md | skeleton |
-| §18 | V1 Scope | v1-scope.md | skeleton |
-| §19 | Development Standards | quality.md | skeleton |
-| §19.1 | Logging Standards | quality.md | skeleton |
-| §19.2 | Testing Standards | quality.md | skeleton |
-| §19.3 | Stress Testing Standards | quality.md | skeleton |
-| §20 | Success Criteria | v1-scope.md | skeleton |
-| §21 | Performance Requirements | quality.md | skeleton |
+| §1 | Executive Summary | (context -- informs all) | -- |
+| §2 | Invariants (Hard-Enforced) | invariants.md | complete |
+| §3 | Problem Statement / Goals | (context -- informs all) | -- |
+| §4.1 | Agent Types | agents.md | complete |
+| §4.2 | Agent States | agents.md | complete |
+| §4.3 | Task Modes | agents.md | complete |
+| §4.4 | Operating Modes | operating-modes.md | complete |
+| §4.5 | The Document Store | doc-store.md | complete |
+| §4.6 | Sandbox Primitives | sandbox.md | complete |
+| §4.7 | Deterministic Shell | deterministic-shell.md | complete |
+| §5.1 | The Core Loop | user-experience.md | complete |
+| §5.2 | Attention Model | operating-modes.md | complete |
+| §5.3 | Bubbling | communication.md | complete |
+| §5.4 | UI Principles | user-experience.md | complete |
+| §5.5 | Question Triage | communication.md | complete |
+| §6.1 | Tech Stack | system-architecture.md | complete |
+| §6.2 | Agent Spawn Configuration | spawning.md | complete |
+| §6.3 | Work Queues | spawning.md | complete |
+| §6.4 | Preflight Checks | sandbox.md | complete |
+| §6.5 | Merge Queue | workflows.md | complete |
+| §6.6 | Hygiene | doc-store.md | complete |
+| §7 | Agent Naming | spawning.md | complete |
+| §8 | Progressive Unlocks | user-experience.md | complete |
+| §8.1 | Concept | user-experience.md | complete |
+| §8.2 | Open Questions | user-experience.md | complete |
+| §9 | Metrics | observability.md | complete |
+| §9.1 | Starter Templates | workflows.md | complete |
+| §9.2 | Meta Process | observability.md | complete |
+| §9.3 | Discovery Sharing | observability.md, communication.md | complete |
+| §10 | Workflows | workflows.md | complete |
+| §11 | Gang of Experts | workflows.md | complete |
+| §12 | Fish or Cut Bait | lifecycle.md | complete |
+| §13 | Rewind and Branch | lifecycle.md | complete |
+| §14 | Open Items / TBD | (context -- informs all) | -- |
+| §15 | Day 1 Questions | (context -- informs all) | -- |
+| §16 | Violation Monitoring | observability.md | complete |
+| §17 | Testability Requirements | quality.md | complete |
+| §18 | V1 Scope | v1-scope.md | complete |
+| §19 | Development Standards | quality.md | complete |
+| §19.1 | Logging Standards | quality.md | complete |
+| §19.2 | Testing Standards | quality.md | complete |
+| §19.3 | Stress Testing Standards | quality.md | complete |
+| §20 | Success Criteria | v1-scope.md | complete |
+| §21 | Performance Requirements | quality.md | complete |
 
 ## Coverage Summary
 
-- **Total PRD sections:** 40
-- **Covered by spec:** 36
+- **Total PRD sections:** 44
+- **Covered by spec:** 40
 - **Context-only (no spec needed):** 4 (§1, §3, §14, §15)
 - **Gaps:** none
 
@@ -67,26 +67,28 @@ Traceability matrix mapping every PRD section to its spec module(s). Every requi
 
 | Module | Prefix | Status | Requirements Count |
 |--------|--------|--------|-------------------|
-| invariants.md | REQ-INV | skeleton | 0 |
-| agents.md | REQ-AGT | skeleton | 0 |
-| operating-modes.md | REQ-OPM | skeleton | 0 |
-| doc-store.md | REQ-DOC | skeleton | 0 |
-| sandbox.md | REQ-SBX | skeleton | 0 |
-| deterministic-shell.md | REQ-DET | skeleton | 0 |
-| communication.md | REQ-COM | skeleton | 0 |
-| spawning.md | REQ-SPN | skeleton | 0 |
-| user-experience.md | REQ-UX | skeleton | 0 |
-| view-architecture.md | REQ-VIW | skeleton | 0 |
-| system-architecture.md | REQ-ARCH | skeleton | 0 |
-| workflows.md | REQ-WRK | skeleton | 0 |
-| lifecycle.md | REQ-LCM | skeleton | 0 |
-| observability.md | REQ-OBS | skeleton | 0 |
-| quality.md | REQ-QA | skeleton | 0 |
-| v1-scope.md | REQ-V1 | skeleton | 0 |
+| invariants.md | REQ-INV | complete | 8 |
+| agents.md | REQ-AGT | complete | 10 |
+| operating-modes.md | REQ-OPM | complete | 6 |
+| doc-store.md | REQ-DOC | complete | 8 |
+| deterministic-shell.md | REQ-DET | complete | 8 |
+| communication.md | REQ-COM | complete | 8 |
+| spawning.md | REQ-SPN | complete | 10 |
+| user-experience.md | REQ-UX | complete | 11 |
+| observability.md | REQ-OBS | complete | 11 |
+| quality.md | REQ-QA | complete | 16 |
+| v1-scope.md | REQ-V1 | complete | 17 |
+| system-architecture.md | REQ-ARCH | complete | 10 |
+| lifecycle.md | REQ-LCM | complete | 7 |
+| workflows.md | REQ-WRK | complete | 8 |
+| view-architecture.md | REQ-VIW | complete | 9 |
+| sandbox.md | REQ-SBX | complete | 8 |
+
+**Total requirements:** 155
 
 ## Verification Rules
 
 1. Every PRD section (except context sections) must appear in at least one spec module
 2. Every spec module must list its upstream PRD references
 3. Requirements use the format REQ-PREFIX-NNN
-4. Status progression: skeleton → partial → complete → verified
+4. Status progression: skeleton -> partial -> complete -> verified
