@@ -44,8 +44,11 @@ public final class TavernProject: ObservableObject, Identifiable {
     public func initialize() async {
         TavernLogger.coordination.info("[\(self.name)] Initializing project at: \(self.rootURL.path)")
 
+        let permissionManager = PermissionManager(store: PermissionStore())
+        TavernLogger.coordination.debug("[\(self.name)] PermissionManager created, mode=\(permissionManager.mode.rawValue)")
+
         TavernLogger.coordination.debug("[\(self.name)] Creating Jake...")
-        let jake = Jake(projectURL: rootURL)
+        let jake = Jake(projectURL: rootURL, permissionManager: permissionManager)
         TavernLogger.coordination.debug("[\(self.name)] Jake created")
 
         let registry = AgentRegistry()
@@ -54,12 +57,23 @@ public final class TavernProject: ObservableObject, Identifiable {
         let spawner = ServitorSpawner(
             registry: registry,
             nameGenerator: nameGenerator,
-            projectURL: rootURL
+            projectURL: rootURL,
+            messengerFactory: { agentName in
+                LiveMessenger(
+                    permissionManager: permissionManager,
+                    agentName: agentName
+                )
+            }
         )
         TavernLogger.coordination.debug("[\(self.name)] ServitorSpawner created")
 
         TavernLogger.coordination.debug("[\(self.name)] Creating TavernCoordinator...")
-        self.coordinator = TavernCoordinator(jake: jake, spawner: spawner, projectURL: rootURL)
+        self.coordinator = TavernCoordinator(
+            jake: jake,
+            spawner: spawner,
+            projectURL: rootURL,
+            permissionManager: permissionManager
+        )
         self.isReady = true
 
         TavernLogger.coordination.info("[\(self.name)] Project initialized successfully")

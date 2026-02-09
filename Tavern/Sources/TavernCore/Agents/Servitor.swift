@@ -106,6 +106,7 @@ public final class Servitor: Agent, @unchecked Sendable {
     ///   - projectURL: The project directory URL
     ///   - commitments: List of commitments to verify before completion (defaults to empty)
     ///   - verifier: Verifier for checking commitments (defaults to shell-based)
+    ///   - messenger: The messenger for Claude communication (default: LiveMessenger)
     ///   - loadSavedSession: Whether to load a saved session from SessionStore (default true)
     public init(
         id: UUID = UUID(),

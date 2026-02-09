@@ -2,8 +2,9 @@ import Foundation
 import os.log
 
 /// Factory type for creating AgentMessenger instances.
+/// Accepts the servitor name for context in permission approval requests.
 /// Returns a new messenger for each spawned servitor.
-public typealias MessengerFactory = @Sendable () -> AgentMessenger
+public typealias MessengerFactory = @Sendable (_ agentName: String) -> AgentMessenger
 
 /// Spawns and manages servitors for the Tavern
 /// This is Jake's way of delegating work to the Slop Squad
@@ -28,7 +29,7 @@ public final class ServitorSpawner: @unchecked Sendable {
         registry: AgentRegistry,
         nameGenerator: NameGenerator,
         projectURL: URL,
-        messengerFactory: @escaping MessengerFactory = { LiveMessenger() }
+        messengerFactory: @escaping MessengerFactory = { _ in LiveMessenger() }
     ) {
         self.registry = registry
         self.nameGenerator = nameGenerator
@@ -53,7 +54,7 @@ public final class ServitorSpawner: @unchecked Sendable {
             name: name,
             assignment: nil,
             projectURL: projectURL,
-            messenger: messengerFactory()
+            messenger: messengerFactory(name)
         )
 
         try registry.register(servitor)
@@ -77,7 +78,7 @@ public final class ServitorSpawner: @unchecked Sendable {
             name: name,
             assignment: assignment,
             projectURL: projectURL,
-            messenger: messengerFactory()
+            messenger: messengerFactory(name)
         )
 
         try registry.register(servitor)
@@ -106,7 +107,7 @@ public final class ServitorSpawner: @unchecked Sendable {
             name: name,
             assignment: assignment,
             projectURL: projectURL,
-            messenger: messengerFactory()
+            messenger: messengerFactory(name)
         )
 
         do {

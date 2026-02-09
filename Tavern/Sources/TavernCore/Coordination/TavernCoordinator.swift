@@ -23,6 +23,9 @@ public final class TavernCoordinator: ObservableObject {
     /// Spawner for servitors
     public let spawner: ServitorSpawner
 
+    /// Permission manager shared across all agents in this project
+    public let permissionManager: PermissionManager
+
     /// Slash command dispatcher (shared across all chats in this project)
     public let commandDispatcher: SlashCommandDispatcher
 
@@ -50,10 +53,12 @@ public final class TavernCoordinator: ObservableObject {
     ///   - jake: The Proprietor
     ///   - spawner: Servitor spawner for the Slop Squad
     ///   - projectURL: The project directory URL
-    public init(jake: Jake, spawner: ServitorSpawner, projectURL: URL) {
+    ///   - permissionManager: Permission manager for tool checks (default: new instance with standard store)
+    public init(jake: Jake, spawner: ServitorSpawner, projectURL: URL, permissionManager: PermissionManager = PermissionManager(store: PermissionStore())) {
         self.jake = jake
         self.spawner = spawner
         self.projectURL = projectURL
+        self.permissionManager = permissionManager
         self.commandDispatcher = SlashCommandDispatcher()
         self.commandContext = CommandContext()
 
@@ -119,6 +124,10 @@ public final class TavernCoordinator: ObservableObject {
                 assignment: nil,  // Restored servitors don't have original assignment
                 chatDescription: persisted.chatDescription,
                 projectURL: projectURL,
+                messenger: LiveMessenger(
+                    permissionManager: permissionManager,
+                    agentName: persisted.name
+                ),
                 loadSavedSession: true  // Will load session from SessionStore
             )
 

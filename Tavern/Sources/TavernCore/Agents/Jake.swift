@@ -105,12 +105,25 @@ public final class Jake: Agent, @unchecked Sendable {
     /// - Parameters:
     ///   - id: Unique identifier (auto-generated if not provided)
     ///   - projectURL: The project directory URL
-    ///   - messenger: The messenger for Claude communication (default: LiveMessenger)
+    ///   - permissionManager: Permission manager for tool checks (nil disables checks)
+    ///   - approvalHandler: Async callback for user prompting when permission is needed
+    ///   - messenger: The messenger for Claude communication (overrides permission-based default)
     ///   - loadSavedSession: Whether to load a saved session from SessionStore (default true)
-    public init(id: UUID = UUID(), projectURL: URL, messenger: AgentMessenger = LiveMessenger(), loadSavedSession: Bool = true) {
+    public init(
+        id: UUID = UUID(),
+        projectURL: URL,
+        permissionManager: PermissionManager? = nil,
+        approvalHandler: ToolApprovalHandler? = nil,
+        messenger: AgentMessenger? = nil,
+        loadSavedSession: Bool = true
+    ) {
         self.id = id
         self.projectURL = projectURL
-        self.messenger = messenger
+        self.messenger = messenger ?? LiveMessenger(
+            permissionManager: permissionManager,
+            approvalHandler: approvalHandler,
+            agentName: "Jake"
+        )
 
         // Restore session from previous run (per-project)
         if loadSavedSession, let savedSession = SessionStore.loadJakeSession(projectPath: projectURL.path) {
