@@ -32,6 +32,9 @@ public enum TavernLogger {
 
     /// Resource panel, file tree scanning, file content loading
     public static let resources = Logger(subsystem: subsystem, category: "resources")
+
+    /// Permission checks, rule evaluation, mode changes
+    public static let permissions = Logger(subsystem: subsystem, category: "permissions")
 }
 
 // MARK: - Debug-Only Public Logging
