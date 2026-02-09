@@ -46,6 +46,58 @@ public struct AssertionTimeoutError: Error, CustomStringConvertible {
     }
 }
 
+/// Thread-safe boolean flag for coordinating between terminationHandler and launch failure
+private final class LockedFlag: @unchecked Sendable {
+    private let lock = NSLock()
+    private var _value = false
+
+    /// Returns the current value
+    var value: Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return _value
+    }
+
+    /// Sets the flag to true
+    func set() {
+        lock.lock()
+        _value = true
+        lock.unlock()
+    }
+
+    /// Atomically tests if false and sets to true. Returns true if this call set it (was false).
+    func testAndSet() -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        if _value { return false }
+        _value = true
+        return true
+    }
+}
+
+/// Thread-safe mutable reference holder
+private final class LockedRef<T>: @unchecked Sendable {
+    private let lock = NSLock()
+    private var _value: T
+
+    init(_ value: T) {
+        self._value = value
+    }
+
+    var value: T {
+        get {
+            lock.lock()
+            defer { lock.unlock() }
+            return _value
+        }
+        set {
+            lock.lock()
+            _value = newValue
+            lock.unlock()
+        }
+    }
+}
+
 /// Default shell-based assertion runner
 /// Runs commands in /bin/bash with optional timeout
 public final class ShellAssertionRunner: AssertionRunner, @unchecked Sendable {
@@ -86,35 +138,16 @@ public final class ShellAssertionRunner: AssertionRunner, @unchecked Sendable {
         process.standardError = errorPipe
 
         return try await withCheckedThrowingContinuation { continuation in
-            DispatchQueue.global().async { [timeout] in
-                do {
-                    try process.run()
-                } catch {
-                    Self.logger.error("Failed to launch assertion process: \(error.localizedDescription)")
-                    continuation.resume(throwing: error)
-                    return
-                }
+            // Track whether we've already resumed the continuation (timeout vs normal completion race)
+            let hasResumed = LockedFlag()
+            let didTimeout = LockedFlag()
+            let timeoutRef = LockedRef<DispatchWorkItem?>(nil)
 
-                // Set up timeout if configured
-                var timeoutWorkItem: DispatchWorkItem?
-                var didTimeout = false
+            // Use terminationHandler instead of blocking waitUntilExit()
+            process.terminationHandler = { _ in
+                timeoutRef.value?.cancel()
 
-                if let timeout {
-                    let timeoutSeconds = Double(timeout.components.seconds) + Double(timeout.components.attoseconds) / 1e18
-                    let workItem = DispatchWorkItem {
-                        didTimeout = true
-                        Self.logger.warning("Assertion timed out after \(timeoutSeconds)s, terminating: \(command)")
-                        process.terminate()
-                    }
-                    timeoutWorkItem = workItem
-                    DispatchQueue.global().asyncAfter(
-                        deadline: .now() + timeoutSeconds,
-                        execute: workItem
-                    )
-                }
-
-                process.waitUntilExit()
-                timeoutWorkItem?.cancel()
+                guard hasResumed.testAndSet() else { return }
 
                 let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
                 let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
@@ -122,19 +155,45 @@ public final class ShellAssertionRunner: AssertionRunner, @unchecked Sendable {
                 let output = String(data: outputData, encoding: .utf8) ?? ""
                 let errorOutput = String(data: errorData, encoding: .utf8) ?? ""
 
-                let passed = !didTimeout && process.terminationStatus == 0
+                let timedOut = didTimeout.value
+                let passed = !timedOut && process.terminationStatus == 0
 
-                Self.logger.info("Assertion finished: passed=\(passed), exitCode=\(process.terminationStatus), timedOut=\(didTimeout)")
+                Self.logger.info("Assertion finished: passed=\(passed), exitCode=\(process.terminationStatus), timedOut=\(timedOut)")
 
                 let result = AssertionResult(
                     passed: passed,
                     output: output,
-                    errorOutput: didTimeout ? "Assertion timed out" : errorOutput,
+                    errorOutput: timedOut ? "Assertion timed out" : errorOutput,
                     exitCode: process.terminationStatus,
-                    timedOut: didTimeout
+                    timedOut: timedOut
                 )
 
                 continuation.resume(returning: result)
+            }
+
+            // Set up timeout if configured
+            if let timeout {
+                let timeoutSeconds = Double(timeout.components.seconds) + Double(timeout.components.attoseconds) / 1e18
+                let workItem = DispatchWorkItem {
+                    didTimeout.set()
+                    Self.logger.warning("Assertion timed out after \(timeoutSeconds)s, terminating: \(command)")
+                    process.terminate()
+                }
+                timeoutRef.value = workItem
+                DispatchQueue.global().asyncAfter(
+                    deadline: .now() + timeoutSeconds,
+                    execute: workItem
+                )
+            }
+
+            do {
+                try process.run()
+            } catch {
+                // Prevent terminationHandler from also resuming
+                guard hasResumed.testAndSet() else { return }
+                timeoutRef.value?.cancel()
+                Self.logger.error("Failed to launch assertion process: \(error.localizedDescription)")
+                continuation.resume(throwing: error)
             }
         }
     }
