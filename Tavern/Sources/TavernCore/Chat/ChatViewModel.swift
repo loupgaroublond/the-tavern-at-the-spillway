@@ -364,6 +364,16 @@ public final class ChatViewModel: ObservableObject {
                 self.corruptSessionId = sessionId
                 self.showSessionRecoveryOptions = true
                 TavernLogger.chat.debugError("[\(self.agentName)] session '\(sessionId)' is corrupt")
+            case .agentNameConflict(let name):
+                TavernLogger.chat.debugError("[\(self.agentName)] name conflict: '\(name)'")
+            case .commitmentTimeout(let id):
+                TavernLogger.chat.debugError("[\(self.agentName)] commitment timeout: \(id)")
+            case .mcpServerFailed(let reason):
+                TavernLogger.chat.debugError("[\(self.agentName)] MCP server failed: \(reason)")
+            case .permissionDenied(let tool):
+                TavernLogger.chat.debugError("[\(self.agentName)] permission denied: \(tool)")
+            case .commandNotFound(let name):
+                TavernLogger.chat.debugError("[\(self.agentName)] command not found: /\(name)")
             case .internalError(let message):
                 TavernLogger.chat.debugError("[\(self.agentName)] internal error: \(message)")
             }

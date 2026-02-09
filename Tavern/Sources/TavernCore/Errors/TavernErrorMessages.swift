@@ -194,6 +194,35 @@ public enum TavernErrorMessages {
 
                 Click "Start Fresh" below to clear the old session and try again.
                 """
+        case .agentNameConflict(let name):
+            return """
+                The name "\(name)" is already taken by another agent in this project.
+                Pick a different name, or dismiss the existing agent first.
+                """
+        case .commitmentTimeout(let commitmentId):
+            return """
+                Commitment verification timed out.
+                ID: \(commitmentId)
+
+                The agent may still be working — check its status, or try again.
+                """
+        case .mcpServerFailed(let reason):
+            return """
+                MCP server couldn't start or lost connection.
+                \(reason)
+
+                Try restarting the app.
+                """
+        case .permissionDenied(let toolName):
+            return """
+                Tool "\(toolName)" was blocked by permission rules.
+                Check your permission settings if this tool should be allowed.
+                """
+        case .commandNotFound(let name):
+            return """
+                Unknown command "/\(name)".
+                Type /help to see available commands.
+                """
         case .internalError(let message):
             return """
                 Something unexpected happened inside the Tavern.
