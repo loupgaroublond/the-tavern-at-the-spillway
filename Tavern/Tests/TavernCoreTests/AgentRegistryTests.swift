@@ -25,7 +25,7 @@ final class TestAgent: Agent, @unchecked Sendable {
         let response = "Response to: \(message)"
         let stream = AsyncThrowingStream<StreamEvent, Error> { continuation in
             continuation.yield(.textDelta(response))
-            continuation.yield(.completed(sessionId: nil))
+            continuation.yield(.completed(sessionId: nil, usage: nil))
             continuation.finish()
         }
         return (stream: stream, cancel: {})

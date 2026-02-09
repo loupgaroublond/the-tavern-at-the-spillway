@@ -9,10 +9,11 @@ struct ChatView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Header with agent name and new conversation button
+            // Header with agent name, token display, and new conversation button
             ChatHeader(
                 agentName: viewModel.agentName,
                 isEnabled: !viewModel.isCogitating,
+                tokenDisplay: viewModel.hasUsageData ? viewModel.formattedTokens : nil,
                 onNewConversation: {
                     viewModel.clearConversation()
                 }
@@ -31,52 +32,89 @@ struct ChatView: View {
                 .accessibilityIdentifier("sessionRecoveryBanner")
             }
 
-            // Message list
-            ScrollViewReader { proxy in
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 12) {
-                        ForEach(viewModel.messages) { message in
-                            MessageRowView(message: message, agentName: viewModel.agentName)
-                        }
+            // Message list with scroll-to-bottom support
+            ZStack(alignment: .bottom) {
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        LazyVStack(alignment: .leading, spacing: 12) {
+                            ForEach(viewModel.messages) { message in
+                                MessageRowView(message: message, agentName: viewModel.agentName)
+                            }
 
-                        // Cogitating indicator (shown before streaming starts)
-                        if viewModel.isCogitating && !viewModel.isStreaming {
-                            CogitatingIndicator(
-                                agentName: viewModel.agentName,
-                                verb: viewModel.cogitationVerb
-                            )
-                            .id("cogitating")
-                            .accessibilityIdentifier("cogitatingIndicator")
-                        }
+                            // Cogitating indicator (shown before streaming starts)
+                            if viewModel.isCogitating && !viewModel.isStreaming {
+                                CogitatingIndicator(
+                                    agentName: viewModel.agentName,
+                                    verb: viewModel.cogitationVerb
+                                )
+                                .id("cogitating")
+                                .accessibilityIdentifier("cogitatingIndicator")
+                            }
 
-                        // Streaming indicator (shown while tokens are arriving)
-                        if viewModel.isStreaming {
-                            StreamingIndicator()
-                                .id("streaming")
-                                .accessibilityIdentifier("streamingIndicator")
+                            // Tool progress indicator (shown when a tool is executing)
+                            if let toolName = viewModel.currentToolName {
+                                ToolProgressIndicator(
+                                    toolName: toolName,
+                                    startTime: viewModel.toolStartTime ?? Date()
+                                )
+                                .id("toolProgress")
+                                .accessibilityIdentifier("toolProgressIndicator")
+                            }
+
+                            // Streaming indicator (shown while tokens are arriving)
+                            if viewModel.isStreaming && viewModel.currentToolName == nil {
+                                StreamingIndicator()
+                                    .id("streaming")
+                                    .accessibilityIdentifier("streamingIndicator")
+                            }
+
+                            // Bottom anchor for scroll detection
+                            Color.clear
+                                .frame(height: 1)
+                                .id("bottomAnchor")
+                                .onAppear {
+                                    viewModel.showScrollToBottom = false
+                                }
+                                .onDisappear {
+                                    viewModel.showScrollToBottom = true
+                                }
+                        }
+                        .padding()
+                    }
+                    .onChange(of: viewModel.messages.count) {
+                        // Auto-scroll only if already at bottom
+                        if !viewModel.showScrollToBottom {
+                            if let lastMessage = viewModel.messages.last {
+                                withAnimation {
+                                    proxy.scrollTo(lastMessage.id, anchor: .bottom)
+                                }
+                            }
                         }
                     }
-                    .padding()
-                }
-                .onChange(of: viewModel.messages.count) {
-                    // Scroll to bottom when new message arrives
-                    if let lastMessage = viewModel.messages.last {
-                        withAnimation {
-                            proxy.scrollTo(lastMessage.id, anchor: .bottom)
+                    .onChange(of: viewModel.isCogitating) {
+                        if viewModel.isCogitating && !viewModel.showScrollToBottom {
+                            withAnimation {
+                                proxy.scrollTo("cogitating", anchor: .bottom)
+                            }
                         }
                     }
-                }
-                .onChange(of: viewModel.isCogitating) {
-                    if viewModel.isCogitating {
-                        withAnimation {
-                            proxy.scrollTo("cogitating", anchor: .bottom)
+                    .onChange(of: viewModel.isStreaming) {
+                        if viewModel.isStreaming && !viewModel.showScrollToBottom {
+                            withAnimation {
+                                proxy.scrollTo("streaming", anchor: .bottom)
+                            }
                         }
                     }
-                }
-                .onChange(of: viewModel.isStreaming) {
-                    if viewModel.isStreaming {
-                        withAnimation {
-                            proxy.scrollTo("streaming", anchor: .bottom)
+                    // Expose proxy for the scroll-to-bottom button
+                    .overlay(alignment: .bottom) {
+                        if viewModel.showScrollToBottom {
+                            ScrollToBottomButton {
+                                withAnimation {
+                                    proxy.scrollTo("bottomAnchor", anchor: .bottom)
+                                }
+                            }
+                            .padding(.bottom, 8)
+                            .transition(.opacity.combined(with: .move(edge: .bottom)))
                         }
                     }
                 }
@@ -137,10 +175,11 @@ struct ChatView: View {
 
 // MARK: - Chat Header
 
-/// Header bar with agent name and new conversation button
+/// Header bar with agent name, token display, and new conversation button
 private struct ChatHeader: View {
     let agentName: String
     let isEnabled: Bool
+    let tokenDisplay: String?
     let onNewConversation: () -> Void
 
     var body: some View {
@@ -149,6 +188,13 @@ private struct ChatHeader: View {
                 .font(.headline)
 
             Spacer()
+
+            if let tokenDisplay {
+                Text(tokenDisplay)
+                    .font(.system(.caption2, design: .monospaced))
+                    .foregroundColor(.secondary)
+                    .accessibilityIdentifier("tokenDisplay")
+            }
 
             Button(action: onNewConversation) {
                 Image(systemName: "square.and.pencil")
@@ -287,6 +333,75 @@ private struct StreamingIndicator: View {
                 opacity = 1.0
             }
         }
+    }
+}
+
+// MARK: - Scroll to Bottom Button
+
+/// Floating button that scrolls the chat to the latest message
+private struct ScrollToBottomButton: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "arrow.down.circle.fill")
+                .font(.system(size: 32))
+                .foregroundStyle(.white, .blue)
+                .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("scrollToBottomButton")
+        .help("Scroll to bottom")
+    }
+}
+
+// MARK: - Tool Progress Indicator
+
+/// Shows which tool is currently executing with elapsed time
+private struct ToolProgressIndicator: View {
+    let toolName: String
+    let startTime: Date
+
+    @State private var elapsed: TimeInterval = 0
+    @State private var timer: Timer?
+
+    var body: some View {
+        HStack(spacing: 8) {
+            ProgressView()
+                .controlSize(.small)
+
+            Text(toolName)
+                .font(.system(.caption, design: .monospaced))
+                .fontWeight(.medium)
+                .foregroundColor(.secondary)
+
+            Text(formattedElapsed)
+                .font(.caption2)
+                .foregroundColor(.secondary.opacity(0.7))
+                .monospacedDigit()
+        }
+        .padding(.leading, 44) // Align with message content (past avatar)
+        .padding(.vertical, 4)
+        .onAppear {
+            elapsed = Date().timeIntervalSince(startTime)
+            timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
+                Task { @MainActor in
+                    elapsed = Date().timeIntervalSince(startTime)
+                }
+            }
+        }
+        .onDisappear {
+            timer?.invalidate()
+            timer = nil
+        }
+    }
+
+    private var formattedElapsed: String {
+        let seconds = Int(elapsed)
+        if seconds < 60 {
+            return "\(seconds)s"
+        }
+        return "\(seconds / 60)m \(seconds % 60)s"
     }
 }
 

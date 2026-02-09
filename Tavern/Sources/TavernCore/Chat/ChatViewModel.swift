@@ -23,8 +23,23 @@ public final class ChatViewModel: ObservableObject {
     /// Whether the agent is currently streaming a response
     @Published public private(set) var isStreaming: Bool = false
 
+    /// Name of the currently executing tool (nil when no tool is active)
+    @Published public private(set) var currentToolName: String?
+
+    /// When the current tool started executing (nil when no tool is active)
+    @Published public private(set) var toolStartTime: Date?
+
+    /// Cumulative input tokens for this session
+    @Published public private(set) var totalInputTokens: Int = 0
+
+    /// Cumulative output tokens for this session
+    @Published public private(set) var totalOutputTokens: Int = 0
+
     /// Any error that occurred
     @Published public private(set) var error: Error?
+
+    /// Whether the scroll-to-bottom button should be visible
+    @Published public var showScrollToBottom: Bool = false
 
     /// Whether to show session recovery options (corrupt session detected)
     @Published public private(set) var showSessionRecoveryOptions: Bool = false
@@ -50,6 +65,14 @@ public final class ChatViewModel: ObservableObject {
 
     /// The agent's name
     public var agentName: String { agent.name }
+
+    /// Whether there is any token usage data to display
+    public var hasUsageData: Bool { totalInputTokens > 0 || totalOutputTokens > 0 }
+
+    /// Formatted token count string (e.g. "1.2K in / 3.4K out")
+    public var formattedTokens: String {
+        "\(formatTokenCount(totalInputTokens)) in / \(formatTokenCount(totalOutputTokens)) out"
+    }
 
     // MARK: - Cogitation Verbs
 
@@ -279,9 +302,26 @@ public final class ChatViewModel: ObservableObject {
                     // Append delta to the streaming message in place
                     messages[streamingIndex].content += delta
 
-                case .completed:
+                case .toolUseStarted(let toolName):
+                    currentToolName = toolName
+                    toolStartTime = Date()
+                    TavernLogger.chat.debug("[\(self.agentName)] tool started: \(toolName)")
+
+                case .toolUseFinished(let toolName):
+                    TavernLogger.chat.debug("[\(self.agentName)] tool finished: \(toolName)")
+                    currentToolName = nil
+                    toolStartTime = nil
+
+                case .completed(_, let usage):
                     // Mark streaming complete
                     messages[streamingIndex].isStreaming = false
+                    currentToolName = nil
+                    toolStartTime = nil
+                    if let usage {
+                        totalInputTokens += usage.inputTokens
+                        totalOutputTokens += usage.outputTokens
+                        TavernLogger.chat.info("[\(self.agentName)] usage: +\(usage.inputTokens)in/+\(usage.outputTokens)out (total: \(self.totalInputTokens)in/\(self.totalOutputTokens)out)")
+                    }
                     TavernLogger.chat.info("[\(self.agentName)] streaming completed, total messages: \(self.messages.count)")
 
                 case .error(let errorDescription):
@@ -344,6 +384,8 @@ public final class ChatViewModel: ObservableObject {
         streamCancelHandle = nil
         isStreaming = false
         isCogitating = false
+        currentToolName = nil
+        toolStartTime = nil
 
         // Mark the last message as no longer streaming
         if let lastIndex = messages.indices.last, messages[lastIndex].isStreaming {
@@ -359,6 +401,8 @@ public final class ChatViewModel: ObservableObject {
         error = nil
         showSessionRecoveryOptions = false
         corruptSessionId = nil
+        totalInputTokens = 0
+        totalOutputTokens = 0
     }
 
     /// Start fresh after a corrupt session
@@ -372,4 +416,15 @@ public final class ChatViewModel: ObservableObject {
         // Keep messages so user can see what they tried to send
     }
 
+    // MARK: - Private Helpers
+
+    /// Format token count for display (e.g. 1234 -> "1.2K", 999 -> "999")
+    private func formatTokenCount(_ count: Int) -> String {
+        if count >= 1_000_000 {
+            return String(format: "%.1fM", Double(count) / 1_000_000)
+        } else if count >= 1_000 {
+            return String(format: "%.1fK", Double(count) / 1_000)
+        }
+        return "\(count)"
+    }
 }

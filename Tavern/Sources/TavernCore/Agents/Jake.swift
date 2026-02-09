@@ -221,7 +221,7 @@ public final class Jake: Agent, @unchecked Sendable {
                 do {
                     for try await event in innerStream {
                         switch event {
-                        case .completed(let sessionId):
+                        case .completed(let sessionId, _):
                             if let sessionId, let self {
                                 self.queue.sync { self._sessionId = sessionId }
                                 SessionStore.saveJakeSession(sessionId, projectPath: self.projectURL.path)

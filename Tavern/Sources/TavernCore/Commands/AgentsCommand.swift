@@ -36,6 +36,7 @@ public struct AgentsCommand: SlashCommand {
             case .waiting: stateEmoji = "◎"
             case .verifying: stateEmoji = "◈"
             case .done: stateEmoji = "✓"
+            case .error: stateEmoji = "✗"
             }
 
             var line = "\(stateEmoji) **\(item.name)** (\(role)) — \(item.stateLabel)"

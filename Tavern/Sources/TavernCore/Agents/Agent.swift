@@ -16,6 +16,9 @@ public enum AgentState: String, Equatable, Sendable {
 
     /// Agent has completed their assignment
     case done
+
+    /// Agent encountered an error
+    case error
 }
 
 /// Protocol defining the common interface for all agents in the Tavern

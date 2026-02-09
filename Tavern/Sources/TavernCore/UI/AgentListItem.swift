@@ -78,11 +78,12 @@ extension AgentListItem {
         case .waiting: return "Needs attention"
         case .verifying: return "Verifying"
         case .done: return "Done"
+        case .error: return "Error"
         }
     }
 
-    /// Whether the agent needs attention (waiting state)
+    /// Whether the agent needs attention (waiting or error state)
     public var needsAttention: Bool {
-        state == .waiting
+        state == .waiting || state == .error
     }
 }

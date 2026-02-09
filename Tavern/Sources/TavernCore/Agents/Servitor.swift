@@ -217,7 +217,7 @@ public final class Servitor: Agent, @unchecked Sendable {
                             responseAccumulator.value += delta
                             continuation.yield(event)
 
-                        case .completed(let sessionId):
+                        case .completed(let sessionId, _):
                             if let sessionId, let self {
                                 self.queue.sync { self._sessionId = sessionId }
                                 SessionStore.saveAgentSession(agentId: self.id, sessionId: sessionId)
@@ -228,6 +228,9 @@ public final class Servitor: Agent, @unchecked Sendable {
                             if let self {
                                 await self.checkForCompletionSignal(in: responseAccumulator.value)
                             }
+                            continuation.yield(event)
+
+                        case .toolUseStarted, .toolUseFinished:
                             continuation.yield(event)
 
                         case .error:

@@ -202,23 +202,55 @@ private struct StateIndicator: View {
     let state: AgentState
     let isJake: Bool
 
+    @State private var isPulsing = false
+
     var body: some View {
         Circle()
             .fill(color)
             .frame(width: 10, height: 10)
+            .opacity(shouldPulse ? (isPulsing ? 0.4 : 1.0) : 1.0)
+            .animation(
+                shouldPulse
+                    ? .easeInOut(duration: 0.8).repeatForever(autoreverses: true)
+                    : .default,
+                value: isPulsing
+            )
+            .onChange(of: shouldPulse) {
+                isPulsing = shouldPulse
+            }
+            .onAppear {
+                isPulsing = shouldPulse
+            }
+            .accessibilityLabel(accessibilityStateLabel)
+    }
+
+    private var shouldPulse: Bool {
+        state == .working || (isJake && state == .working)
     }
 
     private var color: Color {
-        if isJake {
-            return .orange
+        if isJake && state != .error {
+            return state == .working ? .green : .orange
         }
 
         switch state {
         case .idle: return .gray
-        case .working: return .blue
+        case .working: return .green
         case .waiting: return .yellow
         case .verifying: return .purple
         case .done: return .green
+        case .error: return .red
+        }
+    }
+
+    private var accessibilityStateLabel: String {
+        switch state {
+        case .idle: return "Idle"
+        case .working: return "Working"
+        case .waiting: return "Needs attention"
+        case .verifying: return "Verifying"
+        case .done: return "Done"
+        case .error: return "Error"
         }
     }
 }

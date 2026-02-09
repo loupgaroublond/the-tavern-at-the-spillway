@@ -74,14 +74,16 @@ struct AgentListItemTests {
         #expect(AgentListItem(name: "A", state: .working).stateLabel == "Working")
         #expect(AgentListItem(name: "A", state: .waiting).stateLabel == "Needs attention")
         #expect(AgentListItem(name: "A", state: .done).stateLabel == "Done")
+        #expect(AgentListItem(name: "A", state: .error).stateLabel == "Error")
     }
 
-    @Test("NeedsAttention is true only for waiting state")
-    func needsAttentionOnlyForWaiting() {
+    @Test("NeedsAttention is true for waiting and error states")
+    func needsAttentionForWaitingAndError() {
         #expect(AgentListItem(name: "A", state: .idle).needsAttention == false)
         #expect(AgentListItem(name: "A", state: .working).needsAttention == false)
         #expect(AgentListItem(name: "A", state: .waiting).needsAttention == true)
         #expect(AgentListItem(name: "A", state: .done).needsAttention == false)
+        #expect(AgentListItem(name: "A", state: .error).needsAttention == true)
     }
 }
 

@@ -148,7 +148,7 @@ public final class MockAgent: Agent, @unchecked Sendable {
                     await Task.yield()
                 }
 
-                continuation.yield(.completed(sessionId: nil))
+                continuation.yield(.completed(sessionId: nil, usage: nil))
                 continuation.finish()
             }
 

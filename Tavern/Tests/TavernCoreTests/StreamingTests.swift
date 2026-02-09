@@ -25,8 +25,8 @@ struct StreamingTests {
 
     @Test("StreamEvent completed carries session ID")
     func streamEventCompleted() {
-        let event = StreamEvent.completed(sessionId: "sess-123")
-        if case .completed(let sid) = event {
+        let event = StreamEvent.completed(sessionId: "sess-123", usage: nil)
+        if case .completed(let sid, _) = event {
             #expect(sid == "sess-123")
         } else {
             Issue.record("Expected completed")
@@ -35,9 +35,23 @@ struct StreamingTests {
 
     @Test("StreamEvent completed can have nil session ID")
     func streamEventCompletedNil() {
-        let event = StreamEvent.completed(sessionId: nil)
-        if case .completed(let sid) = event {
+        let event = StreamEvent.completed(sessionId: nil, usage: nil)
+        if case .completed(let sid, _) = event {
             #expect(sid == nil)
+        } else {
+            Issue.record("Expected completed")
+        }
+    }
+
+    @Test("StreamEvent completed carries usage data")
+    func streamEventCompletedWithUsage() {
+        let usage = SessionUsage(inputTokens: 100, outputTokens: 50)
+        let event = StreamEvent.completed(sessionId: "sess-456", usage: usage)
+        if case .completed(let sid, let u) = event {
+            #expect(sid == "sess-456")
+            #expect(u?.inputTokens == 100)
+            #expect(u?.outputTokens == 50)
+            #expect(u?.totalTokens == 150)
         } else {
             Issue.record("Expected completed")
         }
@@ -57,8 +71,8 @@ struct StreamingTests {
     func streamEventEquatable() {
         #expect(StreamEvent.textDelta("a") == StreamEvent.textDelta("a"))
         #expect(StreamEvent.textDelta("a") != StreamEvent.textDelta("b"))
-        #expect(StreamEvent.completed(sessionId: "x") == StreamEvent.completed(sessionId: "x"))
-        #expect(StreamEvent.completed(sessionId: nil) == StreamEvent.completed(sessionId: nil))
+        #expect(StreamEvent.completed(sessionId: "x", usage: nil) == StreamEvent.completed(sessionId: "x", usage: nil))
+        #expect(StreamEvent.completed(sessionId: nil, usage: nil) == StreamEvent.completed(sessionId: nil, usage: nil))
         #expect(StreamEvent.error("e") == StreamEvent.error("e"))
     }
 
@@ -79,11 +93,13 @@ struct StreamingTests {
             switch event {
             case .textDelta(let text):
                 chunks.append(text)
-            case .completed(let sid):
+            case .completed(let sid, _):
                 completed = true
                 sessionId = sid
             case .error:
                 Issue.record("Unexpected error event")
+            case .toolUseStarted, .toolUseFinished:
+                break
             }
         }
 
@@ -169,6 +185,8 @@ struct StreamingTests {
                 completed = true
             case .error:
                 Issue.record("Unexpected error")
+            case .toolUseStarted, .toolUseFinished:
+                break
             }
         }
 
