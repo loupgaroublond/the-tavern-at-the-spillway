@@ -5,6 +5,7 @@ import TavernCore
 struct ChatView: View {
     @ObservedObject var viewModel: ChatViewModel
     @ObservedObject var autocomplete: SlashCommandAutocomplete
+    @ObservedObject var fileMention: FileMentionAutocomplete
 
     var body: some View {
         VStack(spacing: 0) {
@@ -83,7 +84,7 @@ struct ChatView: View {
 
             Divider()
 
-            // Autocomplete popup (appears above input bar)
+            // Autocomplete popups (appears above input bar) — only one visible at a time
             if autocomplete.isVisible {
                 SlashCommandAutocompletePopup(
                     autocomplete: autocomplete,
@@ -93,6 +94,17 @@ struct ChatView: View {
                     }
                 )
                 .accessibilityIdentifier("autocompletePopup")
+            } else if fileMention.isVisible {
+                FileMentionAutocompletePopup(
+                    fileMention: fileMention,
+                    onSelect: { suggestion in
+                        if let replacement = fileMention.selectedCompletion(for: viewModel.inputText) {
+                            viewModel.inputText = replacement
+                        }
+                        fileMention.hide()
+                    }
+                )
+                .accessibilityIdentifier("fileMentionPopup")
             }
 
             // Input area
@@ -102,6 +114,7 @@ struct ChatView: View {
                 isEnabled: !viewModel.isCogitating,
                 isStreaming: viewModel.isStreaming,
                 autocomplete: autocomplete,
+                fileMention: fileMention,
                 onSend: {
                     Task {
                         await viewModel.sendMessage()
@@ -114,6 +127,10 @@ struct ChatView: View {
         }
         .onChange(of: viewModel.inputText) {
             autocomplete.update(for: viewModel.inputText)
+            // Only update file mentions if slash command autocomplete isn't showing
+            if !autocomplete.isVisible {
+                fileMention.update(for: viewModel.inputText)
+            }
         }
     }
 }
@@ -311,6 +328,44 @@ private struct SlashCommandAutocompletePopup: View {
     }
 }
 
+// MARK: - File Mention Autocomplete Popup
+
+private struct FileMentionAutocompletePopup: View {
+    @ObservedObject var fileMention: FileMentionAutocomplete
+    let onSelect: (FileMentionSuggestion) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(Array(fileMention.suggestions.enumerated()), id: \.element.id) { index, suggestion in
+                HStack(spacing: 8) {
+                    Image(systemName: suggestion.isDirectory ? "folder" : "doc")
+                        .foregroundColor(suggestion.isDirectory ? .blue : .secondary)
+                        .frame(width: 16)
+
+                    Text(suggestion.relativePath)
+                        .font(.system(.body, design: .monospaced))
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+
+                    Spacer()
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(index == fileMention.selectedIndex ? Color.accentColor.opacity(0.15) : Color.clear)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    onSelect(suggestion)
+                }
+            }
+        }
+        .background(.regularMaterial)
+        .cornerRadius(8)
+        .shadow(color: .black.opacity(0.15), radius: 4, y: -2)
+        .padding(.horizontal, 12)
+        .padding(.bottom, 4)
+    }
+}
+
 // MARK: - Input Bar
 
 private struct InputBar: View {
@@ -319,53 +374,48 @@ private struct InputBar: View {
     let isEnabled: Bool
     let isStreaming: Bool
     @ObservedObject var autocomplete: SlashCommandAutocomplete
+    @ObservedObject var fileMention: FileMentionAutocomplete
     let onSend: () -> Void
     let onCancel: () -> Void
 
+    /// Maximum height the input area can grow to (roughly 8 lines)
+    private let maxInputHeight: CGFloat = 200
+
+    /// Whether any autocomplete popup is currently visible
+    private var isAnyAutocompleteVisible: Bool {
+        autocomplete.isVisible || fileMention.isVisible
+    }
+
     var body: some View {
-        HStack(spacing: 12) {
-            TextField("Message \(agentName)...", text: $text)
-                .textFieldStyle(.plain)
-                .disabled(!isEnabled)
-                .accessibilityIdentifier("chatInputField")
-                .onSubmit {
-                    // If autocomplete is showing, Enter selects the completion
+        HStack(alignment: .bottom, spacing: 12) {
+            MultiLineTextInput(
+                text: $text,
+                placeholder: "Message \(agentName)...",
+                isEnabled: isEnabled,
+                maxHeight: maxInputHeight,
+                onSend: {
+                    // If slash command autocomplete is showing, Enter selects the completion
                     if autocomplete.isVisible, let completion = autocomplete.selectedCompletion() {
                         text = completion
                         autocomplete.hide()
                         return
                     }
+                    // If file mention autocomplete is showing, Enter selects the completion
+                    if fileMention.isVisible, let completion = fileMention.selectedCompletion(for: text) {
+                        text = completion
+                        fileMention.hide()
+                        return
+                    }
                     if isEnabled && !text.isEmpty {
                         onSend()
                     }
+                },
+                onTextChange: { _ in },
+                onKeyEvent: { event in
+                    handleKeyEvent(event)
                 }
-                .onKeyPress(.upArrow) {
-                    guard autocomplete.isVisible else { return .ignored }
-                    autocomplete.moveUp()
-                    return .handled
-                }
-                .onKeyPress(.downArrow) {
-                    guard autocomplete.isVisible else { return .ignored }
-                    autocomplete.moveDown()
-                    return .handled
-                }
-                .onKeyPress(.tab) {
-                    guard autocomplete.isVisible, let completion = autocomplete.selectedCompletion() else {
-                        return .ignored
-                    }
-                    text = completion
-                    autocomplete.hide()
-                    return .handled
-                }
-                .onKeyPress(.escape) {
-                    if isStreaming {
-                        onCancel()
-                        return .handled
-                    }
-                    guard autocomplete.isVisible else { return .ignored }
-                    autocomplete.hide()
-                    return .handled
-                }
+            )
+            .frame(minHeight: 28, maxHeight: maxInputHeight)
 
             if isStreaming {
                 // Stop button while streaming
@@ -391,6 +441,71 @@ private struct InputBar: View {
         }
         .padding()
     }
+
+    /// Handle special key events forwarded from the NSTextView
+    private func handleKeyEvent(_ event: NSEvent) -> Bool {
+        let keyCode = event.keyCode
+
+        // Up arrow (keyCode 126)
+        if keyCode == 126 {
+            if autocomplete.isVisible {
+                autocomplete.moveUp()
+                return true
+            }
+            if fileMention.isVisible {
+                fileMention.moveUp()
+                return true
+            }
+            return false
+        }
+
+        // Down arrow (keyCode 125)
+        if keyCode == 125 {
+            if autocomplete.isVisible {
+                autocomplete.moveDown()
+                return true
+            }
+            if fileMention.isVisible {
+                fileMention.moveDown()
+                return true
+            }
+            return false
+        }
+
+        // Tab (keyCode 48)
+        if keyCode == 48 {
+            if autocomplete.isVisible, let completion = autocomplete.selectedCompletion() {
+                text = completion
+                autocomplete.hide()
+                return true
+            }
+            if fileMention.isVisible, let completion = fileMention.selectedCompletion(for: text) {
+                text = completion
+                fileMention.hide()
+                return true
+            }
+            return false
+        }
+
+        // Escape (keyCode 53)
+        if keyCode == 53 {
+            if isStreaming {
+                onCancel()
+                return true
+            }
+            if autocomplete.isVisible {
+                autocomplete.hide()
+                return true
+            }
+            if fileMention.isVisible {
+                fileMention.hide()
+                return true
+            }
+            return false
+        }
+
+        return false
+    }
 }
 
 // MARK: - Preview
@@ -402,7 +517,8 @@ private struct InputBar: View {
     let viewModel = ChatViewModel(jake: jake, loadHistory: false)
     let dispatcher = SlashCommandDispatcher()
     let autocomplete = SlashCommandAutocomplete(dispatcher: dispatcher)
+    let fileMention = FileMentionAutocomplete(projectRoot: projectURL)
 
-    ChatView(viewModel: viewModel, autocomplete: autocomplete)
+    ChatView(viewModel: viewModel, autocomplete: autocomplete, fileMention: fileMention)
         .frame(width: 400, height: 600)
 }

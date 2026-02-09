@@ -521,12 +521,14 @@ struct ProjectContentView: View {
     @SceneStorage("resourcePanelVisible") private var isResourcePanelVisible: Bool = false
     @StateObject private var resourcePanelViewModel: ResourcePanelViewModel
     @StateObject private var autocomplete: SlashCommandAutocomplete
+    @StateObject private var fileMention: FileMentionAutocomplete
 
     init(project: TavernProject, coordinator: TavernCoordinator) {
         self.project = project
         self.coordinator = coordinator
         self._resourcePanelViewModel = StateObject(wrappedValue: ResourcePanelViewModel(rootURL: project.rootURL))
         self._autocomplete = StateObject(wrappedValue: SlashCommandAutocomplete(dispatcher: coordinator.commandDispatcher))
+        self._fileMention = StateObject(wrappedValue: FileMentionAutocomplete(projectRoot: project.rootURL))
     }
 
     var body: some View {
@@ -565,7 +567,7 @@ struct ProjectContentView: View {
         } detail: {
             // Detail: Chat + optional Resource Panel
             HSplitView {
-                ChatView(viewModel: coordinator.activeChatViewModel, autocomplete: autocomplete)
+                ChatView(viewModel: coordinator.activeChatViewModel, autocomplete: autocomplete, fileMention: fileMention)
 
                 if isResourcePanelVisible {
                     ResourcePanelView(viewModel: resourcePanelViewModel)
