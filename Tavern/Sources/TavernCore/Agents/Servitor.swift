@@ -253,8 +253,8 @@ public final class Servitor: Agent, @unchecked Sendable {
         }
 
         let cancel: @Sendable () -> Void = { [weak self] in
-            innerCancel()
             self?.updateStateAfterResponse()
+            innerCancel()
             TavernLogger.agents.debug("[\(self?.name ?? "??")] streaming cancelled by user")
         }
 

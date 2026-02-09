@@ -267,8 +267,8 @@ public final class Jake: Agent, @unchecked Sendable {
         }
 
         let cancel: @Sendable () -> Void = { [weak self] in
-            innerCancel()
             self?.queue.sync { self?._isCogitating = false }
+            innerCancel()
             TavernLogger.agents.debug("Jake streaming cancelled by user")
         }
 
