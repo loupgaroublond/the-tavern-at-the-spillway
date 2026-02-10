@@ -1,5 +1,17 @@
 import Foundation
 
+// MARK: - Tool Approval Handler
+
+/// Async callback invoked when PermissionManager cannot auto-decide (returns nil)
+/// and the user must be prompted. The handler should present ToolApprovalView,
+/// wait for the user's decision, and return the response.
+///
+/// Called from LiveMessenger's canUseTool closure. The closure suspends until
+/// the user approves or denies the tool.
+public typealias ToolApprovalHandler = @Sendable (ToolApprovalRequest) async -> ToolApprovalResponse
+
+// MARK: - Tool Approval Request
+
 /// Represents a tool that is requesting approval to execute.
 ///
 /// When PermissionManager cannot auto-decide (no matching rule, mode is normal),
