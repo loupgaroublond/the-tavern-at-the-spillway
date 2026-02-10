@@ -1,6 +1,6 @@
 # Project Status Summary
 
-**Generated:** 2026-01-27
+**Generated:** 2026-02-08
 **Source:** Synthesis of all seed-design transcripts
 
 
@@ -50,9 +50,39 @@
 
 - **2026-01-24 (window restoration)** — Multi-window architecture, per-project sessions, app icon (orange squircle JT), window restoration debugging, GUI instrumentation guide created
 
+- **2026-01-25 01:08** — Agent registry architecture review: 1:1 relationship analysis (TavernProject → TavernCoordinator → AgentSpawner → AgentRegistry), justification for separation (name uniqueness, thread safety, type erasure, facade for multiple consumers), architecture docs found significantly outdated
+
 - **2026-01-25** — Transcript audit methodology: parallel agent verification, one-transcript-per-agent rule, `/audit-transcripts` command created
 
 - **2026-01-27** — Agent spawn simplification (two-mode: user vs Jake), agent persistence, session history fix for mortal agents, testing principles established (5 principles), log helper scripts, macOS 26+ platform policy
+
+- **2026-01-28** — Jake spawn agent tool: `JakeToolHandler` protocol with `JSONActionHandler` implementation, continuation loop for tool execution feedback, wiring through `TavernCoordinator` to `ServitorSpawner`, 28 new tests (mock-based)
+
+- **2026-02-01** — SDK migration from local ClaudeCodeSDK fork to ClodeMonster/NativeClaudeCodeSDK: static function API (`ClaudeCode.query`), `QueryOptions` replacing split config types, session storage forensics (corrupt session recovery), JSON-in-JSON issue for Jake's history display
+
+- **2026-02-02** — Comprehensive transcript audit system: parallel rewind analyzer agents verify coverage across date ranges, discovered 2 missing transcripts (agent-registry-architecture Jan 25, jake-spawn-tool Jan 28), verified 30 sessions covering all existing transcripts
+
+- **2026-02-05** — Worktree-aware audit discovery: `list-project-dirs.sh` and `list-sessions.sh` scripts for cross-worktree session deduplication, updated `/audit-transcripts` command
+
+- **2026-02-05/06** — Backlog mining: systematic extraction from all transcripts, PRD, session archives, code TODOs into beads issue tracker. Created epic `azu` with 40 child beads across 4 priority tiers (P1: 5, P2: 10, P3: 16, P4: 9)
+
+- **2026-02-06** — Jake JSON response format removed: eliminated `parseJakeMessage()` and structured JSON wrapper now that MCP tools handle agent spawning natively. Jake's text responses treated same as any other agent.
+
+- **2026-02-06** — Resource panel exploration: initial design session identifying 3 layout approaches (NavigationSplitView 3-column, HSplitView, Inspector panel). Session ended before decisions made.
+
+- **2026-02-07 (formal spec)** — Document pipeline reorganization: `docs/` restructured into numbered pipeline stages (0-transcripts → 1-prd → 2-spec → 3-adr → 4-docs). Created formal specification skeleton with 16 modules, traceability matrix in `index.md`, `pipeline.md` overview
+
+- **2026-02-07 (resource panel ideation)** — Resource panel design decisions via `/ideate`: HSplitView layout, per-window scope, toolbar toggle, VSplitView internal split (file tree + file content), v1 scope defined (lazy file tree, read-only viewer, binary/size detection, filtering)
+
+- **2026-02-07 (resource panel impl)** — Resource panel implementation: 4 TavernCore files + 4 view files + 3 test suites. Wrong-worktree deployment discovered and corrected. ClodKit SDK migration (`ClaudeCodeSDK` → `ClodKit`, `ClaudeCode.query` → `Clod.query`). 200 tests passing.
+
+- **2026-02-07 (v1 parity plan)** — V1 chat parity planning: full CLI feature inventory, user-selected scope for v1, chunked into 9 parallelizable epics (message rendering, streaming, input enhancement, permissions, slash commands, custom commands, management UIs, side pane, chat UX polish), dependency graph for parallel execution
+
+- **2026-02-08 (autonomous testing)** — Autonomous testing infrastructure: graded testing system (Grades 1-5), MockAgent + MockMessenger protocol extraction (`AgentMessenger`), `LiveMessenger` production implementation, ViewInspector wiring tests (ADR-004), XCUITest setup with launch arguments (ADR-005), 85+ new tests established
+
+- **2026-02-08 (swarm prompt)** — Team coordinator prompt adaptation from ClodKit project: worktree-based parallel development, bead assignment, merge coordination, model selection guidance. Created `SWARM.md` with plan mode, Grade 3 merge gates, Grade 4 hold, self-destruct
+
+- **2026-02-08 (swarm execution)** — Swarm remediation: 8 parallel worktrees, 76 beads across 10 epics, 3 phases. Phase 0 triage (3 beads on main), Phase 1 foundation (4 agents: specs, rendering, commands, permissions), Phase 2 extensions (3 agents: custom commands, core infra, streaming), Phase 3 gap closure (4 agents: persistence, chat-vm, views, stress-tests). All merged to main, 574 Grade 1+2 + 32 Grade 3 tests passing.
 
 
 ---
@@ -65,9 +95,9 @@
 
 **Implemented:**
 
-- Jake agent class wrapping ClaudeCodeSDK
+- Jake agent class with ClodKit SDK integration
 
-- System prompt establishing role and personality
+- System prompt establishing role and personality (restored authentic voice with apostrophes)
 
 - Can receive messages and respond
 
@@ -81,12 +111,14 @@
 
 - Character document extracted to `docs/0-transcripts/jake-character.md`
 
+- MCP tools for agent spawning (`summon_servitor`, `dismiss_servitor`)
+
+- Streaming responses via `AgentMessenger` protocol
+
+- Plain text responses (JSON wrapper removed after MCP migration)
+
 
 **Remaining:**
-
-- Tool integration for spawning agents directly
-
-- Streaming responses
 
 - Proactive suggestions to zoom into other agents
 
@@ -98,19 +130,19 @@
 
 **Implemented:**
 
-- `Agent` protocol with common interface
+- `Agent` protocol with common interface (uses `any Agent` existentials, no type erasure)
 
-- `AgentRegistry` for tracking active agents
+- `AgentRegistry` for tracking active agents (thread-safe via DispatchQueue)
 
-- `MortalAgent` class with optional assignment, state tracking (idle/working/waiting/done)
+- `Servitor` class with optional assignment, state tracking (idle/working/waiting/done)
 
-- `MortalAgent` methods: `addCommitment()`, `markWaiting()`, `markDone()`
+- `Servitor` methods: `addCommitment()`, `markWaiting()`, `markDone()`
 
-- `MortalAgent` detects both "DONE" and "COMPLETED" signals
+- `Servitor` detects both "DONE" and "COMPLETED" signals
 
-- `MortalAgent` detects "WAITING" signal for pause state
+- `Servitor` detects "WAITING" signal for pause state
 
-- `AgentSpawner` coordinating registry and name generator
+- `ServitorSpawner` coordinating registry and name generator with messenger factory injection
 
 - Naming theme system (LOTR, Rick & Morty, Santa's Reindeer, etc.)
 
@@ -130,10 +162,10 @@
 
 - Mutable chat description field (visible in sidebar)
 
+- Streaming support for both Jake and Servitor via `sendStreaming()` with cancel closures
+
 
 **Remaining:**
-
-- Jake autonomously spawning agents via tool
 
 - Hierarchical spawn trees (agents spawning children)
 
@@ -155,7 +187,7 @@
 
 - `MessageType` enum (text, toolUse, toolResult, toolError, thinking, webSearch)
 
-- Block-aware message rendering (colored avatars, styled boxes)
+- Block-aware message rendering with extracted components (`MessageRowView`, `CollapsibleBlockView`, `CodeBlockView`, `DiffView`)
 
 - Content block parsing from Claude's JSONL
 
@@ -169,12 +201,28 @@
 
 - UI module bridging SwiftUI views to TavernCore
 
-- Session history loading for mortal agents (fixed in 01-27)
+- Session history loading for mortal agents
+
+- Streaming responses with partial message updates
+
+- Streaming indicator and cancel button
+
+- Multi-line input (Enter = send, Shift+Enter = newline)
+
+- @ file mention autocomplete
+
+- Agent sidebar status indicators (idle/working/error)
+
+- Running cost/token display
+
+- Per-tool progress indicator with elapsed time
+
+- Scroll-to-bottom button
+
+- Side pane with tabs: background tasks, TODOs, tab switcher
 
 
 **Remaining:**
-
-- Streaming responses (real-time UI updates)
 
 - Typewriter effect
 
@@ -241,11 +289,13 @@
 
 - `CommitmentList` for agents
 
-- Verifier that runs assertions and updates status
+- Verifier that runs assertions and updates status (non-blocking via `Process.terminationHandler`)
 
 - Completion flow: agent says "done" → verification → actual done or continue
 
-- 32 tests for commitment system
+- Thread-safe helpers (`LockedFlag`, `LockedRef`) for concurrent verification
+
+- Tests for commitment system
 
 
 **Remaining:**
@@ -276,7 +326,7 @@
 
 - Agent persistence to files
 
-- 38 tests for doc store
+- Tests for doc store
 
 
 **Remaining:**
@@ -308,6 +358,12 @@
 - Window state persisted across app restarts
 
 - GUI instrumentation guide (`docs/4-docs/gui-instrumentation-guide.md`)
+
+- Resource panel (right-side pane with file tree browser + read-only file viewer)
+
+- Resource panel toggle via toolbar button
+
+- File tree with lazy loading, binary detection, size caps, filtered directories
 
 
 **Remaining:**
@@ -367,21 +423,29 @@
 
 - XcodeGen setup (`project.yml`)
 
-- Redo build system (build, run, test, stop, clean, xcodegen)
+- Redo build system (build, run, test, test-core, test-integration, test-grade3, test-grade4, test-all, stop, clean, xcodegen)
 
-- 180 unit tests (173 + 7 new testing principle tests)
+- 574 Grade 1+2 unit tests across TavernCoreTests and TavernTests
 
-- 8 stress tests
+- 32 Grade 3 integration tests (real Claude via ClodKit)
 
-- TavernLogger with categories (agents, chat, coordination, claude)
+- Grade 4 XCUITest infrastructure with launch arguments (`--ui-testing`, `--project-path`)
+
+- Grade 5 stress tests (8 test files: concurrency, message accumulation, file tree scanning, permissions, command dispatch, session loading, todo/background bulk operations)
+
+- TavernLogger with categories (agents, chat, coordination, claude, permissions, commands)
 
 - Console.app filtering
 
 - Build output to `~/.local/builds/tavern`
 
-- MockClaudeCode for tests
+- MockAgent for ViewModel/Coordinator testing
+
+- `AgentMessenger` protocol with `LiveMessenger` (production) and `MockMessenger` (test double)
 
 - Integration tests for session rehydration
+
+- ViewInspector wiring tests (ADR-004) for SwiftUI view-ViewModel binding verification
 
 - App icon generation via redo (`icon.do`)
 
@@ -389,10 +453,10 @@
 
 - macOS 26+ platform target (no backwards compat)
 
+- View instrumentation tests (verify logging fires in SwiftUI views)
+
 
 **Remaining:**
-
-- Programmatic GUI testing (XCTest UI)
 
 - Log-based automated verification
 
@@ -402,34 +466,100 @@
 ---
 
 
-### 10. SDK Fork
+### 10. SDK Integration
 
 **Implemented:**
 
-- Local fork at `LocalPackages/ClaudeCodeSDK`
+- ClodKit v1.0.0 (migrated from local fork → ClodeMonster → ClodKit)
 
-- Fixed JSON array parsing in `HeadlessBackend.swift`
+- `Clod.query()` static API with `QueryOptions`
 
-- Path encoding fixed (symlink resolution, underscore replacement)
+- `LiveMessenger` wrapping SDK calls (batch and streaming modes)
 
-- `StoredContentBlock` enum for structured content
+- Streaming via `AsyncThrowingStream<StreamEvent, Error>` with cancellation support
 
-- Debug logging with `.public` privacy in DEBUG builds
+- `canUseTool` callback integration for permission enforcement
+
+- Path encoding for session storage
 
 - Content block parsing for tool_use inputs and tool_result error flags
 
 
 **Remaining:**
 
-- Streaming support (`.streamJson`)
-
-- Upstream PR or full fork maintenance
+- Upstream contributions or fork maintenance
 
 
 ---
 
 
-### 11. Progressive Unlocks
+### 11. Permissions Subsystem
+
+**Implemented:**
+
+- `PermissionManager` with mode-based evaluation (bypassPermissions, plan, dontAsk, normal, acceptEdits)
+
+- `PermissionStore` backed by UserDefaults
+
+- Allow/deny rules with wildcard pattern matching
+
+- `ToolApprovalRequest` / `ToolApprovalResponse` types
+
+- `ToolApprovalView` connected to async permission decisions
+
+- "Always allow" rule persistence via approval responses
+
+- Integration with `LiveMessenger` via `canUseTool` callback
+
+- Mode switching affects subsequent evaluations
+
+- Tests for permission enforcement
+
+
+**Remaining:**
+
+- Permission rules display/editing UI
+
+- Per-project permission profiles
+
+
+---
+
+
+### 12. Slash Command Infrastructure
+
+**Implemented:**
+
+- `CommandRegistry` with command parsing and dispatch
+
+- `CommandParser` extracting command name and arguments from input
+
+- Core commands: `/compact`, `/cost`, `/model`, `/status`, `/context`, `/stats`
+
+- Max thinking tokens control
+
+- Autocomplete integration for command names
+
+- Custom command discovery from `.claude/commands/*.md`
+
+- Subdirectory namespacing for custom commands
+
+- Argument substitution ($ARGUMENTS)
+
+- `CommandFormattingUtils` shared utility (formatTokens, makeBar)
+
+- Tests for command dispatch and formatting
+
+
+**Remaining:**
+
+- Management commands with substantial UIs (/agents, /hooks, /mcp)
+
+
+---
+
+
+### 13. Progressive Unlocks
 
 **Implemented:**
 
@@ -450,7 +580,7 @@
 ---
 
 
-### 12. Inter-Agent Communication
+### 14. Inter-Agent Communication
 
 **Implemented:**
 
@@ -471,11 +601,11 @@
 ---
 
 
-### 13. Architecture (ADR-001)
+### 15. Architecture (ADR-001)
 
 **Implemented:**
 
-- Shape selection complete: Shared Workspace (E) + Supervisor Tree (D) + Reactive Streams (A) + Plugin (I) + Layer (C) + Sidecar (L)
+- Shape selection complete: Shared Workspace (E) + Supervisor Tree (D) + Reactive Streams (A) + Plugin (I) + Layer (C)
 
 - ADR-001 documenting decision with rationale
 
@@ -484,6 +614,14 @@
 - Synthesis report with 16 shapes and 122-pair compatibility matrix
 
 - Async primitive strategy: AsyncStream long-term, Combine at boundary
+
+- ADR-002: Testing Grade System (Grades 1-5)
+
+- ADR-003: Dependency Injection (MockAgent + AgentMessenger two-layer approach)
+
+- ADR-004: ViewInspector for SwiftUI wiring tests
+
+- ADR-005: XCUITest for E2E validation
 
 
 **Remaining:**
@@ -500,7 +638,7 @@
 ---
 
 
-### 14. Design Principles
+### 16. Design Principles
 
 **Documented:**
 
@@ -533,7 +671,28 @@
 ---
 
 
-### 15. Process & Methodology
+### 17. Formal Specification Pipeline
+
+**Implemented:**
+
+- Document pipeline reorganization: `docs/` restructured into numbered stages (0-transcripts → 1-prd → 2-spec → 3-adr → 4-docs)
+
+- `pipeline.md` defining rules (forward only, traceability, single home per document)
+
+- 16 formal spec modules in `docs/2-spec/` with traceability matrix (`index.md`)
+
+- All spec modules filled from transcripts, PRD, and session logs
+
+
+**Remaining:**
+
+- Incremental verification that downstream elements are complete relative to upstream
+
+
+---
+
+
+### 18. Process & Methodology
 
 **Implemented:**
 
@@ -541,13 +700,21 @@
 
 - `/conceive` command for bootstrapping design sessions
 
-- `/audit-transcripts` command for transcript verification and repair
+- `/audit-transcripts` command for transcript verification and repair (worktree-aware)
 
 - `/status` command for project status updates
+
+- `/reader` command for reader document synthesis
+
+- `/commit` command for transcribe-and-commit workflow
 
 - Parallel agent spawning for architecture exploration
 
 - Transcript audit methodology (one-transcript-per-agent rule)
+
+- Beads issue tracking for backlog management
+
+- Team-based swarm coordination (multi-worktree parallel development with merge gates)
 
 
 **Remaining:**
