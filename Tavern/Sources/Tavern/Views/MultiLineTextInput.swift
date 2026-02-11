@@ -61,6 +61,11 @@ struct MultiLineTextInput: NSViewRepresentable {
     func updateNSView(_ scrollView: NSScrollView, context: Context) {
         guard let textView = scrollView.documentView as? InputTextView else { return }
 
+        // Keep coordinator's bindings and closures current across body re-evaluations.
+        // Without this, switching agents leaves the coordinator holding stale references
+        // to the previous viewModel's $inputText and onSend closure.
+        context.coordinator.parent = self
+
         // Sync text from SwiftUI -> NSTextView (only if different to avoid cursor jump)
         if textView.string != text {
             Self.logger.debug("[MultiLineTextInput] updateNSView - syncing text, length: \(text.count)")

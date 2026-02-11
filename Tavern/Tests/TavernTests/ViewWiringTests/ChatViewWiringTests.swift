@@ -31,8 +31,10 @@ final class ChatViewWiringTests: XCTestCase {
         let view = ChatView(viewModel: viewModel, autocomplete: makeAutocomplete(), fileMention: makeFileMention())
 
         let sut = try view.inspect()
-        // Verify the view renders without crashing
-        XCTAssertNoThrow(try sut.find(viewWithAccessibilityIdentifier: "chatInputField"))
+        // MultiLineTextInput is an NSViewRepresentable — ViewInspector can find
+        // the type in the hierarchy but can't traverse into the AppKit NSTextView
+        // to reach its accessibility identifier. Verify the representable exists.
+        XCTAssertNoThrow(try sut.find(MultiLineTextInput.self))
     }
 
     /// Send button exists and is disabled when input is empty
