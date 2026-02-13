@@ -1,7 +1,7 @@
-# System Architecture Specification
+# 003 — System Architecture Specification
 
 **Status:** complete
-**Last Updated:** 2026-02-08
+**Last Updated:** 2026-02-10
 
 ## Upstream References
 - PRD: §6.1 (Tech Stack)
@@ -25,13 +25,14 @@ Tech stack, layer structure, concurrency rules, component ownership hierarchy, a
 **Priority:** must-have
 **Status:** specified
 
-- **Agent runtime:** ClodKit v1.0.0 (published Swift wrapper that spawns Claude Agent SDK as subprocess)
-- **Primary language:** Swift 6
-- **Framework:** SwiftUI
-- **Platform:** macOS 26+ (Tahoe) -- target only the most recent release, no backwards compatibility
-- **Build system:** XcodeGen + redo
-- **Dependencies:** Node.js + @anthropic-ai/claude-agent-sdk (for Agent SDK backend)
-- **Test framework:** ViewInspector (test-only, does not ship)
+**Properties:**
+- Agent runtime: ClodKit v1.0.0 (Swift wrapper, spawns Claude Agent SDK as subprocess)
+- Primary language: Swift 6
+- Framework: SwiftUI
+- Platform: macOS 26+ (Tahoe) — target only the most recent release, no backwards compatibility
+- Build system: XcodeGen + redo
+- Dependencies: Node.js + @anthropic-ai/claude-agent-sdk (for Agent SDK backend)
+- Test framework: ViewInspector (test-only, does not ship in production)
 
 **Testable assertion:** The project compiles with Swift 6 on macOS 26+. ClodKit v1.0.0 resolves via SPM. ViewInspector is test-only. No backwards compatibility code exists for older macOS versions.
 
@@ -40,16 +41,21 @@ Tech stack, layer structure, concurrency rules, component ownership hierarchy, a
 **Priority:** must-have
 **Status:** specified
 
-The application follows a six-layer dependency structure. Each layer depends only on layers below it. Never reach up.
+**Properties:**
+- Six layers, each depending only on layers below it — never reach up:
 
 ```
-UI Layer (thin, dumb)           -- layout + gestures + bindings only
-ViewModel Layer                 -- all UX logic (@MainActor)
-Application Layer               -- TavernCoordinator, ServitorSpawner
-Agent Layer                     -- Jake, Servitor, Sidecar
-Domain Layer                    -- Commitment, Assignment
-Infrastructure Layer            -- DocStore, SessionStore, SDK
+UI Layer (thin, dumb)           — layout + gestures + bindings only
+ViewModel Layer                 — all UX logic (@MainActor)
+Application Layer               — TavernCoordinator, ServitorSpawner
+Agent Layer                     — Jake, Servitor, Sidecar
+Domain Layer                    — Commitment, Assignment
+Infrastructure Layer            — DocStore, SessionStore, SDK
 ```
+
+- No import from a higher layer exists in any lower layer's source files
+- UI code contains no business logic
+- ViewModels contain all UX logic
 
 **Testable assertion:** No import from a higher layer exists in any lower layer's source files. UI code contains no business logic. ViewModels contain all UX logic.
 
@@ -58,7 +64,11 @@ Infrastructure Layer            -- DocStore, SessionStore, SDK
 **Priority:** must-have
 **Status:** specified
 
-SwiftUI views are dumb: layout, styling, gestures, bindings only. All UX logic lives in ViewModels. Goal: 90%+ of UX workflows are testable via ViewModel unit tests without touching SwiftUI.
+**Properties:**
+- SwiftUI views are dumb: layout, styling, gestures, bindings only
+- All UX logic lives in ViewModels
+- 90%+ of UX workflows are testable via ViewModel unit tests without touching SwiftUI
+- ViewInspector tests verify wiring only, not business logic
 
 **Testable assertion:** ViewModels can be tested without instantiating any SwiftUI views. UX logic tests use ViewModels directly. ViewInspector tests verify wiring only, not business logic.
 
@@ -67,17 +77,20 @@ SwiftUI views are dumb: layout, styling, gestures, bindings only. All UX logic l
 **Priority:** must-have
 **Status:** specified
 
-Selected architecture shapes from 49 proposals across 16 fundamental shapes:
+**Properties:**
+- Selected from 49 proposals across 16 fundamental shapes:
 
 | Shape | Role |
 |-------|------|
-| E: Shared Workspace | Doc store as blackboard -- if it's not in a file, it doesn't exist |
+| E: Shared Workspace | Doc store as blackboard — if it's not in a file, it doesn't exist |
 | D: Supervisor Tree | Agent hierarchy with lifecycle, Erlang-style |
 | A: Reactive Streams | UI updates, with batching at 60fps |
 | A: Message Bus | Agent-to-agent messaging over shared workspace |
 | I: Plugin | Closed set of agent types and spawners (registered at startup) |
 | C: Layer | Basic layering for testability |
 | L: Sidecar | Agent responsiveness while managing children |
+
+**See also:** §10.2.1 (doc store as filesystem), §4.2.8 (sidecar pattern per agent)
 
 **Testable assertion:** Each shape is identifiable in the codebase. The doc store is the communication medium (E). Agent hierarchy is a tree (D). UI updates are reactive (A). Agent types are registered at startup (I). Layer dependencies go downward only (C). API calls use sidecar actors (L).
 
@@ -86,7 +99,10 @@ Selected architecture shapes from 49 proposals across 16 fundamental shapes:
 **Priority:** must-have
 **Status:** specified
 
-Per-project ownership chain:
+**Properties:**
+- Each project gets its own fresh stack — agents in Project A are completely isolated from Project B
+- The only singleton is `ProjectManager`; everything else is per-project
+- Per-project ownership chain:
 
 ```
 ProjectManager.shared (singleton)
@@ -102,8 +118,6 @@ ProjectManager.shared (singleton)
                             +-- ChatViewModel cache (0..*)
 ```
 
-Each project gets its own fresh stack. Agents in Project A are completely isolated from Project B. The only singleton is `ProjectManager`; everything else is per-project.
-
 **Testable assertion:** Two projects have independent coordinators, registries, and agent sets. No shared mutable state exists between projects. `ProjectManager` is the sole singleton.
 
 ### REQ-ARCH-006: Closed Plugin Set
@@ -111,7 +125,10 @@ Each project gets its own fresh stack. Agents in Project A are completely isolat
 **Priority:** must-have
 **Status:** specified
 
-Agent types and spawners are registered at startup, not dynamically loaded. All agent types are known at compile time. No runtime plugin discovery or loading.
+**Properties:**
+- Agent types and spawners are registered at startup, not dynamically loaded
+- All agent types are known at compile time
+- Adding a new agent type requires code changes and recompilation
 
 **Testable assertion:** The set of agent types is determined at compile time. No dynamic loading APIs exist. Adding a new agent type requires code changes and recompilation.
 
@@ -120,12 +137,12 @@ Agent types and spawners are registered at startup, not dynamically loaded. All 
 **Priority:** must-have
 **Status:** specified
 
+**Properties:**
 - `@MainActor` on all ViewModels and UI-bound types
-- Never block the cooperative thread pool (`Thread.sleep`, `DispatchSemaphore.wait`, sync file I/O) -- this is why sidecars exist
+- Never block the cooperative thread pool (`Thread.sleep`, `DispatchSemaphore.wait`, sync file I/O) — sidecars exist for this reason
 - Global semaphore for concurrent Anthropic calls (max ~10)
 - UI updates via Combine or @Observable, never block main thread
-
-All mutable state protected by serial `DispatchQueue`:
+- All mutable state protected by serial `DispatchQueue`:
 
 | Type | Queue Label | Protected State |
 |------|-------------|-----------------|
@@ -136,6 +153,8 @@ All mutable state protected by serial `DispatchQueue`:
 | CommitmentList | `com.tavern.CommitmentList` | `_commitments` |
 | DocStore | `com.tavern.DocStore` | file operations |
 
+**See also:** §4.2.8 (sidecar pattern per agent)
+
 **Testable assertion:** No `Thread.sleep` or `DispatchSemaphore.wait` calls exist in the cooperative thread pool. All mutable state has a documented protection mechanism. Concurrent API calls respect the global semaphore limit.
 
 ### REQ-ARCH-008: Async Primitive Strategy
@@ -143,10 +162,10 @@ All mutable state protected by serial `DispatchQueue`:
 **Priority:** must-have
 **Status:** specified
 
-Long-term direction: AsyncStream/AsyncSequence (language-level concurrency). Combine bridges at the ViewModel boundary only.
-
-- `@Observable` at SwiftUI boundary
-- AsyncStream for everything below
+**Properties:**
+- Long-term direction: AsyncStream/AsyncSequence (language-level concurrency)
+- Combine bridges at the ViewModel boundary only
+- `@Observable` at SwiftUI boundary, AsyncStream for everything below
 - Bridge once, at the ViewModel layer
 
 **Testable assertion:** Below the ViewModel layer, async/await and AsyncSequence are used. Combine is only present at the ViewModel/UI boundary.
@@ -156,12 +175,12 @@ Long-term direction: AsyncStream/AsyncSequence (language-level concurrency). Com
 **Priority:** must-have
 **Status:** specified
 
-Two mocking layers:
-
-1. **MockAgent** -- Conforms to `Agent` protocol, returns canned responses. For testing `ChatViewModel` and `TavernCoordinator`.
-2. **AgentMessenger protocol** -- Abstracts the SDK boundary. `LiveMessenger` (production) and `MockMessenger` (test double). Jake and Servitor accept via constructor injection, defaulting to `LiveMessenger()`.
-
-Any new agent type that calls the SDK must accept `AgentMessenger` for testability.
+**Properties:**
+- Two mocking layers for testing:
+  1. `MockAgent` — conforms to `Agent` protocol, returns canned responses (for testing ViewModels and coordinators)
+  2. `AgentMessenger` protocol — abstracts SDK boundary; `LiveMessenger` (production) and `MockMessenger` (test double)
+- Jake and Servitor accept `AgentMessenger` via constructor injection, defaulting to `LiveMessenger()`
+- Any new agent type that calls the SDK must accept `AgentMessenger` for testability
 
 **Testable assertion:** Tests can substitute `MockAgent` for any real agent. Tests can substitute `MockMessenger` for `LiveMessenger`. No test requires a real Claude API call for Grade 1+2 testing.
 
@@ -170,13 +189,15 @@ Any new agent type that calls the SDK must accept `AgentMessenger` for testabili
 **Priority:** must-have
 **Status:** specified
 
-The app does not use the macOS app sandbox entitlement (`com.apple.security.app-sandbox: false`). This allows unrestricted filesystem and network access, which is required for agent operations.
+**Properties:**
+- The app does not use the macOS app sandbox (`com.apple.security.app-sandbox: false`)
+- Unrestricted filesystem and network access, required for agent operations
 
 **Testable assertion:** The `Tavern.entitlements` file contains `com.apple.security.app-sandbox` set to `false`.
 
-## 3. Behavior
+## 3. Architecture Diagrams
 
-### Layer Dependency Flow
+### Layer Dependency
 
 ```mermaid
 flowchart TD

@@ -1,7 +1,7 @@
-# User Experience Specification
+# 013 — User Experience Specification
 
 **Status:** complete
-**Last Updated:** 2026-02-08
+**Last Updated:** 2026-02-10
 
 ## Upstream References
 - PRD: §5.1 (The Core Loop), §5.4 (UI Principles), §8 (Progressive Unlocks), §8.1 (Concept), §8.2 (Open Questions)
@@ -25,7 +25,10 @@ Core user loop, UI principles, progressive unlocks, and the project-as-document 
 **Priority:** must-have
 **Status:** specified
 
-When a user opens a project directory with no history, they see only Jake's chat box. This is the starting point for all interaction. The user describes what they need, and Jake spawns agents to handle it.
+**Properties:**
+- A project with no history shows only Jake's chat box — no other agents, panels, or UI clutter
+- Jake is the single entry point for all new interaction
+- The user describes what they need; Jake coordinates from there
 
 **Testable assertion:** Opening a project with no prior sessions shows a single chat interface for Jake. No other agents or panels are visible.
 
@@ -34,7 +37,10 @@ When a user opens a project directory with no history, they see only Jake's chat
 **Priority:** must-have
 **Status:** specified
 
-Each task appears as both a todo item AND a chat interface. The user can interact with any task by opening its chat. The dashboard shows all open tasks; the user can drill into any agent.
+**Properties:**
+- Every task has dual representation: a todo item (sidebar entry) AND a chat interface
+- Every spawned agent is accessible through both representations
+- The dashboard shows all open tasks; the user can drill into any agent
 
 **Testable assertion:** Every spawned agent appears in both the agent list (sidebar) and has an associated chat view. Clicking an agent in the sidebar opens its chat.
 
@@ -43,7 +49,11 @@ Each task appears as both a todo item AND a chat interface. The user can interac
 **Priority:** must-have
 **Status:** specified
 
-A sidebar displays all agents for the current project. Each entry shows the agent's name, status, and chat description. The user selects agents by clicking. Jake is always present at the top.
+**Properties:**
+- The sidebar displays all agents for the current project
+- Each entry shows the agent's name, status, and chat description
+- Jake is always present at the top
+- Selecting an agent shows its chat
 
 **Testable assertion:** The sidebar lists all live agents. Jake always appears. Clicking an agent selects it and shows its chat. Agent status (working, waiting, done) is visible in the sidebar.
 
@@ -52,40 +62,49 @@ A sidebar displays all agents for the current project. Each entry shows the agen
 **Priority:** must-have
 **Status:** specified
 
-North star UI principle: do not shove new stuff in front of the user without consent. Agents surface questions via passive notifications (badges, bubbles), not by stealing focus or opening windows uninvited.
+**Properties:**
+- No window, sheet, or modal appears without user-initiated action
+- Notifications are passive indicators only (badge counts, sidebar indicators)
+- The user's current view is never replaced without their action
+- Agents surface questions via passive notifications, not by stealing focus
 
-**Testable assertion:** No window, sheet, or modal appears without user-initiated action. Notifications are passive indicators only (badge counts, sidebar indicators). The user's current view is never replaced without their action.
+**Testable assertion:** No UI transition or content display occurs without user-initiated action (click, keyboard shortcut, or explicit preference). Notifications are passive (badges, bubbles), never modal interruptions.
 
 ### REQ-UX-005: Stream Separation
 **Source:** PRD §5.4
 **Priority:** should-have
 **Status:** specified
 
-The UI provides styling cues to indicate content type: thinking, tool use, code, chat text. Each content block type has its own visual treatment. The dedicated chat view shows just the conversation in a readable format; other streams (thinking, tools) are displayed alongside.
+**Properties:**
+- Different content block types (thinking, tool use, code, chat text) have distinct visual treatments
+- A dedicated "chat only" view mode exists that shows just the conversation
+- Other streams (thinking, tools) are displayed alongside but visually distinct
 
-**Testable assertion:** Different content block types (text, tool_use, tool_result, thinking) render with distinct visual styles. A "chat only" view mode exists that hides non-chat blocks.
+**Testable assertion:** Different content block types render with distinct visual styles. A "chat only" view mode exists that hides non-chat blocks.
 
 ### REQ-UX-006: Content Block Rendering
 **Source:** Reader §8 (Content Block Rendering)
 **Priority:** must-have
 **Status:** specified
 
-Claude's responses include a `content` array with typed blocks that each have their own visual style:
+**Properties:**
+- Claude's responses include a `content` array with typed blocks: `text`, `tool_use`, `tool_result`, `thinking`, `web_search_result`
+- Each block type has its own visual style (colored avatars, styled boxes)
+- `tool_use` displays tool name and parameters
+- `tool_result` displays success/error state
 
-- `text` -- Plain text content
-- `tool_use` -- Tool invocation with name and input parameters
-- `tool_result` -- Tool result with content and isError flag
-- `thinking` -- Claude's thinking process
-- `web_search_result` -- Web search output
-
-**Testable assertion:** Each block type renders with a distinct visual treatment (colored avatars, styled boxes). Tool use shows tool name and parameters. Tool results show success/error state.
+**Testable assertion:** Each block type renders with a distinct visual treatment. Tool use shows tool name and parameters. Tool results show success/error state.
 
 ### REQ-UX-007: Project-as-Document
 **Source:** Reader §4 (Project-as-Document)
 **Priority:** must-have
 **Status:** specified
 
-The Tavern is a document-based Mac app where the "document" is the project directory. Any directory works, like Claude CLI. Full Mac app trappings: File > Open, Open Recent, Dock icon menus, drag-to-open, state restoration on relaunch.
+**Properties:**
+- The app is document-based where the "document" is the project directory
+- Any directory can be opened as a project, like Claude CLI
+- Standard macOS document trappings: File > Open, Open Recent, Dock icon menus, drag-to-open
+- State restores on app relaunch
 
 **Testable assertion:** The app opens via File > Open (directory picker). Recent projects appear in Open Recent menu. Drag-and-drop a directory onto the Dock icon opens it. Open projects restore on app relaunch.
 
@@ -94,7 +113,11 @@ The Tavern is a document-based Mac app where the "document" is the project direc
 **Priority:** must-have
 **Status:** specified
 
-Each open project gets a separate window. Multiple projects can be open simultaneously. A welcome window shows recent projects. Cmd+O opens the welcome screen. Windows restore on app restart.
+**Properties:**
+- Each open project gets a separate window
+- Multiple projects can be open simultaneously with fully isolated state
+- A welcome window shows recent projects
+- Window positions and states restore after quit and relaunch
 
 **Testable assertion:** Two projects can be open in two separate windows simultaneously. The welcome window lists recent projects. Window positions and states restore after quit and relaunch.
 
@@ -103,7 +126,9 @@ Each open project gets a separate window. Multiple projects can be open simultan
 **Priority:** must-have
 **Status:** specified
 
-Each chat view has a header showing the agent name and a "New Conversation" button (compose icon `square.and.pencil`, matching Apple's convention).
+**Properties:**
+- Each chat view has a header showing the agent name
+- A "New Conversation" button (compose icon `square.and.pencil`, matching Apple's convention) is present
 
 **Testable assertion:** The chat header displays the agent name. The compose button is present and uses SF Symbol `square.and.pencil`.
 
@@ -112,14 +137,11 @@ Each chat view has a header showing the agent name and a "New Conversation" butt
 **Priority:** should-have
 **Status:** specified
 
-The Tavern reveals content progressively based on user engagement (message count). As engagement grows, new content unlocks:
-
-- **Cogitating verbs** -- Start with a core set, reveal more colorful options over time
-- **Naming themes** -- Unlock new themes as engagement deepens
-- **Jake's vocabulary** -- Expand his repertoire of bits and references
-- **Easter eggs** -- Hidden content that appears after significant use
-
-The unlock experience must feel organic, not gamified. Jake does not announce unlocks with fanfare -- he just starts using new words, new themes become available, new jokes appear. Subtle hints only.
+**Properties:**
+- Content is revealed progressively based on user engagement (message count)
+- Unlockable content includes: cogitating verbs, naming themes, Jake's vocabulary, easter eggs
+- Unlocks feel organic, not gamified — Jake just starts using new words, no announcements or fanfare
+- A new user sees a limited vocabulary; an engaged user sees the full range
 
 **Testable assertion:** A new user sees a limited vocabulary. After N messages, additional vocabulary becomes available. Unlocks are not accompanied by notifications or announcements.
 
@@ -128,42 +150,21 @@ The unlock experience must feel organic, not gamified. Jake does not announce un
 **Priority:** deferred
 **Status:** specified
 
-These progressive unlock details are explicitly deferred:
-
-- **Scope** -- Per-project count, global count, or both?
-- **Thresholds** -- Linear progression, milestone-based, or front-loaded?
-- **Persistence** -- Where is the count stored? Doc store? User preferences?
-- **Reset behavior** -- Does anything reset? Can users "prestige"?
+These progressive unlock details are explicitly deferred: scope (per-project vs global), thresholds (linear vs milestone), persistence (where count is stored), reset behavior (prestige?).
 
 **Testable assertion:** Deferred. Implementation details to be determined during development.
 
-## 3. Behavior
+## 3. Properties Summary
 
-### Core User Loop
+### UI Invariants
 
-```mermaid
-flowchart TD
-    Open[User opens project] --> Fresh{First time?}
-    Fresh -->|Yes| JakeOnly[See Jake's chat only]
-    Fresh -->|No| Restore[Restore previous state]
-
-    JakeOnly --> Describe[User describes need]
-    Describe --> JakeSpawn[Jake spawns agent]
-    JakeSpawn --> Dashboard[Dashboard shows agent]
-
-    Restore --> Dashboard
-
-    Dashboard --> Select[User selects agent]
-    Select --> Chat[Chat with agent]
-    Chat --> Steer[Steer / interrupt / wait]
-
-    Dashboard --> Notify[Agent has question]
-    Notify --> Jump[User jumps to agent]
-    Jump --> Chat
-
-    Chat --> Back[Return to dashboard]
-    Back --> Dashboard
-```
+| Property | Holds When | Violated When |
+|----------|-----------|---------------|
+| Fresh project = Jake only | No agents or panels visible on first open | UI shows agents/panels before user interacts |
+| Dual representation | Every agent is in both sidebar and chat | Agent visible in one but not the other |
+| No unsolicited content | All UI transitions require user action | Window/modal appears without user action |
+| State restoration | Quit + relaunch restores everything | Layout, agents, or history lost on restart |
+| Project isolation | Two open projects have completely independent state | Action in project A affects project B |
 
 ### Multi-Window Architecture
 
@@ -172,9 +173,6 @@ flowchart TD
     App[TavernApp] --> Welcome[Welcome Window]
     App --> PW1[Project Window A]
     App --> PW2[Project Window B]
-
-    Welcome -->|"Open project"| PW1
-    Welcome -->|"Open project"| PW2
 
     PW1 --> Sidebar1[Agent Sidebar]
     PW1 --> Chat1[Chat View]

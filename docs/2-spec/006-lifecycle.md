@@ -1,7 +1,7 @@
-# Lifecycle Specification
+# 006 — Lifecycle Specification
 
 **Status:** complete
-**Last Updated:** 2026-02-08
+**Last Updated:** 2026-02-10
 
 ## Upstream References
 - PRD: §12 (Fish or Cut Bait), §13 (Rewind and Branch)
@@ -25,14 +25,15 @@ Agent lifecycle management including the "fish or cut bait" decision pattern, re
 **Priority:** must-have
 **Status:** specified
 
-The system provides triggers to kill and restart agents rather than allowing them to continue unproductively. Triggers include:
+**Properties:**
+- The system detects unproductive agents rather than allowing them to continue indefinitely
+- Four trigger conditions exist: token budget exceeded, changeset fundamentally wrong, agent spinning, entire gang on wrong path
+- Each trigger condition is detectable programmatically
+- When a trigger fires, the agent transitions to Failed/Reaped state
+- The parent is notified with the specific trigger reason
+- An optional restart with different parameters is available (parent or user decides)
 
-- Token budget exceeded
-- Changeset is fundamentally wrong (beyond repair)
-- Agent is spinning (repeated actions without progress)
-- Entire gang (agent tree) going down the wrong path
-
-When triggered, the agent is reaped (terminated) and may optionally be restarted with different parameters.
+**See also:** §4.2.5 (base agent state machine), §4.2.9 (done signal detection), §8.2.4 (commitment verification)
 
 **Testable assertion:** Each trigger condition can be detected programmatically. When a trigger fires, the agent transitions to Failed/Reaped state. The parent is notified with the trigger reason.
 
@@ -41,16 +42,23 @@ When triggered, the agent is reaped (terminated) and may optionally be restarted
 **Priority:** must-have
 **Status:** specified
 
-Agents have token budgets set at spawn time. When an agent exceeds its budget, the fish-or-cut-bait trigger fires. The budget includes tokens consumed by the agent's own API calls.
+**Properties:**
+- Every agent has a token budget set at spawn time
+- An agent cannot consume unbounded tokens — exceeding the budget fires the fish-or-cut-bait trigger
+- Budget overshoot is bounded (the agent does not consume 10x its budget before stopping)
+- The budget accounts for the agent's own API calls
 
-**Testable assertion:** An agent with a token budget of N stops after consuming approximately N tokens. The budget overshoot is bounded (the agent does not consume 10x its budget before stopping).
+**Testable assertion:** An agent with a token budget of N stops after consuming approximately N tokens. The budget overshoot is bounded.
 
 ### REQ-LCM-003: Spin Detection
 **Source:** PRD §12
 **Priority:** should-have
 **Status:** specified
 
-The system detects when an agent is spinning: performing repeated actions without making progress. Detection is based on heuristics (repeated similar tool calls, no new file changes, looping conversation patterns).
+**Properties:**
+- An agent that makes N identical or near-identical tool calls in succession without producing new artifacts is considered spinning
+- The detection threshold N is configurable
+- Spin detection triggers the fish-or-cut-bait flow (REQ-LCM-001)
 
 **Testable assertion:** An agent that makes the same tool call N times in succession triggers spin detection. The detection threshold is configurable.
 
@@ -59,7 +67,11 @@ The system detects when an agent is spinning: performing repeated actions withou
 **Priority:** must-have
 **Status:** specified
 
-When an agent dies (completes, fails, or is reaped), its tile persists showing the final state for review and debugging. Dead agents are not immediately cleaned up. Initial cleanup is manual; sophisticated reaping comes later.
+**Properties:**
+- Dead agents (completed, failed, or reaped) leave persistent artifacts for review and debugging
+- The agent's tile persists in the sidebar showing its final state
+- The user can view the agent's final state, conversation history, and outputs after death
+- Dead agent artifacts are not immediately cleaned up — initial cleanup is manual
 
 **Testable assertion:** After an agent is reaped, its entry remains in the sidebar with a "dead" indicator. The user can view the agent's final state, conversation history, and any outputs.
 
@@ -68,7 +80,10 @@ When an agent dies (completes, fails, or is reaped), its tile persists showing t
 **Priority:** deferred
 **Status:** specified
 
-General capability to checkpoint agent state, rewind to a previous point, and continue from there. Works at both the agent level (conversation state) and the changeset level (file modifications).
+**Properties:**
+- Agent state can be checkpointed at any point
+- Rewinding to a checkpoint restores the agent's conversation state and changeset to that point
+- The original state is not destroyed by rewinding
 
 **Testable assertion:** Deferred. When implemented: a checkpoint can be created at any point. Rewinding to a checkpoint restores the agent and its changeset to that point.
 
@@ -77,7 +92,10 @@ General capability to checkpoint agent state, rewind to a previous point, and co
 **Priority:** deferred
 **Status:** specified
 
-After rewinding, the user can tweak the prompt and fork a new timeline. The original timeline is preserved. Multiple branches can exist simultaneously.
+**Properties:**
+- Branching from a checkpoint creates an independent copy with a tweaked prompt
+- The original timeline is preserved; changes in one branch do not affect the other
+- Multiple branches can exist simultaneously
 
 **Testable assertion:** Deferred. When implemented: branching from a checkpoint creates an independent copy. Changes in one branch do not affect the other.
 
@@ -86,13 +104,26 @@ After rewinding, the user can tweak the prompt and fork a new timeline. The orig
 **Priority:** should-have
 **Status:** specified
 
-Mortal agents expire or go into hibernation when tasks complete. Jake ensures someone handles open loops. The dashboard reflects completed vs in-progress vs pending work.
+**Properties:**
+- Mortal agents transition to done/expired or hibernation when tasks complete
+- Jake is notified when any agent completes, ensuring no open loops go unhandled
+- The dashboard accurately reflects completed vs in-progress vs pending work at all times
 
 **Testable assertion:** A completed agent transitions to done state and is marked as expired or hibernating. Jake is notified when an agent completes. Incomplete tasks are tracked.
 
-## 3. Behavior
+## 3. Properties Summary
 
-### Agent Lifecycle
+### Lifecycle Properties
+
+| Property | Holds When | Violated When |
+|----------|-----------|---------------|
+| Bounded token consumption | Agent stops at or near budget | Agent consumes unbounded tokens |
+| Spin detection | Repeated identical actions trigger reaping | Agent loops indefinitely without detection |
+| Dead body persistence | Reaped/completed agents remain viewable | Dead agent's state disappears |
+| Parent notification | Parent knows when child is reaped and why | Child reaped silently |
+| No open loops | Jake tracks all incomplete work | Completed agent's unfinished tasks forgotten |
+
+### Agent Lifecycle State Machine
 
 ```mermaid
 stateDiagram-v2
@@ -114,27 +145,6 @@ stateDiagram-v2
 
     Hibernating --> Alive : queue item arrives
     Hibernating --> Dead : reap
-```
-
-### Fish-or-Cut-Bait Decision
-
-```mermaid
-flowchart TD
-    Monitor[Monitor Agent Activity] --> Check{Trigger Condition?}
-
-    Check -->|Token budget exceeded| Trigger[Trigger FOCB]
-    Check -->|Changeset wrong| Trigger
-    Check -->|Spinning| Trigger
-    Check -->|Gang wrong path| Trigger
-    Check -->|No trigger| Monitor
-
-    Trigger --> Notify[Notify parent]
-    Notify --> Decision{Action}
-    Decision -->|Reap| Kill[Terminate agent]
-    Decision -->|Restart| Respawn[New agent, new parameters]
-    Decision -->|Continue| Override[Override trigger, continue]
-
-    Kill --> Artifact[Preserve artifacts]
 ```
 
 ## 4. Open Questions

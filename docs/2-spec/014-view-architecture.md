@@ -1,7 +1,7 @@
-# View Architecture Specification
+# 014 — View Architecture Specification
 
 **Status:** complete
-**Last Updated:** 2026-02-08
+**Last Updated:** 2026-02-10
 
 ## Upstream References
 - PRD: (none directly -- derived from Reader and transcripts)
@@ -25,7 +25,13 @@ View architecture for the dynamic tile-based UI, view modes, context cards, and 
 **Priority:** should-have
 **Status:** specified
 
-The view layer is not a fixed hierarchy. It is a composable surface that can be reshaped by both the user and agents. Tiles live within windows; windows serve as macOS-level escape hatches for when tiling is insufficient.
+**Properties:**
+- The view layer is a composable surface, not a fixed hierarchy
+- Both the user and agents can reshape the layout
+- Tiles live within windows; windows serve as macOS-level escape hatches when tiling is insufficient
+- Multiple layout configurations can coexist
+
+**See also:** §3.2.3 (thin UI / fat ViewModel principle)
 
 **Testable assertion:** Views can be rearranged by the user. The layout is not hardcoded. Multiple layout configurations can coexist.
 
@@ -34,7 +40,11 @@ The view layer is not a fixed hierarchy. It is a composable surface that can be 
 **Priority:** should-have
 **Status:** specified
 
-Different view modes present the same data differently, like Finder's list/icon/column views. The response stream (thinking, tools, text) stays in one place. Different view modes select which parts to show and how to arrange them. Multiple tiles can show different view modes of the same agent simultaneously.
+**Properties:**
+- The same agent data can be rendered in multiple view modes (like Finder's list/icon/column views)
+- Switching view modes does not lose data
+- Two tiles showing the same agent in different modes stay in sync
+- The response stream (thinking, tools, text) stays in one place; view modes select which parts to show
 
 **Testable assertion:** The same agent's data can be rendered in at least two different view modes. Switching view modes does not lose data. Two tiles showing the same agent in different modes stay in sync.
 
@@ -43,7 +53,12 @@ Different view modes present the same data differently, like Finder's list/icon/
 **Priority:** should-have
 **Status:** specified
 
-Chat components can be split into granular primitives: thinking, tool use, tool results, messages. Each primitive can be displayed independently or combined. This enables custom layouts that focus on specific aspects of an agent's work.
+**Properties:**
+- Chat components decompose into granular primitives: thinking, tool use, tool results, messages
+- Each primitive can be displayed independently or combined
+- Custom layouts can focus on specific aspects of an agent's work (e.g., "tools only" mode)
+
+**See also:** §13.2.6 (content block types)
 
 **Testable assertion:** Individual content block types (thinking, tool_use, text) can be shown or hidden independently. A "tools only" view mode shows only tool use and results.
 
@@ -52,7 +67,10 @@ Chat components can be split into granular primitives: thinking, tool use, tool 
 **Priority:** should-have
 **Status:** specified
 
-The view structure is independent of the agent hierarchy. The same agents can render as a tree view (showing parent-child relationships) or a flat list. Erlang-style arbitrary depth in the agent hierarchy does not constrain the view layout.
+**Properties:**
+- The view structure is independent of the agent hierarchy
+- The same agents can render as a tree view (parent-child relationships) or a flat list
+- Erlang-style arbitrary depth does not constrain view layout
 
 **Testable assertion:** The agent sidebar can show agents as a flat list or as a tree. Switching between tree and flat view does not change agent relationships.
 
@@ -61,7 +79,10 @@ The view structure is independent of the agent hierarchy. The same agents can re
 **Priority:** must-have
 **Status:** specified
 
-Dead agents leave bodies. When an agent completes, fails, or is reaped, its tile persists showing the final state for review and debugging. Cleanup is manual initially; sophisticated reaping comes later.
+**Properties:**
+- Dead agents leave persistent views showing their final state
+- Dead agent views are accessible for review and debugging
+- The user must manually dismiss dead agent views (initial cleanup is manual)
 
 **Testable assertion:** After an agent dies, its view remains accessible. The view shows the agent's final state, last output, and status. The user must manually dismiss dead agent views.
 
@@ -70,10 +91,10 @@ Dead agents leave bodies. When an agent completes, fails, or is reaped, its tile
 **Priority:** should-have
 **Status:** specified
 
-Two types of persistence:
-
-- **Session restore** -- Automatic: restore what was open on quit
-- **Saved layouts** -- Named templates (abstract structure, no specific agent binding) AND concrete snapshots (specific agents, specific state)
+**Properties:**
+- Session restore is automatic: quitting and relaunching restores what was open
+- Named layouts support two types: templates (abstract structure, no specific agent binding) and snapshots (specific agents, specific state)
+- Users can save and load named layouts
 
 **Testable assertion:** Quitting and relaunching the app restores the previous layout. Users can save and load named layout templates.
 
@@ -82,7 +103,10 @@ Two types of persistence:
 **Priority:** deferred
 **Status:** specified
 
-Agents can suggest layout changes (e.g., "you might want a tile for Gang B"). Suggestions are passive -- the user places them, and can auto-reject. Suggestions do not modify the layout directly.
+**Properties:**
+- Agents can suggest layout changes (passive — user must accept)
+- Suggestions do not modify the layout directly
+- The user can auto-reject suggestions
 
 **Testable assertion:** Deferred. When implemented: agents can create layout suggestions. Suggestions appear as non-intrusive UI elements. The user must explicitly accept a suggestion for the layout to change.
 
@@ -91,7 +115,10 @@ Agents can suggest layout changes (e.g., "you might want a tile for Gang B"). Su
 **Priority:** deferred
 **Status:** specified
 
-With explicit permission, agents can read and directly modify the layout. This is a separate permission tier from suggestions. Layout mutations require user authorization.
+**Properties:**
+- With explicit user permission, agents can read and directly modify the layout
+- Layout mutation is a separate permission tier from suggestions
+- Agents without permission cannot modify layout
 
 **Testable assertion:** Deferred. When implemented: agents with mutation permission can modify the layout. Agents without permission cannot. Permission is granted per-agent or per-session.
 
@@ -100,17 +127,24 @@ With explicit permission, agents can read and directly modify the layout. This i
 **Priority:** deferred
 **Status:** specified
 
-Quick context cards for jumping into agent conversations. Each card shows:
-
-- Agent name
-- Current assignment
-- Current status
-
-Context cards let users switch contexts without reading full chat history.
+**Properties:**
+- Each agent has a context card showing: name, current assignment, current status
+- Context cards enable rapid context switching without reading full chat history
+- Clicking a card navigates to the agent's chat
 
 **Testable assertion:** Deferred. When implemented: each agent has a context card. The card shows name, assignment, and status. Clicking a card navigates to the agent's chat.
 
-## 3. Behavior
+## 3. Properties Summary
+
+### View Properties
+
+| Property | Holds When | Violated When |
+|----------|-----------|---------------|
+| View-hierarchy independence | View layout is independent of agent tree | Agent hierarchy constrains view layout |
+| Multi-mode sync | Two tiles of same agent in different modes stay in sync | Mode change desynchronizes tiles |
+| Data preservation | Switching view modes doesn't lose data | Data disappears on mode switch |
+| Dead body persistence | Dead agent views remain until manually dismissed | Dead agent views auto-disappear |
+| Session restore | Quit + relaunch restores layout | Layout lost on restart |
 
 ### View Mode Concept
 
@@ -123,35 +157,6 @@ flowchart TD
     VM1 --> All[Thinking + Tools + Text]
     VM2 --> Chat[Text only]
     VM3 --> Tools[Tool Use + Results only]
-```
-
-### Layout Composition
-
-```mermaid
-flowchart TD
-    Window[Project Window] --> Sidebar[Agent Sidebar]
-    Window --> Main[Main Content Area]
-
-    Main --> Tile1[Agent A Chat]
-    Main --> Tile2[Agent B Tools]
-    Main --> Tile3[Agent A Thinking]
-
-    Sidebar --> Click[User clicks agent]
-    Click --> Main
-```
-
-### Layout Persistence
-
-```mermaid
-flowchart TD
-    Quit[App Quit] --> Save[Save current layout]
-    Save --> Restore[App Launch]
-    Restore --> Rehydrate[Restore layout]
-
-    User[User action] --> Named[Save named layout]
-    Named --> Templates[Layout templates]
-    Templates --> Load[Load named layout]
-    Load --> Apply[Apply to current window]
 ```
 
 ## 4. Open Questions

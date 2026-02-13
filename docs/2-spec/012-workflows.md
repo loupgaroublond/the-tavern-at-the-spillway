@@ -1,7 +1,7 @@
-# Workflows Specification
+# 012 — Workflows Specification
 
 **Status:** complete
-**Last Updated:** 2026-02-08
+**Last Updated:** 2026-02-10
 
 ## Upstream References
 - PRD: §10 (Workflows), §9.1 (Starter Templates), §11 (Gang of Experts), §6.5 (Merge Queue)
@@ -25,7 +25,11 @@ Workflow engine, starter templates, gang of experts pattern, and merge queue. Mo
 **Priority:** deferred
 **Status:** specified
 
-A workflow is a state machine. The workflow engine tracks and enforces progress through states, manages workflow templates, surfaces open loops and incomplete steps, and shows status for long-running workflows.
+**Properties:**
+- A workflow is a state machine with defined states and transitions
+- The workflow engine prevents invalid transitions
+- Incomplete steps are surfaced (not silently skipped)
+- Status is visible for long-running workflows
 
 **Testable assertion:** Deferred. When implemented: a workflow can be defined as a set of states and transitions. The engine prevents invalid transitions. Incomplete steps are surfaced.
 
@@ -34,7 +38,10 @@ A workflow is a state machine. The workflow engine tracks and enforces progress 
 **Priority:** deferred
 **Status:** specified
 
-Starter template: five agent passes over a single output from an initial prompt. Each pass refines the output. The template can be modified by the user.
+**Properties:**
+- Five sequential agent passes over a single output from an initial prompt
+- Each pass receives the previous pass's output and refines it
+- The template is user-modifiable
 
 **Testable assertion:** Deferred. When implemented: the Rule of 5 template spawns 5 sequential agents. Each agent receives the previous agent's output. The final output reflects 5 passes of refinement.
 
@@ -43,7 +50,10 @@ Starter template: five agent passes over a single output from an initial prompt.
 **Priority:** deferred
 **Status:** specified
 
-Starter template: progressive gates. Output must pass through: linting, then code structure analysis, then architecture review, then performance assessment. Each gate is an agent or tool with pass/fail.
+**Properties:**
+- Ordered verification stages: linting → code structure → architecture review → performance assessment
+- Each stage is pass/fail
+- A failure at any stage blocks progression to the next
 
 **Testable assertion:** Deferred. When implemented: the template defines ordered verification stages. Each stage must pass before the next begins. A failure at any stage blocks progression.
 
@@ -52,7 +62,10 @@ Starter template: progressive gates. Output must pass through: linting, then cod
 **Priority:** deferred
 **Status:** specified
 
-Users can modify workflow templates. Agents can propose new templates as a creative meta process. Templates are stored in the doc store (`.tavern/` directory).
+**Properties:**
+- Users can edit template definitions
+- Agents can propose new templates (creative meta process)
+- Templates persist in `.tavern/` directory
 
 **Testable assertion:** Deferred. When implemented: users can edit template definitions. New templates can be created and saved. Templates persist in `.tavern/`.
 
@@ -61,7 +74,10 @@ Users can modify workflow templates. Agents can propose new templates as a creat
 **Priority:** deferred
 **Status:** specified
 
-Specialized prompts applied to agents (not persistent entities). Examples: Reviewer, Tester, Architect. "Pull in the reviewer" means spawn an agent with reviewer instructions. Users can customize expert prompts.
+**Properties:**
+- Expert roles (Reviewer, Tester, Architect) are specialized prompts applied to agents, not persistent entities
+- "Pull in the reviewer" = spawn an agent with reviewer instructions
+- Expert prompts are user-customizable
 
 **Testable assertion:** Deferred. When implemented: spawning an agent with an expert role applies the corresponding specialized prompt. Users can customize the prompt for each expert type.
 
@@ -70,7 +86,11 @@ Specialized prompts applied to agents (not persistent entities). Examples: Revie
 **Priority:** deferred
 **Status:** specified
 
-A merge queue applies to changesets and source repos. Agents queue up their changes, can see what is ahead in the queue, refine their changes against the predictable target, and merge serially to reduce conflicts.
+**Properties:**
+- Changesets merge serially, not in parallel
+- Queue order is visible to all queued agents
+- Agents can refine their changes against the predictable merge target (what's ahead in the queue)
+- Serial merging reduces conflicts compared to parallel merges
 
 **Testable assertion:** Deferred. When implemented: agents can enqueue changesets. Queue order is visible. Merges happen serially. Conflicts are reduced compared to parallel merges.
 
@@ -79,11 +99,10 @@ A merge queue applies to changesets and source repos. Agents queue up their chan
 **Priority:** deferred
 **Status:** specified
 
-Correctness verification layer that:
-
-- Verifies completed output matches the specification
-- Detects if agent A destroyed agent B's work
-- Checks that all agents completed all required tasks
+**Properties:**
+- Completed output is verified against the specification
+- Cross-agent interference is detected (agent A destroying agent B's work)
+- All required tasks are verified as complete (holistic check)
 
 **Testable assertion:** Deferred. When implemented: the spec engine can compare agent output against a specification. Cross-agent interference is detected. Task completion is verified holistically.
 
@@ -92,11 +111,24 @@ Correctness verification layer that:
 **Priority:** deferred
 **Status:** specified
 
-How workflows combine is not yet defined. The system must eventually support composing workflows (e.g., running a verification layer workflow inside a Rule of 5 workflow).
+**Properties:**
+- Workflows can nest (a workflow can be a step in another workflow)
+- Circular dependencies are prevented
+- Composition does not break individual workflow guarantees
 
 **Testable assertion:** Deferred. When implemented: workflows can nest and compose without circular dependencies.
 
-## 3. Behavior
+## 3. Properties Summary
+
+### Workflow Properties (Deferred)
+
+| Property | Holds When | Violated When |
+|----------|-----------|---------------|
+| State machine validity | Only valid transitions occur | Workflow skips or repeats states |
+| Stage gating | Failed stage blocks progression | Output passes despite stage failure |
+| Serial merge | Changesets merge one at a time | Parallel merge produces conflicts |
+| Composability | Nested workflows maintain their guarantees | Nesting breaks inner workflow |
+| Interference detection | Cross-agent damage is caught | Agent A silently overwrites agent B's work |
 
 ### Workflow State Machine (Conceptual)
 
@@ -116,7 +148,13 @@ stateDiagram-v2
     Failed --> StepN : retry from failure point
 ```
 
-### Gang of Experts Pattern
+## 4. Example Workflows
+
+These sketches illustrate what good workflows look like. They are examples of what the workflow system must support, not specifications of internal mechanics.
+
+### Gang of Experts
+
+A complex task is farmed out to specialized expert agents working in parallel. Each expert contributes their domain perspective, and results are combined into unified feedback.
 
 ```mermaid
 flowchart TD
@@ -133,6 +171,8 @@ flowchart TD
 ```
 
 ### Merge Queue
+
+When multiple agents produce changesets against the same codebase, they queue up and merge serially. Each agent can see what's ahead and refine against the predictable target.
 
 ```mermaid
 sequenceDiagram
@@ -151,7 +191,25 @@ sequenceDiagram
     B->>Repo: Merge changeset
 ```
 
-## 4. Open Questions
+### Verification Layers
+
+Output passes through ordered gates. Each gate is an agent or tool with pass/fail semantics. Failure at any stage blocks progression.
+
+```mermaid
+flowchart LR
+    Input[Agent Output] --> Lint[Linting]
+    Lint -->|pass| Structure[Code Structure]
+    Structure -->|pass| Arch[Architecture Review]
+    Arch -->|pass| Perf[Performance Assessment]
+    Perf -->|pass| Done[Approved]
+
+    Lint -->|fail| Block[Blocked — rework]
+    Structure -->|fail| Block
+    Arch -->|fail| Block
+    Perf -->|fail| Block
+```
+
+## 5. Open Questions
 
 - **Workflow composability:** How do workflows combine? Can one workflow be a step in another? What prevents circular composition?
 
@@ -159,7 +217,7 @@ sequenceDiagram
 
 - **Expert prompt management:** Where do expert prompts live? In `.tavern/`? Are they per-project or global?
 
-## 5. Coverage Gaps
+## 6. Coverage Gaps
 
 - **Workflow failure recovery:** No specification for what happens when a workflow step fails partway through. Retry from start? Resume from failure point? Manual intervention?
 

@@ -353,7 +353,7 @@ Every document belongs to exactly one pipeline stage. Documents flow forward onl
 |-------|----------|----------|
 | 0 | `docs/0-transcripts/` | Interview transcripts, reader syntheses, vocabulary, notes |
 | 1 | `docs/1-prd/` | Product requirements (canonical statement of what the system must do) |
-| 2 | `docs/2-spec/` | Testable, traceable specs (16 domain modules + index.md traceability matrix) |
+| 2 | `docs/2-spec/` | Testable, traceable specs (18 numbered modules, §000–§017) |
 | 3 | `docs/3-adr/` | Architecture Decision Records (the "why" behind technical choices) |
 | 4–6 | `Tavern/` | Code, tests, built application |
 | 7 | `docs/4-docs/` | Post-implementation documentation |

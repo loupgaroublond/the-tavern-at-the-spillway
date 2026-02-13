@@ -1,7 +1,7 @@
-# Communication Specification
+# 009 — Communication Specification
 
 **Status:** complete
-**Last Updated:** 2026-02-08
+**Last Updated:** 2026-02-10
 
 ## Upstream References
 - PRD: §5.3 (Bubbling), §5.5 (Question Triage)
@@ -25,7 +25,11 @@ Bubbling mechanism, question triage, and inter-agent communication. Defines how 
 **Priority:** must-have
 **Status:** specified
 
-Agents can escalate questions and information upward through the agent hierarchy: child to parent to grandparent to user. Each level in the hierarchy can handle, transform, or pass through the message. Jake, as the top-level daemon, is the final relay before the user.
+**Properties:**
+- Agents can escalate questions and information upward through the agent hierarchy: child → parent → grandparent → user
+- Each level in the hierarchy can handle, transform, or pass through the message
+- Jake is the final relay before the user
+- Messages are never lost in transit — a message either reaches its destination or the sender is notified of delivery failure
 
 **Testable assertion:** A message from a grandchild agent can reach the user through the parent and grandparent chain. Each intermediary receives the message and can either handle it or forward it upward.
 
@@ -34,7 +38,10 @@ Agents can escalate questions and information upward through the agent hierarchy
 **Priority:** should-have
 **Status:** specified
 
-Agents can communicate laterally with siblings. Sibling agents (children of the same parent) can exchange messages to collaborate on related work. Lateral communication does not require routing through the parent.
+**Properties:**
+- Sibling agents (children of the same parent) can exchange messages directly
+- Lateral communication does not require routing through the parent
+- The parent retains visibility into lateral communication (can observe, but is not a relay)
 
 **Testable assertion:** Two agents with the same parent can exchange messages directly. Messages are delivered without passing through the parent agent.
 
@@ -43,7 +50,10 @@ Agents can communicate laterally with siblings. Sibling agents (children of the 
 **Priority:** should-have
 **Status:** specified
 
-Agents can communicate directly with the user, with oversight by other agents in the hierarchy. Direct communication bypasses the normal bubbling chain but parent agents maintain visibility into what was communicated.
+**Properties:**
+- Agents can communicate directly with the user, bypassing the normal bubbling chain
+- Parent agents maintain visibility into direct communication (notified that it occurred)
+- Direct communication requires oversight — it is not invisible to the hierarchy
 
 **Testable assertion:** An agent can send a message directly to the user. The parent agent is notified (or can observe) that direct communication occurred.
 
@@ -52,7 +62,10 @@ Agents can communicate directly with the user, with oversight by other agents in
 **Priority:** must-have
 **Status:** specified
 
-Questions from agents are classified as quick vs deep. The classification is conveyed in the notification so the user knows what they are getting into before engaging. Quick questions can be answered without context; deep questions require reading agent state.
+**Properties:**
+- Every question from an agent is classified as quick or deep before being surfaced
+- Quick questions can be answered without reading agent state; deep questions require context
+- The classification is conveyed in the notification so the user knows what they're getting into before engaging
 
 **Testable assertion:** Questions surfaced to the user include a complexity classification. The classification is determined before the notification is shown, not after the user opens the conversation.
 
@@ -61,12 +74,10 @@ Questions from agents are classified as quick vs deep. The classification is con
 **Priority:** should-have
 **Status:** specified
 
-Parent agents choose the notification approach for their children's questions:
-
-- **Close collaboration:** Chat window pops up with notification for each question
-- **Overseer mode:** Periodic summary of outstanding questions
-
-The user can override the parent's choice.
+**Properties:**
+- Parent agents choose the notification approach for their children's questions: close collaboration (per-question popup) or overseer mode (periodic summary)
+- The user can override the parent's choice at any time
+- The notification mode affects presentation only — it does not change which questions are surfaced
 
 **Testable assertion:** A parent agent can configure its children's notification mode. Children's questions are surfaced according to the configured mode. The user can change the mode at any time.
 
@@ -75,7 +86,10 @@ The user can override the parent's choice.
 **Priority:** must-have
 **Status:** specified
 
-Certain message types expect certain response types. When an agent sends a message of type X, the expected response type is known. A wrong or missing response is a signal of agent malfunction.
+**Properties:**
+- Each message type has a defined expected response type
+- A wrong or missing response within a timeout is a signal of agent malfunction
+- The protocol is symmetric: for every message type X, the expected response type is known at design time
 
 **Testable assertion:** Each message type has a defined expected response type. An agent that responds with the wrong type or fails to respond within a timeout triggers a malfunction signal.
 
@@ -84,22 +98,38 @@ Certain message types expect certain response types. When an agent sends a messa
 **Priority:** should-have
 **Status:** specified
 
-Agents (including drones) are prompted to notice oddities and share discoveries via messaging, even while continuing their main task. This relies on prompt engineering encouraging curiosity and social behavior rather than deterministic hooks.
+**Properties:**
+- Agent system prompts include instructions to notice oddities and report discoveries
+- Discovery sharing is prompt-engineering-based (not deterministically enforceable)
+- Discovery messages are delivered to parent agents without interrupting the agent's main task
 
-**Testable assertion:** Agent system prompts include instructions to report discoveries. Discovery messages are delivered to parent agents. (Cannot deterministically verify agent compliance -- prompt-based.)
+**Testable assertion:** Agent system prompts include instructions to report discoveries. Discovery messages are delivered to parent agents. (Cannot deterministically verify agent compliance — prompt-based.)
 
 ### REQ-COM-008: Jake as Communication Hub
 **Source:** PRD §5.3, Reader §3
 **Priority:** must-have
 **Status:** specified
 
-Jake coordinates across all task trees. Jake is aware of hibernating agents, unfinished work, and backlogs. Jake proactively suggests that the user zoom into specific agents when their attention is needed.
+**Properties:**
+- Jake has awareness of all agents and their states (hibernating, unfinished, backlogged)
+- Jake proactively suggests that the user zoom into agents when their attention is needed
+- Jake coordinates cross-tree communication
 
 **Testable assertion:** Jake can enumerate all agents and their states. Jake generates suggestions for user attention based on agent state. Suggestions are surfaced through the chat interface.
 
-## 3. Behavior
+## 3. Properties Summary
 
-### Bubbling Flow
+### Communication Routing Properties
+
+| Property | Holds When | Violated When |
+|----------|-----------|---------------|
+| Message delivery | Every message reaches its destination or sender is notified of failure | Message silently lost in transit |
+| Hierarchy respect | Upward bubbling follows parent chain | Message skips levels without explicit direct-to-user mode |
+| Lateral independence | Sibling messages don't route through parent | Parent is a required relay for lateral messages |
+| Parent visibility | Parent can observe all child communication (bubbled, lateral, direct) | Child communicates invisibly to parent |
+| Classification before display | User knows question complexity before engaging | Classification determined after user opens conversation |
+
+### Communication Directions
 
 ```mermaid
 flowchart TD
@@ -113,50 +143,6 @@ flowchart TD
 ```
 
 Solid lines = upward bubbling. Dashed = lateral and direct.
-
-### Question Triage
-
-```mermaid
-flowchart TD
-    Q[Agent Question] --> Classify{Classify}
-    Classify -->|Quick| QN[Quick Notification]
-    Classify -->|Deep| DN[Deep Notification]
-
-    QN --> Mode{Parent Mode}
-    DN --> Mode
-
-    Mode -->|Close Collaboration| Popup[Chat Window Popup]
-    Mode -->|Overseer| Summary[Periodic Summary]
-
-    Popup --> User[User Responds]
-    Summary --> User
-```
-
-### Message Flow Sequence
-
-```mermaid
-sequenceDiagram
-    participant Child as Child Agent
-    participant Parent as Parent Agent
-    participant Jake
-    participant UI as User Interface
-    participant User
-
-    Child->>Parent: Question (type: quick)
-    Parent->>Parent: Can I answer this?
-
-    alt Parent can answer
-        Parent->>Child: Answer
-    else Need to escalate
-        Parent->>Jake: Bubble up question
-        Jake->>UI: Surface notification (quick)
-        UI->>User: Badge/bubble
-        User->>UI: Open conversation
-        UI->>Jake: User response
-        Jake->>Parent: Relay answer
-        Parent->>Child: Relay answer
-    end
-```
 
 ## 4. Open Questions
 

@@ -43,11 +43,12 @@ Formal requirements derived from transcripts. The PRD is the canonical statement
 Testable, traceable specifications derived from the PRD. Each spec module covers a domain and maps requirements back to PRD sections.
 
 **Contents:**
-- `index.md` — Traceability matrix + coverage tracking
-- 16 domain modules (see index.md for full list)
+- `000-index.md` — Traceability matrix + coverage tracking
+- `001-introduction.md` — Conventions, numbering, cross-reference syntax
+- 16 domain modules (see §0 for full list, §1 for addressing conventions)
 
 **Update trigger:** When PRD changes or when implementation reveals specification gaps
-**Verification:** `index.md` must account for every PRD section; each module tracks its own completeness
+**Verification:** `000-index.md` must account for every PRD section; each module tracks its own completeness
 
 ### Stage 3: Architecture Decision Records (`3-adr/`)
 
@@ -93,7 +94,7 @@ When new design conversations happen:
 2. Update reader (via `/reader`)
 3. Update PRD in `1-prd/` if requirements changed
 4. Update relevant spec modules in `2-spec/`
-5. Update `index.md` traceability + status
+5. Update `000-index.md` traceability + status
 6. If spec changes affect architecture → update/create ADRs in `3-adr/`
 7. Downstream: code → tests → docs as needed
 
@@ -105,7 +106,7 @@ Each pipeline stage can be verified against its upstream:
 |-------|----------|------------|------|
 | Transcript coverage | Sessions | Transcripts | `/audit-transcripts` |
 | PRD coverage | Transcripts | PRD | (manual) |
-| Spec coverage | PRD | Spec modules | `2-spec/index.md` matrix |
+| Spec coverage | PRD | Spec modules | `2-spec/000-index.md` matrix |
 | ADR coverage | Spec | ADRs | ADR references in spec modules |
 | Code coverage | Spec | Code | Downstream references in spec modules |
 | Test coverage | Spec | Tests | Downstream references in spec modules |

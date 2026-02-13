@@ -1,7 +1,7 @@
-# V1 Scope Specification
+# 017 — V1 Scope Specification
 
 **Status:** complete
-**Last Updated:** 2026-02-08
+**Last Updated:** 2026-02-10
 
 ## Upstream References
 - PRD: §18 (V1 Scope), §20 (Success Criteria)
@@ -25,7 +25,10 @@ V1 scope boundaries, success criteria, and what ships versus what does not. V1 i
 **Priority:** must-have
 **Status:** specified
 
-User can open a project directory and chat with Jake. Jake responds in his character voice. Jake's session persists across app restarts.
+**Properties:**
+- User can open a project directory and chat with Jake
+- Jake responds in his character voice
+- Jake's session persists across app restarts
 
 **Testable assertion:** Opening a project directory presents Jake's chat. Messages sent to Jake receive responses. Closing and reopening the app shows Jake's conversation history.
 
@@ -34,7 +37,10 @@ User can open a project directory and chat with Jake. Jake responds in his chara
 **Priority:** must-have
 **Status:** specified
 
-Jake can spawn mortal agents to handle delegated work. Jake uses the `summon_servitor` MCP tool to create agents with assignments and names.
+**Properties:**
+- Jake can spawn mortal agents to handle delegated work
+- Jake uses the `summon_servitor` MCP tool to create agents with assignments and names
+- Spawned agents appear in the agent list
 
 **Testable assertion:** Telling Jake to do something causes him to spawn a Servitor. The Servitor appears in the agent list with the correct assignment.
 
@@ -43,7 +49,11 @@ Jake can spawn mortal agents to handle delegated work. Jake uses the `summon_ser
 **Priority:** must-have
 **Status:** specified
 
-User can see a list of all agents (sidebar) and switch between their chats. Each agent's chat shows its conversation history.
+**Properties:**
+- All spawned agents are visible in the sidebar
+- The user can switch between agent chats
+- Each agent's chat shows its conversation history
+- Switching preserves scroll position and history
 
 **Testable assertion:** All spawned agents appear in the sidebar. Clicking an agent shows its chat. Switching between agents preserves each chat's scroll position and history.
 
@@ -52,7 +62,9 @@ User can see a list of all agents (sidebar) and switch between their chats. Each
 **Priority:** must-have
 **Status:** specified
 
-Spawning supports basic configuration: assignment and model selection. Advanced spawn parameters (sandbox, token budget, work queue, commitments, done behavior) are architecturally supported but not required for v1.
+**Properties:**
+- Spawning supports assignment and model selection
+- Advanced spawn parameters (sandbox, token budget, work queue, commitments, done behavior) are architecturally supported but not required for v1
 
 **Testable assertion:** An agent can be spawned with an assignment. Model selection parameter is accepted (even if only one model is used in v1).
 
@@ -61,7 +73,10 @@ Spawning supports basic configuration: assignment and model selection. Advanced 
 **Priority:** must-have
 **Status:** specified
 
-Agents can complete tasks and report done. The done signal is detected from agent responses (DONE/COMPLETED keywords) and triggers the verification flow.
+**Properties:**
+- V1 implements done signal detection and verification flow
+
+**See also:** §4.2.9 (done signal detection), §8.2.4 (commitment verification)
 
 **Testable assertion:** An agent that outputs DONE transitions toward completion. The completion flow is initiated (even if verification is mock in v1).
 
@@ -70,16 +85,22 @@ Agents can complete tasks and report done. The done signal is detected from agen
 **Priority:** must-have
 **Status:** specified
 
-Commitments are verified by deterministic assertion. The `CommitmentVerifier` runs shell-based checks independent of the agent's session. An agent is only marked "done" after verification passes.
+**Properties:**
+- Commitments are verified by deterministic assertion (`CommitmentVerifier`)
+- Verification is independent of the agent's session
+- An agent is only marked "done" after verification passes
+- (Note: v1 may use mock verification; the flow must be exercised end-to-end)
 
-**Testable assertion:** A commitment with a passing assertion allows the agent to complete. A commitment with a failing assertion keeps the agent in a non-done state. (Note: v1 may use mock verification; the flow must be exercised end-to-end.)
+**Testable assertion:** A commitment with a passing assertion allows the agent to complete. A commitment with a failing assertion keeps the agent in a non-done state.
 
 ### REQ-V1-007: Full Test Suite
 **Source:** PRD §18
 **Priority:** must-have
 **Status:** specified
 
-Full test suite for all of the above v1 features. Every v1 feature has automated tests at the appropriate grade level.
+**Properties:**
+- Every v1 feature has automated tests at the appropriate grade level
+- Grade 3 integration tests cover the end-to-end flow
 
 **Testable assertion:** `redo Tavern/test` passes. Every v1 feature has at least Grade 1+2 test coverage. Grade 3 integration tests cover the end-to-end flow.
 
@@ -146,15 +167,10 @@ Checkpointing, prompt tweaking, and timeline forking are deferred.
 **Priority:** must-have
 **Status:** specified
 
-V1 is successful if:
-
-1. User can open a project and talk to Jake
-2. Jake can spawn mortal agents that work autonomously
-3. User can see dashboard of all agents and zoom into any
-4. Agents can spawn children and coordinate via doc store
-5. Deterministic verification works (agent commits, system checks)
-6. Changesets protect original project from agent writes (deferred -- architecturally preserved)
-7. User spends more time directing than waiting
+**Properties:**
+- V1 is successful if all of: user can chat with Jake, Jake spawns autonomous agents, dashboard shows all agents with zoom-in, agents spawn children and coordinate via doc store, deterministic verification works
+- Changesets are architecturally preserved for future enforcement
+- User spends more time directing than waiting
 
 **Testable assertion:** Items 1-5 are verified by Grade 3 integration tests. Item 6 is verified by architecture review. Item 7 is verified by user testing with timing metrics.
 
@@ -163,15 +179,14 @@ V1 is successful if:
 **Priority:** should-have
 **Status:** specified
 
-Future success indicators (not required for v1 ship, but tracked):
+**Properties:**
+- Amplification metric is computable (even if value is low in v1)
+- Naming themes produce names
+- Cogitation verbs display during agent work
 
-- High amplification factor (many saturated agents, one human)
-- Workflows improving through measurement
-- Users entertained by agent names and cogitation verbs
+**Testable assertion:** Amplification metric is computable. Naming themes produce names. Cogitation verbs display during agent work.
 
-**Testable assertion:** Amplification metric is computable (even if value is low in v1). Naming themes produce names. Cogitation verbs display during agent work.
-
-## 3. Behavior
+## 3. Scope Boundaries
 
 ### V1 Feature Scope Map
 
@@ -201,7 +216,9 @@ flowchart TD
     V1 -->|"architecture supports"| Deferred
 ```
 
-### V1 Verification Flow
+## 4. Example: V1 End-to-End Flow
+
+This illustrates what the v1 experience looks like in action — user talks to Jake, Jake delegates, verification closes the loop.
 
 ```mermaid
 sequenceDiagram
@@ -226,13 +243,13 @@ sequenceDiagram
     end
 ```
 
-## 4. Open Questions
+## 5. Open Questions
 
 - **V1 changeset workaround:** With changesets deferred, how does v1 protect original files? PRD says "agents work on actual files for now." Is there any intermediate protection (e.g., git stash, branch per agent)?
 
 - **Multi-project scope in v1:** Is multi-project support a v1 requirement? It is implemented but not listed in the PRD's v1 must-have list.
 
-## 5. Coverage Gaps
+## 6. Coverage Gaps
 
 - **Ship criteria formalization:** "User spends more time directing than waiting" is qualitative. No quantitative threshold is specified for when this criterion is met.
 

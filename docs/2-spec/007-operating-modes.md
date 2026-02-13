@@ -1,7 +1,7 @@
-# Operating Modes Specification
+# 007 — Operating Modes Specification
 
 **Status:** complete
-**Last Updated:** 2026-02-08
+**Last Updated:** 2026-02-10
 
 ## Upstream References
 - PRD: §4.4 (Operating Modes), §5.2 (Attention Model)
@@ -25,7 +25,13 @@ Perseverance mode vs chat mode, attention management, and the calling/hanging-up
 **Priority:** must-have
 **Status:** specified
 
-In perseverance mode, an agent operates in the background. When the agent stops, the system automatically sends continuation prompts to keep it working. The agent must explicitly use a tool to request user attention. This is the default mode for agents working heads-down on assignments.
+**Properties:**
+- An agent in perseverance mode operates in the background
+- An agent in perseverance mode never remains idle indefinitely — the system sends auto-continuation prompts when the agent stops
+- An agent in perseverance mode does not generate user-facing notifications unless it explicitly invokes an attention-requesting tool
+- Perseverance mode is the default for agents working heads-down on assignments
+
+**See also:** §4.2.5 (base agent state machine)
 
 **Testable assertion:** An agent in perseverance mode receives an auto-continuation prompt within a configurable interval after stopping. The agent does not generate user-facing notifications unless it explicitly invokes an attention-requesting tool.
 
@@ -34,7 +40,13 @@ In perseverance mode, an agent operates in the background. When the agent stops,
 **Priority:** must-have
 **Status:** specified
 
-In chat mode, the agent appears in an active chat window. The user is notified when the agent pauses or stops. The user provides the next message. This mode is used when the user is actively engaged with the agent in conversation.
+**Properties:**
+- An agent in chat mode appears in an active chat window
+- An agent in chat mode does not receive auto-continuation prompts
+- When an agent in chat mode stops, the user is notified
+- The agent waits for user input before continuing
+
+**See also:** §4.2.5 (base agent state machine), §4.2.9 (done signal detection)
 
 **Testable assertion:** An agent in chat mode does not receive auto-continuation prompts. When the agent stops, a notification is surfaced to the user. The agent waits for user input before continuing.
 
@@ -43,10 +55,11 @@ In chat mode, the agent appears in an active chat window. The user is notified w
 **Priority:** must-have
 **Status:** specified
 
-The user controls which mode each agent is in. Zooming in on an agent transitions it to chat mode. Hanging up (zooming out) returns it to perseverance mode. The system injects deterministic messages to inform the agent of the transition:
-
-- **Calling:** User zooms in. System injects "user joined" message. Agent knows someone is present.
-- **Hanging up:** User zooms out. System injects "user left" message. Agent knows not to pause for interaction and continues working autonomously.
+**Properties:**
+- An agent always knows whether a user is present (the agent's awareness is deterministic, not inferred)
+- Mode transitions produce deterministic system messages: "user joined" on zoom-in, "user left" on zoom-out
+- The agent's operating mode matches the user's engagement state: zoomed-in = chat mode, zoomed-out = perseverance mode
+- The user controls which mode each agent is in
 
 **Testable assertion:** Selecting an agent in the UI triggers a "calling" system message. Deselecting (or closing the chat) triggers a "hanging up" system message. The agent's operating mode changes accordingly.
 
@@ -55,9 +68,12 @@ The user controls which mode each agent is in. Zooming in on an agent transition
 **Priority:** must-have
 **Status:** specified
 
-Users see tabs/UX for agents they are actively engaged with. Notification bubbles appear when agents have questions. The interaction pattern is "whack-a-mole" -- jumping between conversations as needed. The user can zoom in on any agent at any depth in the hierarchy.
-
-When zooming in on a busy agent, the user sees "cogitating" status while the agent works. The user can steer the agent, interrupt it, or wait.
+**Properties:**
+- Active agents are visible in the user's view (tabs/UX)
+- Agents with pending questions display notification indicators (badges, bubbles)
+- The user can zoom into any agent at any depth in the hierarchy
+- Cogitating status is visible when an agent is actively processing
+- The interaction pattern supports rapid context-switching ("whack-a-mole" between conversations)
 
 **Testable assertion:** Active agents show in the user's view. Agents with pending questions display notification indicators. Cogitating status is visible when an agent is actively processing.
 
@@ -66,10 +82,10 @@ When zooming in on a busy agent, the user sees "cogitating" status while the age
 **Priority:** must-have
 **Status:** specified
 
-Agent spawning has two modes depending on who initiates:
+**Properties:**
+- The spawn origin determines the initial operating mode — no explicit mode parameter is needed
 
-- **User-spawn:** User clicks `+` button. No dialog. Agent is created instantly with a system prompt telling it to wait for the user's first message. Agent starts in chat mode.
-- **Jake-spawn:** Jake decides to delegate work. Agent is created with an assignment and a system prompt telling it to work immediately. Agent starts in perseverance mode.
+**See also:** §4.2.7 (two-level orchestration model), §5.2.2/§5.2.3 (spawn configuration details)
 
 **Testable assertion:** A user-spawned agent has no assignment and is in waiting state. A Jake-spawned agent has an assignment and immediately transitions to working state.
 
@@ -78,11 +94,31 @@ Agent spawning has two modes depending on who initiates:
 **Priority:** should-have
 **Status:** specified
 
-While an agent is actively processing, the UI displays a "cogitating" status using vocabulary drawn from Jewish cultural and linguistic traditions (711 entries across Yiddish, Hebrew, Ladino, Judeo-Arabic, Talmudic Aramaic, Kabbalistic terminology, and diaspora communities). Terms appear in natural forms; awkward -ing constructions are avoided.
+**Properties:**
+- While an agent is in working state, the UI displays a cogitation verb
+- Cogitation verbs are drawn from Jewish cultural and linguistic traditions (711 entries across Yiddish, Hebrew, Ladino, Judeo-Arabic, Talmudic Aramaic, Kabbalistic terminology, and diaspora communities)
+- Terms appear in natural forms; awkward -ing constructions are avoided
 
 **Testable assertion:** When an agent is in working state, a cogitation verb is displayed in the UI. The verb is selected from the approved vocabulary list.
 
-## 3. Behavior
+## 3. Properties Summary
+
+### Mode Properties
+
+| Property | Perseverance Mode | Chat Mode |
+|----------|------------------|-----------|
+| Auto-continuation | Yes — system prompts on stop | No — agent waits for user |
+| User notifications | Only on explicit tool call | On every stop |
+| Background operation | Yes | No — visible in active window |
+| Default for | Jake-spawned agents | User-spawned agents |
+
+### Mode Transition Properties
+
+| Property | Holds When | Violated When |
+|----------|-----------|---------------|
+| Agent awareness | Agent receives deterministic "joined"/"left" messages | Agent must infer user presence |
+| User control | Only user actions trigger mode transitions | System or agent initiates mode change without user |
+| Mode-state consistency | Agent mode matches user engagement | Agent in chat mode while user is zoomed out, or vice versa |
 
 ### Operating Mode State Machine
 
@@ -106,28 +142,6 @@ stateDiagram-v2
         Working_C --> WaitingForUser : agent stops
         WaitingForUser --> Working_C : user sends message
     }
-```
-
-### Calling / Hanging Up Sequence
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant UI as UI Layer
-    participant System as Deterministic Shell
-    participant Agent
-
-    User->>UI: Click on agent
-    UI->>System: User zoomed in
-    System->>Agent: inject "user joined" message
-    Agent->>Agent: Switch to chat mode behavior
-
-    Note over User, Agent: Active conversation...
-
-    User->>UI: Navigate away
-    UI->>System: User zoomed out
-    System->>Agent: inject "user left" message
-    Agent->>Agent: Switch to perseverance mode behavior
 ```
 
 ## 4. Open Questions

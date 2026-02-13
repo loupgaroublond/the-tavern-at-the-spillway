@@ -679,7 +679,7 @@
 
 - `pipeline.md` defining rules (forward only, traceability, single home per document)
 
-- 16 formal spec modules in `docs/2-spec/` with traceability matrix (`index.md`)
+- 18 numbered spec modules (§000–§017) in `docs/2-spec/` with traceability matrix and introduction
 
 - All spec modules filled from transcripts, PRD, and session logs
 
