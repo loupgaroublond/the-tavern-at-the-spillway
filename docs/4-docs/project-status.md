@@ -1,10 +1,12 @@
 # Project Status Summary
 
-**Generated:** 2026-02-08
+**Generated:** 2026-02-12
 **Source:** Synthesis of all seed-design transcripts
 
 
 ## Timeline
+
+- **2026-01-18** — Project inception: Jake's voice and character established (Spillway Principle, joke management lifecycle, name translation layer), TAP.CLAUDE.md for homebrew tap, cast of characters with diverse ethnic names, README with comedy pacing principles, git repository initialized
 
 - **2026-01-19 09:06** — Process establishment, notation system for transcripts
 
@@ -62,6 +64,8 @@
 
 - **2026-02-02** — Comprehensive transcript audit system: parallel rewind analyzer agents verify coverage across date ranges, discovered 2 missing transcripts (agent-registry-architecture Jan 25, jake-spawn-tool Jan 28), verified 30 sessions covering all existing transcripts
 
+- **2026-02-02 16:50** — Servitor naming: MortalAgent renamed to Servitor (code), Jake calls them "The Regulars" (voice). MCP tool design (`summon_servitor`/`dismiss_servitor`) replacing JSON envelope hack. Phase 1 scope: minimal viable dispatcher (summon + dismiss only), defer message forwarding, resummon, capability distribution
+
 - **2026-02-05** — Worktree-aware audit discovery: `list-project-dirs.sh` and `list-sessions.sh` scripts for cross-worktree session deduplication, updated `/audit-transcripts` command
 
 - **2026-02-05/06** — Backlog mining: systematic extraction from all transcripts, PRD, session archives, code TODOs into beads issue tracker. Created epic `azu` with 40 child beads across 4 priority tiers (P1: 5, P2: 10, P3: 16, P4: 9)
@@ -82,7 +86,15 @@
 
 - **2026-02-08 (swarm prompt)** — Team coordinator prompt adaptation from ClodKit project: worktree-based parallel development, bead assignment, merge coordination, model selection guidance. Created `SWARM.md` with plan mode, Grade 3 merge gates, Grade 4 hold, self-destruct
 
-- **2026-02-08 (swarm execution)** — Swarm remediation: 8 parallel worktrees, 76 beads across 10 epics, 3 phases. Phase 0 triage (3 beads on main), Phase 1 foundation (4 agents: specs, rendering, commands, permissions), Phase 2 extensions (3 agents: custom commands, core infra, streaming), Phase 3 gap closure (4 agents: persistence, chat-vm, views, stress-tests). All merged to main, 574 Grade 1+2 + 32 Grade 3 tests passing.
+- **2026-02-08 (swarm execution)** — First swarm: 8 parallel worktrees, 76 beads across 10 epics, 3 phases. Phase 0 triage (3 beads on main), Phase 1 foundation (4 agents: specs, rendering, commands, permissions), Phase 2 extensions (3 agents: custom commands, core infra, streaming). All merged to main, 526 Grade 1+2 tests passing.
+
+- **2026-02-08/09 (gap remediation)** — Second swarm: 12 gaps from post-v1-parity audit remediated via 8 parallel worktrees (34 beads). `PermissionManager` wired to SDK, streaming race conditions fixed, `AnyAgent` type-erasure replaced with existentials, blocking `waitUntilExit` fixed, 14 views instrumented, Grade 5 stress tests (8 files), `CommandFormattingUtils` extracted, sidecar pattern removed from docs. 574 Grade 1+2 + 32 Grade 3 tests passing.
+
+- **2026-02-09** — Multi-type file audit: 90 Swift files audited, 15 with multiple top-level types, 3 split (AgentMessenger → 3 files, CommitmentVerifier → 4 files, TavernApp → 5 files). Anti-pattern identified: protocol + production impl + mock impl + data types in single file. iCloud duplicate cleanup.
+
+- **2026-02-10** — Property-based spec reframing: all 16 spec modules rewritten to lead with properties ("whenever X, then Y") instead of procedural workflows. Four-gap framework: (1) promote testable assertions to primary framing, (2) convert flowcharts to property tables, (3) separate "what must hold" from "how to implement", (4) distinguish illustrative examples from prescriptive specs.
+
+- **2026-02-12** — Spec enumeration with stable content addressing: files renamed to §000–§017, `§DOC.SECTION.SUBSECTION` addressing scheme for cross-references. 27 cross-reference opportunities identified, 12 major duplicated concepts assigned canonical homes. Append-only numbering ensures permanent addresses.
 
 
 ---
@@ -683,8 +695,18 @@
 
 - All spec modules filled from transcripts, PRD, and session logs
 
+- Property-based spec methodology: requirements lead with **Properties:** blocks, procedural workflows converted to property tables, state machine diagrams preserved (they ARE properties)
+
+- Stable content addressing (`§DOC.SECTION.SUBSECTION`) with append-only numbering for permanent cross-references
+
+- 27 cross-reference opportunities identified, 12 duplicated concepts assigned canonical homes
+
 
 **Remaining:**
+
+- Deduplication pass: replace restated content with `§` references to canonical homes
+
+- External docs updated with new spec file names
 
 - Incremental verification that downstream elements are complete relative to upstream
 
