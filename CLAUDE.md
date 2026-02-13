@@ -471,7 +471,7 @@ Design discussions use a formalized interview methodology:
 
 ### System Design Reader
 
-The **reader document** synthesizes all transcripts into a standalone reference. Find the latest at `docs/0-transcripts/reader_*.md` (most recent by datetime suffix). The current reader is `reader_2026-02-05.md`.
+The **reader document** synthesizes all transcripts into a standalone reference. Find the latest at `docs/0-transcripts/reader_*.md` (most recent by datetime suffix). The current reader is `reader_2026-02-12.md`.
 
 **Read the reader before making design decisions.** It contains the open questions index (?1–?19), the two-level orchestration model, two-mode spawning, and all key decision points traced to their source transcripts.
 
