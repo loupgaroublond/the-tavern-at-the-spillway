@@ -22,7 +22,8 @@ settings:
 
 packages:
   ClodKit:
-    path: /Users/yankee/Documents/Projects/ClodKit
+    url: https://github.com/loupgaroublond/ClodKit
+    from: 1.0.0
 
 targets:
   TavernCore:
