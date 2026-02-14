@@ -79,3 +79,10 @@ private struct FileTreeRow: View {
         }
     }
 }
+
+// MARK: - Preview
+
+#Preview("File Tree") {
+    FileTreeView(viewModel: ResourcePanelViewModel(rootURL: URL(fileURLWithPath: "/tmp/tavern-preview")))
+        .frame(width: 300, height: 400)
+}

@@ -257,19 +257,30 @@ private struct TavernHeader: View {
 // MARK: - Preview
 
 #Preview("Project") {
+    // Preview sidebar and detail side-by-side without NavigationSplitView
+    // (NavigationSplitView's OutlineListCoordinator crashes in preview)
     let projectURL = URL(fileURLWithPath: "/tmp/tavern-preview")
-
     let jake = Jake(projectURL: projectURL, loadSavedSession: false)
     let registry = AgentRegistry()
     let nameGenerator = NameGenerator(theme: .lotr)
-    let spawner = ServitorSpawner(
-        registry: registry,
-        nameGenerator: nameGenerator,
-        projectURL: projectURL
-    )
-
+    let spawner = ServitorSpawner(registry: registry, nameGenerator: nameGenerator, projectURL: projectURL)
     let coordinator = TavernCoordinator(jake: jake, spawner: spawner, projectURL: projectURL)
-    let project = TavernProject(rootURL: projectURL)
+    let viewModel = ChatViewModel(jake: jake, loadHistory: false)
+    let dispatcher = SlashCommandDispatcher()
+    let autocomplete = SlashCommandAutocomplete(dispatcher: dispatcher)
+    let fileMention = FileMentionAutocomplete(projectRoot: projectURL)
 
-    ProjectContentView(project: project, coordinator: coordinator)
+    HSplitView {
+        AgentListView(
+            viewModel: coordinator.agentListViewModel,
+            onSpawnAgent: {},
+            onCloseAgent: { _ in },
+            onUpdateDescription: { _, _ in },
+            onSelectAgent: { _ in }
+        )
+        .frame(width: 250)
+
+        ChatView(viewModel: viewModel, autocomplete: autocomplete, fileMention: fileMention)
+    }
+    .frame(width: 800, height: 500)
 }

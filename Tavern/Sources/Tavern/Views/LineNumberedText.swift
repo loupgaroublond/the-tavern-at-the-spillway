@@ -44,3 +44,10 @@ struct LineNumberedText: View {
         }
     }
 }
+
+// MARK: - Preview
+
+#Preview("Line Numbered") {
+    LineNumberedText(content: "import SwiftUI\n\nstruct MyView: View {\n    var body: some View {\n        Text(\"Hello\")\n    }\n}")
+        .frame(width: 400, height: 200)
+}

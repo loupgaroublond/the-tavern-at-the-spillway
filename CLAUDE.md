@@ -552,3 +552,4 @@ Claude must adhere to development standards:
 - New entity types require equivalent test coverage to existing types
 - No silent failures — every error logged with context
 - New agent types accept `AgentMessenger` for testability
+- Every SwiftUI view file must include at least one `#Preview` block (ADR-006)

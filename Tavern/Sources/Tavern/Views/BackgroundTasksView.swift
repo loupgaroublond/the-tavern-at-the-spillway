@@ -183,3 +183,10 @@ private struct BackgroundTaskRow: View {
         }
     }
 }
+
+// MARK: - Preview
+
+#Preview("Background Tasks") {
+    BackgroundTasksView(viewModel: BackgroundTaskViewModel())
+        .frame(width: 300, height: 400)
+}

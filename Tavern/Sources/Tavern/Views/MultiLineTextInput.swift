@@ -221,3 +221,20 @@ struct MultiLineTextInputSized: View {
         .frame(height: min(max(28, contentHeight), maxHeight))
     }
 }
+
+// MARK: - Preview
+
+#Preview("Text Input") {
+    @Previewable @State var text = ""
+    MultiLineTextInput(
+        text: $text,
+        placeholder: "Message Jake...",
+        isEnabled: true,
+        maxHeight: 200,
+        onSend: {},
+        onTextChange: { _ in },
+        onKeyEvent: nil
+    )
+    .frame(width: 400, height: 60)
+    .padding()
+}

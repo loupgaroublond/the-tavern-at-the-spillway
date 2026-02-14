@@ -66,3 +66,16 @@ private struct FilesTabContent: View {
         }
     }
 }
+
+// MARK: - Preview
+
+#Preview("Resource Panel") {
+    @Previewable @State var selectedTab: SidePaneTab = .files
+    ResourcePanelView(
+        resourceViewModel: ResourcePanelViewModel(rootURL: URL(fileURLWithPath: "/tmp/tavern-preview")),
+        taskViewModel: BackgroundTaskViewModel(),
+        todoViewModel: TodoListViewModel(),
+        selectedTab: $selectedTab
+    )
+    .frame(width: 350, height: 500)
+}

@@ -113,3 +113,11 @@ private struct DiffLineView: View {
         }
     }
 }
+
+// MARK: - Preview
+
+#Preview("Diff") {
+    DiffView(content: "--- a/file.swift\n+++ b/file.swift\n@@ -1,3 +1,3 @@\n func hello() {\n-    print(\"old\")\n+    print(\"new\")\n }")
+        .frame(width: 400, height: 200)
+        .padding()
+}

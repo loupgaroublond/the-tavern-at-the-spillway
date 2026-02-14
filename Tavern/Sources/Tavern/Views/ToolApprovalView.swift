@@ -86,3 +86,16 @@ struct ToolApprovalView: View {
         }
     }
 }
+
+// MARK: - Preview
+
+#Preview("Tool Approval") {
+    ToolApprovalView(
+        request: ToolApprovalRequest(
+            toolName: "bash",
+            toolDescription: "Execute: rm -rf /tmp/test",
+            agentName: "Marcos Antonio"
+        ),
+        onResponse: { response in print("Response: \(response.approved)") }
+    )
+}

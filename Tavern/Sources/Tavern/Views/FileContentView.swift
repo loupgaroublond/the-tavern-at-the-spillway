@@ -91,3 +91,10 @@ struct FileContentView: View {
         }
     }
 }
+
+// MARK: - Preview
+
+#Preview("File Content") {
+    FileContentView(viewModel: ResourcePanelViewModel(rootURL: URL(fileURLWithPath: "/tmp/tavern-preview")))
+        .frame(width: 400, height: 300)
+}

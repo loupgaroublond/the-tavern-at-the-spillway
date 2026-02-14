@@ -262,3 +262,18 @@ private struct DiffCollapsibleBlock: View {
         return firstLine
     }
 }
+
+// MARK: - Preview
+
+#Preview("Message Types") {
+    VStack(spacing: 8) {
+        MessageRowView(message: .text(role: .user, content: "Hello Jake!"), agentName: "Jake")
+        MessageRowView(message: .text(role: .agent, content: "Well HOWDY there, friend!"), agentName: "Jake")
+        MessageRowView(message: .toolUse(name: "bash", input: "ls -la"), agentName: "Jake")
+        MessageRowView(message: .toolResult(content: "file1.txt\nfile2.txt"), agentName: "Jake")
+        MessageRowView(message: .toolResult(content: "No such file", isError: true), agentName: "Jake")
+        MessageRowView(message: .thinking(content: "Let me think about this..."), agentName: "Jake")
+    }
+    .frame(width: 500)
+    .padding()
+}

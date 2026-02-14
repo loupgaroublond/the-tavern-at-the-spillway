@@ -115,3 +115,10 @@ private struct TodoItemRow: View {
         .padding(.vertical, 2)
     }
 }
+
+// MARK: - Preview
+
+#Preview("TODO List") {
+    TodoListView(viewModel: TodoListViewModel())
+        .frame(width: 300, height: 400)
+}

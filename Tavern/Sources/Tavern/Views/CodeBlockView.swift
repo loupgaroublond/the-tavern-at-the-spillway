@@ -90,3 +90,11 @@ struct CodeBlockView: View {
         }
     }
 }
+
+// MARK: - Preview
+
+#Preview("Code Block") {
+    CodeBlockView(content: "func hello() {\n    print(\"Hello, world!\")\n}", style: .monospaced)
+        .frame(width: 400, height: 200)
+        .padding()
+}

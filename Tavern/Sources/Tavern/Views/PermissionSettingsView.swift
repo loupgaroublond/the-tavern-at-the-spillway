@@ -120,3 +120,9 @@ struct PermissionSettingsView: View {
         }
     }
 }
+
+// MARK: - Preview
+
+#Preview("Permissions") {
+    PermissionSettingsView(viewModel: PermissionSettingsViewModel(manager: PermissionManager(store: PermissionStore())))
+}

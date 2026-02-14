@@ -163,3 +163,17 @@ private struct ErrorBlockContent: View {
         )
     }
 }
+
+// MARK: - Preview
+
+#Preview("Collapsible Blocks") {
+    VStack(spacing: 12) {
+        CollapsibleBlockView(blockType: .toolUse(name: "bash"), content: "ls -la /tmp")
+        CollapsibleBlockView(blockType: .toolResult, content: "total 0\ndrwxr-xr-x  2 user  staff  64 Feb 13 12:00 .")
+        CollapsibleBlockView(blockType: .toolError, content: "Permission denied: /etc/shadow")
+        CollapsibleBlockView(blockType: .thinking, content: "Let me analyze the user's request...")
+        CollapsibleBlockView(blockType: .webSearch, content: "Searching for: Swift concurrency patterns")
+    }
+    .frame(width: 500)
+    .padding()
+}
