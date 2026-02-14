@@ -53,7 +53,7 @@ struct TavernCoordinatorTests {
     func switchingAgentsSwitchesChatView() throws {
         let coordinator = createCoordinator()
 
-        let agent = try coordinator.spawnAgent(assignment: "Test task", selectAfterSpawn: false)
+        let agent = try coordinator.summonServitor(assignment: "Test task", selectAfterSummon: false)
         coordinator.selectAgent(id: agent.id)
 
         #expect(coordinator.activeChatViewModel.agentId == agent.id)
@@ -65,7 +65,7 @@ struct TavernCoordinatorTests {
     func selectingJakeReturnsToJakesChat() throws {
         let coordinator = createCoordinator()
 
-        let agent = try coordinator.spawnAgent(assignment: "Task", selectAfterSpawn: true)
+        let agent = try coordinator.summonServitor(assignment: "Task", selectAfterSummon: true)
         #expect(coordinator.activeChatViewModel.agentId == agent.id)
 
         coordinator.selectAgent(id: coordinator.jake.id)
@@ -80,7 +80,7 @@ struct TavernCoordinatorTests {
         let coordinator = createCoordinator()
 
         let initialCount = coordinator.agentListViewModel.items.count
-        _ = try coordinator.spawnAgent(assignment: "Task", selectAfterSpawn: false)
+        _ = try coordinator.summonServitor(assignment: "Task", selectAfterSummon: false)
 
         #expect(coordinator.agentListViewModel.items.count == initialCount + 1)
     }
@@ -90,7 +90,7 @@ struct TavernCoordinatorTests {
     func spawnAgentWithSelectAfterSpawn() throws {
         let coordinator = createCoordinator()
 
-        let agent = try coordinator.spawnAgent(assignment: "Task", selectAfterSpawn: true)
+        let agent = try coordinator.summonServitor(assignment: "Task", selectAfterSummon: true)
 
         #expect(coordinator.agentListViewModel.selectedAgentId == agent.id)
         #expect(coordinator.activeChatViewModel.agentId == agent.id)
@@ -103,10 +103,10 @@ struct TavernCoordinatorTests {
     func dismissAgentRemovesFromList() throws {
         let coordinator = createCoordinator()
 
-        let agent = try coordinator.spawnAgent(assignment: "Task", selectAfterSpawn: false)
+        let agent = try coordinator.summonServitor(assignment: "Task", selectAfterSummon: false)
         let countAfterSpawn = coordinator.agentListViewModel.items.count
 
-        try coordinator.dismissAgent(id: agent.id)
+        try coordinator.closeServitor(id: agent.id)
 
         #expect(coordinator.agentListViewModel.items.count == countAfterSpawn - 1)
     }
@@ -116,10 +116,10 @@ struct TavernCoordinatorTests {
     func dismissSelectedAgentSwitchesToJake() throws {
         let coordinator = createCoordinator()
 
-        let agent = try coordinator.spawnAgent(assignment: "Task", selectAfterSpawn: true)
+        let agent = try coordinator.summonServitor(assignment: "Task", selectAfterSummon: true)
         #expect(coordinator.activeChatViewModel.agentId == agent.id)
 
-        try coordinator.dismissAgent(id: agent.id)
+        try coordinator.closeServitor(id: agent.id)
 
         #expect(coordinator.activeChatViewModel.agentId == coordinator.jake.id)
         #expect(coordinator.agentListViewModel.selectedAgentId == coordinator.jake.id)
@@ -130,13 +130,13 @@ struct TavernCoordinatorTests {
     func dismissNonSelectedAgentKeepsSelection() throws {
         let coordinator = createCoordinator()
 
-        let agent1 = try coordinator.spawnAgent(assignment: "Task 1", selectAfterSpawn: true)
-        let agent2 = try coordinator.spawnAgent(assignment: "Task 2", selectAfterSpawn: false)
+        let agent1 = try coordinator.summonServitor(assignment: "Task 1", selectAfterSummon: true)
+        let agent2 = try coordinator.summonServitor(assignment: "Task 2", selectAfterSummon: false)
 
         // Agent1 should still be selected
         #expect(coordinator.activeChatViewModel.agentId == agent1.id)
 
-        try coordinator.dismissAgent(id: agent2.id)
+        try coordinator.closeServitor(id: agent2.id)
 
         // Should still have agent1 selected
         #expect(coordinator.activeChatViewModel.agentId == agent1.id)
@@ -150,7 +150,7 @@ struct TavernCoordinatorTests {
         let coordinator = createCoordinator()
 
         // User spawns an agent (no assignment)
-        let agent = try coordinator.spawnAgent(selectAfterSpawn: true)
+        let agent = try coordinator.summonServitor(selectAfterSummon: true)
 
         // ChatViewModel should be created for this agent
         #expect(coordinator.activeChatViewModel.agentId == agent.id)

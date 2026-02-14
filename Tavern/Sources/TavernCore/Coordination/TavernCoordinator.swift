@@ -268,34 +268,6 @@ public final class TavernCoordinator: ObservableObject {
         try closeServitor(id: servitorId)
     }
 
-    // MARK: - Legacy compatibility methods
-
-    /// Spawn a new agent (legacy - calls summonServitor)
-    @available(*, deprecated, renamed: "summonServitor(selectAfterSummon:)")
-    @discardableResult
-    public func spawnAgent(selectAfterSpawn: Bool = true) throws -> Servitor {
-        try summonServitor(selectAfterSummon: selectAfterSpawn)
-    }
-
-    /// Spawn a new agent with assignment (legacy - calls summonServitor)
-    @available(*, deprecated, renamed: "summonServitor(assignment:selectAfterSummon:)")
-    @discardableResult
-    public func spawnAgent(assignment: String, selectAfterSpawn: Bool = true) throws -> Servitor {
-        try summonServitor(assignment: assignment, selectAfterSummon: selectAfterSpawn)
-    }
-
-    /// Close an agent (legacy - calls closeServitor)
-    @available(*, deprecated, renamed: "closeServitor(id:)")
-    public func closeAgent(id agentId: UUID) throws {
-        try closeServitor(id: agentId)
-    }
-
-    /// Dismiss an agent (legacy - calls dismissServitor)
-    @available(*, deprecated, renamed: "dismissServitor(id:)")
-    public func dismissAgent(id agentId: UUID) throws {
-        try dismissServitor(id: agentId)
-    }
-
     // MARK: - Servitor Persistence
 
     /// Persist a servitor to UserDefaults

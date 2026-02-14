@@ -305,7 +305,7 @@ public final class ChatViewModel: ObservableObject {
 
         // Create placeholder message for streaming content
         let placeholderId = UUID()
-        var streamingMessage = ChatMessage(
+        let streamingMessage = ChatMessage(
             id: placeholderId,
             role: .agent,
             content: "",

@@ -124,14 +124,14 @@ struct ProjectContentView: View {
                     viewModel: coordinator.agentListViewModel,
                     onSpawnAgent: {
                         do {
-                            try coord.spawnAgent()
+                            try coord.summonServitor()
                         } catch {
                             print("Failed to spawn agent: \(error)")
                         }
                     },
                     onCloseAgent: { id in
                         do {
-                            try coord.closeAgent(id: id)
+                            try coord.closeServitor(id: id)
                         } catch {
                             print("Failed to close agent: \(error)")
                         }
