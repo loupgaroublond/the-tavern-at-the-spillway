@@ -292,37 +292,45 @@ private struct AttentionBadge: View {
 
 // MARK: - Preview
 
-@MainActor
-private func makePreviewAgentList() -> AgentListView {
-    let projectURL = URL(fileURLWithPath: "/tmp/tavern-preview")
-    let jake = Jake(projectURL: projectURL, loadSavedSession: false)
-    let registry = AgentRegistry()
-    let nameGen = NameGenerator(theme: .lotr)
-    let spawner = ServitorSpawner(
-        registry: registry,
-        nameGenerator: nameGen,
-        projectURL: projectURL
-    )
-
-    // Summon a couple of servitors (no task - user-spawned style)
-    _ = try? spawner.summon()
-    _ = try? spawner.summon()
-
-    let viewModel = AgentListViewModel(jake: jake, spawner: spawner)
-    viewModel.refreshItems()
-
-    return AgentListView(
-        viewModel: viewModel,
-        onSpawnAgent: { print("Spawn agent") },
-        onCloseAgent: { id in print("Close agent: \(id)") },
-        onUpdateDescription: { id, desc in print("Update \(id): \(desc ?? "nil")") },
-        onSelectAgent: { id in print("Select agent: \(id)") }
-    )
-}
+// Static inline preview — avoids a macOS SwiftUI crash where NSOutlineView's
+// OutlineListCoordinator.outlineView(_:child:ofItem:) triggers a fatalError
+// when views with @State or ObservableObject interact during initial preview layout.
+// See: TableViewListCore_Mac2.swift:5170
+//
+// Uses inline views instead of AgentListRow because @State (hover tracking,
+// animation pulsing) in subviews also triggers the NSOutlineView inconsistency.
 
 #Preview("Agent List") {
-    makePreviewAgentList()
-        .frame(width: 300, height: 400)
+    List {
+        HStack(spacing: 12) {
+            Circle().fill(.orange).frame(width: 10, height: 10)
+            VStack(alignment: .leading) {
+                HStack {
+                    Text("Jake").font(.headline).fontWeight(.bold)
+                    Text("(The Proprietor)").font(.caption).foregroundColor(.orange)
+                }
+            }
+            Spacer()
+        }
+        .padding(.vertical, 4)
+
+        ForEach(["Frodo", "Samwise"], id: \.self) { name in
+            HStack(spacing: 12) {
+                Circle().fill(name == "Frodo" ? .green : .gray)
+                    .frame(width: 10, height: 10)
+                VStack(alignment: .leading) {
+                    Text(name).font(.headline).fontWeight(.medium)
+                    Text(name == "Frodo" ? "Investigating the ring" : "New chat")
+                        .font(.caption).foregroundColor(.secondary)
+                        .lineLimit(1)
+                }
+                Spacer()
+            }
+            .padding(.vertical, 4)
+        }
+    }
+    .listStyle(.sidebar)
+    .frame(width: 300, height: 400)
 }
 
 #Preview("Edit Description Sheet") {
