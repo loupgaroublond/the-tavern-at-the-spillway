@@ -570,3 +570,4 @@ Claude must adhere to development standards:
 - Every SwiftUI view file must include at least one `#Preview` block (ADR-006)
 - New code implementing a specified requirement includes `// MARK: - Provenance: REQ-PREFIX-NNN` (ADR-007)
 - New tests for specified requirements include `.tags()` with requirement-derived tags (ADR-007)
+- When user says "stub" for a bead, the description MUST start with `STUB — <brief note>.` followed by a blank line. Content added beyond the stub marker is a starting point for future design breakdown, not definitive spec. Stubs are not actionable work — they need design decomposition first.
