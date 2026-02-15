@@ -53,13 +53,14 @@ Traceability matrix mapping every PRD section to its spec module(s). Every requi
 | §19.1 | Logging Standards | 016 | 016-quality.md | complete |
 | §19.2 | Testing Standards | 016 | 016-quality.md | complete |
 | §19.3 | Stress Testing Standards | 016 | 016-quality.md | complete |
+| §19.4 | Completeness and Correctness Standards | 018 | 018-spec-fidelity.md | complete |
 | §20 | Success Criteria | 017 | 017-v1-scope.md | complete |
 | §21 | Performance Requirements | 016 | 016-quality.md | complete |
 
 ## Coverage Summary
 
-- **Total PRD sections:** 44
-- **Covered by spec:** 40
+- **Total PRD sections:** 45
+- **Covered by spec:** 41
 - **Context-only (no spec needed):** 4 (§1, §3, §14, §15)
 - **Gaps:** none
 
@@ -83,8 +84,9 @@ Traceability matrix mapping every PRD section to its spec module(s). Every requi
 | 015 | 015-observability.md | REQ-OBS | complete | 11 |
 | 016 | 016-quality.md | REQ-QA | complete | 16 |
 | 017 | 017-v1-scope.md | REQ-V1 | complete | 17 |
+| 018 | 018-spec-fidelity.md | REQ-FID | complete | 7 |
 
-**Total requirements:** 155
+**Total requirements:** 162
 
 ## Verification Rules
 

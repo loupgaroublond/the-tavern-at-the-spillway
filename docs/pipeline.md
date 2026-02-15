@@ -81,7 +81,7 @@ Post-implementation documentation that describes the built system. Written after
 ## Flow Rules
 
 1. **Forward only** — Each stage consumes from stages before it, never after
-2. **Traceability** — Every document references its upstream sources
+2. **Traceability** — Every document references its upstream sources. Code and tests carry `// MARK: - Provenance: REQ-PREFIX-NNN` comments linking back to spec requirements (ADR-007). Forward references (spec → code) are computed by tooling, not manually maintained.
 3. **Single home** — Every document belongs to exactly one stage
 4. **No "reference" bucket** — Everything is either input, requirement, specification, decision, or post-code documentation
 5. **Plans are ephemeral** — OODA loop artifacts (identify gaps → plan → execute → repeat) are not a permanent stage
@@ -108,5 +108,5 @@ Each pipeline stage can be verified against its upstream:
 | PRD coverage | Transcripts | PRD | (manual) |
 | Spec coverage | PRD | Spec modules | `2-spec/000-index.md` matrix |
 | ADR coverage | Spec | ADRs | ADR references in spec modules |
-| Code coverage | Spec | Code | Downstream references in spec modules |
-| Test coverage | Spec | Tests | Downstream references in spec modules |
+| Code coverage | Spec | Code | `grep "MARK: - Provenance"` in source files (ADR-007) |
+| Test coverage | Spec | Tests | `grep "MARK: - Provenance"` + `.tags()` in test files (ADR-007) |

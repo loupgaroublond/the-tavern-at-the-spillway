@@ -9,7 +9,7 @@ This document defines the conventions used throughout the Tavern specification s
 
 ## How to Read the Spec
 
-The specification is organized as 18 numbered modules (000–017). Each module covers a single domain. Modules depend only on lower-numbered modules — invariants and architecture come first, scoping comes last.
+The specification is organized as 19 numbered modules (000–018). Each module covers a single domain. Modules depend only on lower-numbered modules — invariants and architecture come first, scoping comes last.
 
 Start with §2 (Invariants) and §3 (System Architecture) for the foundational rules, then read domain modules in any order. §0 (Index) provides a traceability matrix mapping every PRD section to its spec module(s).
 
@@ -82,5 +82,6 @@ The `_index.md` file replaces the original single file. All `§4.X.Y` references
 | 015 | `015-observability.md` | Metrics, logging, violation monitoring | REQ-OBS |
 | 016 | `016-quality.md` | Testing grades, standards, performance | REQ-QA |
 | 017 | `017-v1-scope.md` | V1 boundaries, success criteria, deferrals | REQ-V1 |
+| 018 | `018-spec-fidelity.md` | Spec fidelity, provenance tracking | REQ-FID |
 
 **Ordering rationale:** Rules → Architecture → Agents (creation → lifecycle → operation → control → communication) → Infrastructure (storage → safety → workflows) → Presentation (UX → views) → Operations (monitoring → testing) → Scoping.
