@@ -132,6 +132,12 @@ struct ChatView: View {
 
             Divider()
 
+            // Session mode picker
+            SessionModeStrip(
+                currentMode: $viewModel.sessionMode,
+                isEnabled: !viewModel.isCogitating
+            )
+
             // Autocomplete popups (appears above input bar) — only one visible at a time
             if autocomplete.isVisible {
                 SlashCommandAutocompletePopup(
@@ -199,6 +205,23 @@ struct ChatView: View {
                     request: request,
                     onResponse: { response in
                         viewModel.respondToApproval(response)
+                    }
+                )
+            }
+        }
+        .sheet(isPresented: Binding(
+            get: { viewModel.pendingPlanApproval != nil },
+            set: { show in
+                if !show {
+                    viewModel.respondToPlanApproval(PlanApprovalResponse(approved: false, feedback: "Dismissed"))
+                }
+            }
+        )) {
+            if let request = viewModel.pendingPlanApproval {
+                PlanApprovalView(
+                    request: request,
+                    onResponse: { response in
+                        viewModel.respondToPlanApproval(response)
                     }
                 )
             }

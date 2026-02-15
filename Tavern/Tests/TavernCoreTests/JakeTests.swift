@@ -218,4 +218,41 @@ struct JakeTests {
         #expect(mock.queryOptions.count == 1)
         #expect(mock.queryOptions[0].systemPrompt == Jake.systemPrompt)
     }
+
+    // MARK: - Session Mode Tests
+
+    @Test("Jake defaults to plan mode")
+    func jakeDefaultsToPlanMode() {
+        let jake = Jake(projectURL: Self.testProjectURL(), loadSavedSession: false)
+        #expect(jake.sessionMode == .plan)
+    }
+
+    @Test("Jake session mode can be changed")
+    func jakeSessionModeCanBeChanged() {
+        let jake = Jake(projectURL: Self.testProjectURL(), loadSavedSession: false)
+        #expect(jake.sessionMode == .plan)
+
+        jake.sessionMode = .normal
+        #expect(jake.sessionMode == .normal)
+
+        jake.sessionMode = .bypassPermissions
+        #expect(jake.sessionMode == .bypassPermissions)
+    }
+
+    @Test("Jake includes permission mode in query options")
+    func jakeIncludesPermissionModeInQueryOptions() async throws {
+        let mock = MockMessenger(responses: ["OK", "OK"])
+        let jake = Jake(projectURL: Self.testProjectURL(), messenger: mock, loadSavedSession: false)
+
+        // Default plan mode
+        let _ = try await jake.send("Test plan")
+        #expect(mock.queryOptions.count == 1)
+        #expect(mock.queryOptions[0].permissionMode == .plan)
+
+        // Switch to normal and verify
+        jake.sessionMode = .normal
+        let _ = try await jake.send("Test normal")
+        #expect(mock.queryOptions.count == 2)
+        #expect(mock.queryOptions[1].permissionMode == .default)
+    }
 }

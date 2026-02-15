@@ -52,6 +52,19 @@ public final class ChatViewModel: ObservableObject {
     /// Current tool approval request waiting for user decision (nil when none pending)
     @Published public private(set) var pendingApproval: ToolApprovalRequest?
 
+    /// Current plan approval request waiting for user decision (nil when none pending)
+    @Published public private(set) var pendingPlanApproval: PlanApprovalRequest?
+
+    /// The agent's session mode — drives CLI permission behavior.
+    /// Changing this updates the agent immediately.
+    @Published public var sessionMode: PermissionMode {
+        didSet {
+            guard sessionMode != oldValue else { return }
+            agent.sessionMode = sessionMode
+            TavernLogger.chat.info("[\(self.agentName)] sessionMode changed: \(oldValue.rawValue) -> \(self.sessionMode.rawValue)")
+        }
+    }
+
     // MARK: - Dependencies
 
     private let agent: any Agent
@@ -64,6 +77,9 @@ public final class ChatViewModel: ObservableObject {
 
     /// Continuation for pending tool approval. Resumed when user responds.
     private var approvalContinuation: CheckedContinuation<ToolApprovalResponse, Never>?
+
+    /// Continuation for pending plan approval. Resumed when user responds.
+    private var planApprovalContinuation: CheckedContinuation<PlanApprovalResponse, Never>?
 
     /// Slash command dispatcher (injected, shared per project)
     public var commandDispatcher: SlashCommandDispatcher?
@@ -149,6 +165,7 @@ public final class ChatViewModel: ObservableObject {
         self.agent = jake
         self.isJake = true
         self.projectPath = jake.projectPath
+        self.sessionMode = jake.sessionMode
 
         if loadHistory {
             Task {
@@ -166,6 +183,7 @@ public final class ChatViewModel: ObservableObject {
         self.agent = agent
         self.isJake = agent is Jake
         self.projectPath = (agent as? Jake)?.projectPath ?? projectPath
+        self.sessionMode = agent.sessionMode
 
         if loadHistory {
             Task {
@@ -465,6 +483,48 @@ public final class ChatViewModel: ObservableObject {
                     self.approvalContinuation = continuation
                     self.pendingApproval = request
                     TavernLogger.permissions.info("[\(self.agentName)] showing approval for tool '\(request.toolName)'")
+                }
+            }
+        }
+    }
+
+    /// Respond to a pending plan approval request.
+    /// Resumes the suspended ExitPlanMode callback with the user's decision.
+    /// On approval, switches the agent out of plan mode.
+    /// - Parameter response: The user's approval or rejection
+    public func respondToPlanApproval(_ response: PlanApprovalResponse) {
+        TavernLogger.permissions.info("[\(self.agentName)] plan approval response: approved=\(response.approved)")
+
+        guard let continuation = planApprovalContinuation else {
+            TavernLogger.permissions.error("[\(self.agentName)] respondToPlanApproval called with no pending continuation")
+            return
+        }
+
+        planApprovalContinuation = nil
+        pendingPlanApproval = nil
+
+        if response.approved {
+            // Switch agent out of plan mode on approval
+            sessionMode = .normal
+        }
+
+        continuation.resume(returning: response)
+    }
+
+    /// Create a PlanApprovalHandler that surfaces requests through this view model.
+    /// The handler suspends until the user responds via `respondToPlanApproval`.
+    public func makePlanApprovalHandler() -> PlanApprovalHandler {
+        return { [weak self] request in
+            guard let self else {
+                TavernLogger.permissions.error("ChatViewModel deallocated, rejecting plan")
+                return PlanApprovalResponse(approved: false, feedback: "View model no longer available")
+            }
+
+            return await withCheckedContinuation { continuation in
+                Task { @MainActor in
+                    self.planApprovalContinuation = continuation
+                    self.pendingPlanApproval = request
+                    TavernLogger.permissions.info("[\(self.agentName)] showing plan approval")
                 }
             }
         }

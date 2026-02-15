@@ -16,33 +16,81 @@ public struct LiveMessenger: AgentMessenger {
 
     private let permissionManager: PermissionManager?
     private let approvalHandler: ToolApprovalHandler?
+    private let planApprovalHandler: PlanApprovalHandler?
     private let agentName: String
 
     /// Create a LiveMessenger with optional permission enforcement.
     /// - Parameters:
     ///   - permissionManager: Permission manager for tool checks (nil disables checks)
     ///   - approvalHandler: Async callback for user prompting (required when manager is non-nil)
+    ///   - planApprovalHandler: Async callback for ExitPlanMode requests
     ///   - agentName: Name of the agent using this messenger (for approval request context)
     public init(
         permissionManager: PermissionManager? = nil,
         approvalHandler: ToolApprovalHandler? = nil,
+        planApprovalHandler: PlanApprovalHandler? = nil,
         agentName: String = ""
     ) {
         self.permissionManager = permissionManager
         self.approvalHandler = approvalHandler
+        self.planApprovalHandler = planApprovalHandler
         self.agentName = agentName
     }
 
     /// Build the canUseTool callback from the permission manager and approval handler.
     /// Returns nil if no permission manager is configured.
     private func buildCanUseToolCallback() -> CanUseToolCallback? {
-        guard let manager = permissionManager else { return nil }
+        // Need a callback if we have a permission manager OR a plan approval handler
+        guard permissionManager != nil || planApprovalHandler != nil else { return nil }
 
+        let manager = permissionManager
         let handler = approvalHandler
+        let planHandler = planApprovalHandler
         let name = agentName
 
         return { toolName, input, context in
             TavernLogger.permissions.info("canUseTool called for '\(toolName)' (agent: \(name))")
+
+            // Intercept ExitPlanMode — route to plan approval handler
+            if toolName == "ExitPlanMode" {
+                guard let planHandler else {
+                    TavernLogger.permissions.info("ExitPlanMode with no plan handler, allowing (agent: \(name))")
+                    return .allowTool(toolUseID: context.toolUseID)
+                }
+
+                // Extract allowed prompts from the input
+                var allowedPrompts: [(tool: String, prompt: String)] = []
+                if let promptsValue = input["allowedPrompts"],
+                   case .array(let prompts) = promptsValue {
+                    for prompt in prompts {
+                        if case .object(let dict) = prompt,
+                           case .string(let tool) = dict["tool"],
+                           case .string(let promptText) = dict["prompt"] {
+                            allowedPrompts.append((tool: tool, prompt: promptText))
+                        }
+                    }
+                }
+
+                let request = PlanApprovalRequest(
+                    agentName: name,
+                    allowedPrompts: allowedPrompts
+                )
+
+                let response = await planHandler(request)
+                if response.approved {
+                    TavernLogger.permissions.info("Plan approved for agent: \(name)")
+                    return .allowTool(toolUseID: context.toolUseID)
+                } else {
+                    let feedback = response.feedback ?? "Plan rejected by user"
+                    TavernLogger.permissions.info("Plan rejected for agent: \(name) — \(feedback)")
+                    return .denyTool(feedback, toolUseID: context.toolUseID)
+                }
+            }
+
+            // Standard permission evaluation
+            guard let manager else {
+                return .allowTool(toolUseID: context.toolUseID)
+            }
 
             let decision = manager.evaluateTool(toolName)
 

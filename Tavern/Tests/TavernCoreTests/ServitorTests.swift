@@ -399,4 +399,52 @@ struct ServitorTests {
         #expect(servitor.state != .done)
         #expect(servitor.state == .idle)
     }
+
+    // MARK: - Session Mode Tests
+
+    @Test("Servitor defaults to plan mode")
+    func servitorDefaultsToPlanMode() {
+        let servitor = Servitor(
+            name: "ModeWorker",
+            projectURL: Self.testProjectURL(),
+            loadSavedSession: false
+        )
+        #expect(servitor.sessionMode == .plan)
+    }
+
+    @Test("Servitor session mode can be changed")
+    func servitorSessionModeCanBeChanged() {
+        let servitor = Servitor(
+            name: "ModeWorker",
+            projectURL: Self.testProjectURL(),
+            loadSavedSession: false
+        )
+        #expect(servitor.sessionMode == .plan)
+
+        servitor.sessionMode = .acceptEdits
+        #expect(servitor.sessionMode == .acceptEdits)
+    }
+
+    @Test("Servitor includes permission mode in query options")
+    func servitorIncludesPermissionModeInQueryOptions() async throws {
+        let mock = MockMessenger(responses: ["OK", "OK"])
+        let servitor = Servitor(
+            name: "ModeQueryWorker",
+            assignment: "Test modes",
+            projectURL: Self.testProjectURL(),
+            messenger: mock,
+            loadSavedSession: false
+        )
+
+        // Default plan mode
+        let _ = try await servitor.send("Test plan")
+        #expect(mock.queryOptions.count == 1)
+        #expect(mock.queryOptions[0].permissionMode == .plan)
+
+        // Switch to bypassPermissions and verify
+        servitor.sessionMode = .bypassPermissions
+        let _ = try await servitor.send("Test bypass")
+        #expect(mock.queryOptions.count == 2)
+        #expect(mock.queryOptions[1].permissionMode == .bypassPermissions)
+    }
 }

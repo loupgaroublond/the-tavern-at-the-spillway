@@ -23,6 +23,12 @@ public final class MockAgent: Agent, @unchecked Sendable {
         queue.sync { _state }
     }
 
+    /// The agent's current session mode
+    public var sessionMode: PermissionMode {
+        get { queue.sync { _sessionMode } }
+        set { queue.sync { _sessionMode = newValue } }
+    }
+
     // MARK: - Mock Configuration
 
     /// Responses to return, popped from front on each `send()` call.
@@ -53,6 +59,7 @@ public final class MockAgent: Agent, @unchecked Sendable {
 
     private let queue = DispatchQueue(label: "com.tavern.MockAgent")
     private var _state: AgentState = .idle
+    private var _sessionMode: PermissionMode = .plan
 
     // MARK: - Initialization
 

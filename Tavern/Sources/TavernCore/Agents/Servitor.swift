@@ -44,10 +44,17 @@ public final class Servitor: Agent, @unchecked Sendable {
 
     private var _state: AgentState = .idle
     private var _sessionId: String?
+    private var _sessionMode: PermissionMode = .plan
 
     /// The current session ID (for conversation continuity)
     public var sessionId: String? {
         queue.sync { _sessionId }
+    }
+
+    /// The current session mode (plan, normal, acceptEdits, etc.)
+    public var sessionMode: PermissionMode {
+        get { queue.sync { _sessionMode } }
+        set { queue.sync { _sessionMode = newValue } }
     }
 
     // MARK: - System Prompt
@@ -150,6 +157,7 @@ public final class Servitor: Agent, @unchecked Sendable {
         // Build query options
         var options = QueryOptions()
         options.systemPrompt = systemPrompt
+        options.permissionMode = clodKitPermissionMode()
         options.workingDirectory = projectURL
         if let sessionId = currentSessionId {
             options.resume = sessionId
@@ -195,6 +203,7 @@ public final class Servitor: Agent, @unchecked Sendable {
         // Build query options
         var options = QueryOptions()
         options.systemPrompt = systemPrompt
+        options.permissionMode = clodKitPermissionMode()
         options.workingDirectory = projectURL
         if let sessionId = currentSessionId {
             options.resume = sessionId
@@ -301,6 +310,18 @@ public final class Servitor: Agent, @unchecked Sendable {
     }
 
     // MARK: - Private Helpers
+
+    /// Map Tavern's PermissionMode to ClodKit's PermissionMode for QueryOptions
+    private func clodKitPermissionMode() -> ClodKit.PermissionMode {
+        let mode: PermissionMode = queue.sync { _sessionMode }
+        switch mode {
+        case .normal: return .default
+        case .acceptEdits: return .acceptEdits
+        case .plan: return .plan
+        case .bypassPermissions: return .bypassPermissions
+        case .dontAsk: return .dontAsk
+        }
+    }
 
     private func updateStateAfterResponse() {
         queue.sync {

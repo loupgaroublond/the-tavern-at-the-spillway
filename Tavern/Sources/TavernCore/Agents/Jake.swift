@@ -26,6 +26,7 @@ public final class Jake: Agent, @unchecked Sendable {
     private var _sessionId: String?
     private var _isCogitating: Bool = false
     private var _mcpServer: SDKMCPServer?
+    private var _sessionMode: PermissionMode = .plan
 
     /// MCP server for Jake's tools (summon, dismiss, etc.)
     /// Injected after init to break circular dependency with spawner
@@ -47,6 +48,12 @@ public final class Jake: Agent, @unchecked Sendable {
     /// Whether Jake is currently cogitating (working)
     public var isCogitating: Bool {
         queue.sync { _isCogitating }
+    }
+
+    /// The current session mode (plan, normal, acceptEdits, etc.)
+    public var sessionMode: PermissionMode {
+        get { queue.sync { _sessionMode } }
+        set { queue.sync { _sessionMode = newValue } }
     }
 
     /// Jake's system prompt - establishes his character and dispatcher role
@@ -154,6 +161,7 @@ public final class Jake: Agent, @unchecked Sendable {
         // Build query options
         var options = QueryOptions()
         options.systemPrompt = Self.systemPrompt
+        options.permissionMode = clodKitPermissionMode()
         options.workingDirectory = projectURL
         if let sessionId = currentSessionId {
             options.resume = sessionId
@@ -212,6 +220,7 @@ public final class Jake: Agent, @unchecked Sendable {
         // Build query options
         var options = QueryOptions()
         options.systemPrompt = Self.systemPrompt
+        options.permissionMode = clodKitPermissionMode()
         options.workingDirectory = projectURL
         if let sessionId = currentSessionId {
             options.resume = sessionId
@@ -273,6 +282,18 @@ public final class Jake: Agent, @unchecked Sendable {
         }
 
         return (stream: wrappedStream, cancel: cancel)
+    }
+
+    /// Map Tavern's PermissionMode to ClodKit's PermissionMode for QueryOptions
+    private func clodKitPermissionMode() -> ClodKit.PermissionMode {
+        let mode: PermissionMode = queue.sync { _sessionMode }
+        switch mode {
+        case .normal: return .default
+        case .acceptEdits: return .acceptEdits
+        case .plan: return .plan
+        case .bypassPermissions: return .bypassPermissions
+        case .dontAsk: return .dontAsk
+        }
     }
 
     /// Reset Jake's conversation (start fresh)

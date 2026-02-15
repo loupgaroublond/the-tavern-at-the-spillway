@@ -9,6 +9,7 @@ final class TestAgent: Agent, @unchecked Sendable {
     let id: UUID
     let name: String
     private(set) var state: AgentState = .idle
+    var sessionMode: PermissionMode = .plan
 
     init(id: UUID = UUID(), name: String) {
         self.id = id

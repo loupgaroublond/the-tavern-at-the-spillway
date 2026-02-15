@@ -33,6 +33,9 @@ public protocol Agent: AnyObject, Identifiable, Sendable {
     /// Current state of the agent
     var state: AgentState { get }
 
+    /// The agent's current session mode (plan, normal, acceptEdits, etc.)
+    var sessionMode: PermissionMode { get set }
+
     /// Send a message to this agent and get a response (batch mode)
     /// - Parameter message: The message to send
     /// - Returns: The agent's response

@@ -243,4 +243,37 @@ struct ChatViewModelTests {
         #expect(viewModel.agentName == "ServitorMock")
         #expect(viewModel.messages[1].content == "Servitor response")
     }
+
+    // MARK: - Session Mode Tests
+
+    @Test("ChatViewModel inherits agent's session mode")
+    @MainActor
+    func chatViewModelInheritsAgentSessionMode() {
+        let mock = MockAgent(name: "ModeAgent")
+        #expect(mock.sessionMode == .plan) // default
+        let viewModel = ChatViewModel(agent: mock, loadHistory: false)
+        #expect(viewModel.sessionMode == .plan)
+    }
+
+    @Test("ChatViewModel mode change propagates to agent")
+    @MainActor
+    func chatViewModelModeChangePropagates() {
+        let mock = MockAgent(name: "ModeAgent")
+        let viewModel = ChatViewModel(agent: mock, loadHistory: false)
+
+        viewModel.sessionMode = .bypassPermissions
+        #expect(mock.sessionMode == .bypassPermissions)
+
+        viewModel.sessionMode = .acceptEdits
+        #expect(mock.sessionMode == .acceptEdits)
+    }
+
+    @Test("ChatViewModel mode initialized from Jake agent")
+    @MainActor
+    func chatViewModelModeInitializedFromJake() {
+        let jake = Jake(projectURL: Self.testProjectURL(), loadSavedSession: false)
+        jake.sessionMode = .normal
+        let viewModel = ChatViewModel(jake: jake, loadHistory: false)
+        #expect(viewModel.sessionMode == .normal)
+    }
 }

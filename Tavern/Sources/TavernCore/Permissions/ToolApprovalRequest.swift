@@ -62,3 +62,53 @@ public struct ToolApprovalResponse: Sendable {
         self.alwaysAllow = alwaysAllow
     }
 }
+
+// MARK: - Plan Approval
+
+/// Async callback invoked when an agent calls ExitPlanMode.
+/// The handler presents the plan for user review and returns the decision.
+public typealias PlanApprovalHandler = @Sendable (PlanApprovalRequest) async -> PlanApprovalResponse
+
+/// Represents a plan submitted by an agent for user review.
+/// Created when an agent in plan mode calls ExitPlanMode.
+public struct PlanApprovalRequest: Identifiable, Sendable {
+
+    /// Unique identifier for this request
+    public let id: UUID
+
+    /// The agent that submitted the plan
+    public let agentName: String
+
+    /// Prompts the agent requested to be allowed (bash commands, etc.)
+    public let allowedPrompts: [(tool: String, prompt: String)]
+
+    /// When the request was created
+    public let requestedAt: Date
+
+    public init(
+        id: UUID = UUID(),
+        agentName: String,
+        allowedPrompts: [(tool: String, prompt: String)] = [],
+        requestedAt: Date = Date()
+    ) {
+        self.id = id
+        self.agentName = agentName
+        self.allowedPrompts = allowedPrompts
+        self.requestedAt = requestedAt
+    }
+}
+
+/// The user's response to a plan approval request
+public struct PlanApprovalResponse: Sendable {
+
+    /// Whether the plan is approved
+    public let approved: Bool
+
+    /// Feedback if the plan was rejected
+    public let feedback: String?
+
+    public init(approved: Bool, feedback: String? = nil) {
+        self.approved = approved
+        self.feedback = feedback
+    }
+}
