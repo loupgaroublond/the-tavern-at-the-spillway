@@ -88,6 +88,18 @@ redo xcodegen
 redo build
 ```
 
+### Build Dependency Graph
+
+```
+run ──→ build ──→ icon ──→ ../scripts/generate_icon.py
+                  ├────→ xcodegen ──→ project.yml
+                  ├────→ project.yml
+                  └────→ Package.swift
+test-grade4 ──→ build
+all ──→ build
+clean ──→ Tavern/stop
+```
+
 
 ## Non-Negotiable Invariants
 
@@ -553,3 +565,5 @@ Claude must adhere to development standards:
 - No silent failures — every error logged with context
 - New agent types accept `AgentMessenger` for testability
 - Every SwiftUI view file must include at least one `#Preview` block (ADR-006)
+- New code implementing a specified requirement includes `// MARK: - Provenance: REQ-PREFIX-NNN` (ADR-007)
+- New tests for specified requirements include `.tags()` with requirement-derived tags (ADR-007)
