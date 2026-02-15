@@ -384,6 +384,9 @@ See `docs/pipeline.md` for full spec.
 | `/commit` | Transcribe recent design discussion, then git commit |
 | `/status` | Update `docs/4-docs/project-status.md` |
 | `/audit-transcripts` | Audit session history for missing design transcripts |
+| `/spec-status` | Live provenance coverage dashboard across all spec modules |
+| `/trace` | Trace a single requirement through PRD → spec → code → tests |
+| `/audit-spec` | Full PRD-to-spec coverage verification and gap analysis |
 
 
 ## Debugging
