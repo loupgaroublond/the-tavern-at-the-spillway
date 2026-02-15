@@ -1,5 +1,7 @@
 import Foundation
 
+// MARK: - Provenance: REQ-INV-007
+
 /// Tavern-specific errors that are distinct from SDK errors
 /// These represent application-level failure modes that we can handle specially
 public enum TavernError: Error, LocalizedError {

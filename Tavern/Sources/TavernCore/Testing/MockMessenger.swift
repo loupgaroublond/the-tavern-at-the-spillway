@@ -1,6 +1,8 @@
 import Foundation
 import ClodKit
 
+// MARK: - Provenance: REQ-QA-002
+
 // MARK: - MockMessenger
 
 /// Test messenger that returns canned responses without calling Claude.

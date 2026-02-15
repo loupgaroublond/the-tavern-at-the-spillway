@@ -1,6 +1,8 @@
 import Foundation
 import os.log
 
+// MARK: - Provenance: REQ-AGT-007, REQ-ARCH-004, REQ-ARCH-006, REQ-OPM-005, REQ-SPN-001, REQ-SPN-002, REQ-SPN-003, REQ-SPN-010, REQ-V1-004
+
 /// Factory type for creating AgentMessenger instances.
 /// Accepts the servitor name for context in permission approval requests.
 /// Returns a new messenger for each spawned servitor.

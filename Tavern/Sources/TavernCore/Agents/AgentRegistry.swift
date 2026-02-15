@@ -1,5 +1,7 @@
 import Foundation
 
+// MARK: - Provenance: REQ-SPN-005
+
 /// Error thrown when agent registry operations fail
 public enum AgentRegistryError: Error, Equatable {
     case agentNotFound(UUID)

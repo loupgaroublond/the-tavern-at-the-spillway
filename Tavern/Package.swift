@@ -2,6 +2,8 @@
 
 import PackageDescription
 
+// MARK: - Provenance: REQ-ARCH-001
+
 let package = Package(
     name: "Tavern",
     platforms: [

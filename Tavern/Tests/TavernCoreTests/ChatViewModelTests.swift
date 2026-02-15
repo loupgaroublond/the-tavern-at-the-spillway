@@ -11,7 +11,7 @@ struct ChatViewModelTests {
             .appendingPathComponent("tavern-test-\(UUID().uuidString)")
     }
 
-    @Test("ViewModel initializes with empty state")
+    @Test("ViewModel initializes with empty state", .tags(.reqARCH003))
     @MainActor
     func viewModelInitializesEmpty() {
         let jake = Jake(projectURL: Self.testProjectURL(), loadSavedSession: false)
@@ -141,7 +141,7 @@ struct ChatViewModelTests {
 
     // MARK: - Grade 2 Mock Tests (using MockAgent)
 
-    @Test("Sending message adds user and agent messages")
+    @Test("Sending message adds user and agent messages", .tags(.reqAGT010))
     @MainActor
     func sendingMessageAddsMessages() async {
         let mock = MockAgent(responses: ["Hello from mock!"])
@@ -246,7 +246,7 @@ struct ChatViewModelTests {
 
     // MARK: - Session Mode Tests
 
-    @Test("ChatViewModel inherits agent's session mode")
+    @Test("ChatViewModel inherits agent's session mode", .tags(.reqOPM001, .reqOPM002))
     @MainActor
     func chatViewModelInheritsAgentSessionMode() {
         let mock = MockAgent(name: "ModeAgent")
@@ -255,7 +255,7 @@ struct ChatViewModelTests {
         #expect(viewModel.sessionMode == .plan)
     }
 
-    @Test("ChatViewModel mode change propagates to agent")
+    @Test("ChatViewModel mode change propagates to agent", .tags(.reqOPM001, .reqOPM002))
     @MainActor
     func chatViewModelModeChangePropagates() {
         let mock = MockAgent(name: "ModeAgent")

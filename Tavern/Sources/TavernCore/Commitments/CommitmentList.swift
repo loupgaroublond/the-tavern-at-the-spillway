@@ -1,5 +1,7 @@
 import Foundation
 
+// MARK: - Provenance: REQ-DET-005
+
 /// A collection of commitments for an agent
 /// Thread-safe via serial dispatch queue
 public final class CommitmentList: @unchecked Sendable {

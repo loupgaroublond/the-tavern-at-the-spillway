@@ -2,6 +2,8 @@ import SwiftUI
 import TavernCore
 import os.log
 
+// MARK: - Provenance: REQ-UX-005, REQ-UX-006, REQ-VIW-001, REQ-VIW-003
+
 /// A single message row in the chat view.
 /// Provides visual distinction between message types via color-coded avatars,
 /// styled content blocks, and timestamps.

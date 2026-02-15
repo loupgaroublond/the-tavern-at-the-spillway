@@ -227,7 +227,7 @@ struct AgentPersistenceTests {
         try? FileManager.default.removeItem(at: store.rootDirectory)
     }
 
-    @Test("Agent creates doc store node on save")
+    @Test("Agent creates doc store node on save", .tags(.reqDOC002, .reqLCM004))
     func agentCreatesDocStoreNode() throws {
         let store = try makeTempDocStore()
         defer { cleanupDocStore(store) }
@@ -266,7 +266,7 @@ struct AgentPersistenceTests {
         #expect(loaded.state == "waiting")
     }
 
-    @Test("Agent restored from file")
+    @Test("Agent restored from file", .tags(.reqDOC002, .reqLCM004))
     func agentRestoredFromFile() throws {
         let store = try makeTempDocStore()
         defer { cleanupDocStore(store) }

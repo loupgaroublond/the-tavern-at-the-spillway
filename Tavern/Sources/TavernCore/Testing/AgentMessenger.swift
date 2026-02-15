@@ -1,6 +1,8 @@
 import Foundation
 import ClodKit
 
+// MARK: - Provenance: REQ-ARCH-009, REQ-QA-002
+
 // MARK: - Stream Event
 
 /// Token usage data from a completed response

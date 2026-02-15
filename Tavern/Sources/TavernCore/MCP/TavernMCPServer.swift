@@ -2,6 +2,8 @@ import Foundation
 import ClodKit
 import os.log
 
+// MARK: - Provenance: REQ-DET-003, REQ-DET-006, REQ-DET-008, REQ-INV-006, REQ-SPN-003, REQ-SPN-010, REQ-V1-002
+
 /// Creates the Tavern's MCP server with tools for Jake to manage servitors.
 ///
 /// Phase 1: summon + dismiss only (messaging/forwarding/reuse later)

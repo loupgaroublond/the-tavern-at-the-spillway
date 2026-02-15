@@ -1,5 +1,7 @@
 import Foundation
 
+// MARK: - Provenance: REQ-SPN-004, REQ-SPN-007
+
 /// A theme for naming agents in the Tavern
 /// Each theme has a pool of names organized by tiers (more common to more obscure)
 public struct NamingTheme: Identifiable, Sendable {

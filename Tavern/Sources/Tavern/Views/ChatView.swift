@@ -2,6 +2,8 @@ import SwiftUI
 import TavernCore
 import os.log
 
+// MARK: - Provenance: REQ-UX-002, REQ-UX-009
+
 /// A chat interface for conversing with an agent
 struct ChatView: View {
     private static let logger = Logger(subsystem: "com.tavern.spillway", category: "chat")

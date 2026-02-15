@@ -3,6 +3,8 @@ import TavernCore
 import AppKit
 import os.log
 
+// MARK: - Provenance: REQ-UX-007
+
 // MARK: - Window Opening Service
 
 /// Shared service that bridges AppKit → SwiftUI window opening

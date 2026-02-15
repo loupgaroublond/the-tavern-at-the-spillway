@@ -1,6 +1,8 @@
 import Foundation
 import os.log
 
+// MARK: - Provenance: REQ-OBS-006
+
 /// Persists permission rules and the active permission mode using UserDefaults.
 ///
 /// Thread-safe via serial DispatchQueue, matching the project's concurrency pattern

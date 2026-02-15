@@ -1,5 +1,7 @@
 import Foundation
 
+// MARK: - Provenance: REQ-DOC-004, REQ-DOC-008, REQ-INV-005
+
 /// Stores session IDs locally using UserDefaults
 /// Session IDs are machine-local (stored in ~/.claude/projects/) so they
 /// don't belong in DocStore or other shareable storage

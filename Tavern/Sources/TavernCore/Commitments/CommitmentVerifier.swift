@@ -1,6 +1,8 @@
 import Foundation
 import os.log
 
+// MARK: - Provenance: REQ-DET-004, REQ-INV-003, REQ-V1-006
+
 /// Verifies commitments by running their assertions
 public final class CommitmentVerifier: @unchecked Sendable {
 

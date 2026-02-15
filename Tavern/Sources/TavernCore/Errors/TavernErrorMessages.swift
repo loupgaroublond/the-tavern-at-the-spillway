@@ -1,6 +1,8 @@
 import Foundation
 import ClodKit
 
+// MARK: - Provenance: REQ-INV-007
+
 /// Maps errors to informative, Jake-style messages for users
 /// Every error the user sees should be expected, specific, and actionable
 public enum TavernErrorMessages {

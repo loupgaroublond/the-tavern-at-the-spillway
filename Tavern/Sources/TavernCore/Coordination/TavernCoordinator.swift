@@ -2,6 +2,8 @@ import Foundation
 import ClodKit
 import os.log
 
+// MARK: - Provenance: REQ-AGT-007, REQ-ARCH-002, REQ-ARCH-005, REQ-COM-008
+
 /// Coordinates the Tavern's agents and their chat sessions
 /// This is the central hub that ties together Jake, the Slop Squad, and the UI
 @MainActor

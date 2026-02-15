@@ -2,6 +2,8 @@ import Foundation
 import ClodKit
 import os.log
 
+// MARK: - Provenance: REQ-AGT-002, REQ-AGT-005, REQ-AGT-009, REQ-DET-001, REQ-DET-004, REQ-LCM-007, REQ-OBS-011, REQ-OPM-005, REQ-SPN-009, REQ-V1-005
+
 /// A servitor - a worker spawned by Jake to handle specific assignments
 /// Unlike Jake (who is eternal), servitors are created for a purpose
 /// and eventually complete their work.

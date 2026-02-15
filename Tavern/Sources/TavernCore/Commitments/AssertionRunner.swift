@@ -1,5 +1,7 @@
 import Foundation
 
+// MARK: - Provenance: REQ-INV-003
+
 /// Protocol for running assertions to verify commitments
 /// Allows injection of mock runners for testing
 public protocol AssertionRunner: Sendable {

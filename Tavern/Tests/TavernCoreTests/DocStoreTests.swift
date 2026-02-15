@@ -5,7 +5,7 @@ import Testing
 @Suite("Document Tests")
 struct DocumentTests {
 
-    @Test("Document has all required properties")
+    @Test("Document has all required properties", .tags(.reqDOC001, .reqDOC003))
     func documentHasProperties() {
         let doc = Document(
             id: "test-doc",
@@ -147,7 +147,7 @@ struct DocStoreTests {
         #expect(FileManager.default.fileExists(atPath: store.rootDirectory.path))
     }
 
-    @Test("DocStore creates file")
+    @Test("DocStore creates file", .tags(.reqDOC001, .reqDOC002, .reqINV005))
     func docStoreCreatesFile() throws {
         let tempDir = try makeTempDirectory()
         defer { cleanupDirectory(tempDir) }
@@ -169,7 +169,7 @@ struct DocStoreTests {
         #expect(contents.contains("Content here"))
     }
 
-    @Test("DocStore reads file")
+    @Test("DocStore reads file", .tags(.reqDOC001, .reqDOC003))
     func docStoreReadsFile() throws {
         let tempDir = try makeTempDirectory()
         defer { cleanupDirectory(tempDir) }

@@ -1,6 +1,8 @@
 import Foundation
 import os.log
 
+// MARK: - Provenance: REQ-ARCH-005, REQ-UX-007
+
 /// Manages open projects across the application
 @MainActor
 public final class ProjectManager: ObservableObject {

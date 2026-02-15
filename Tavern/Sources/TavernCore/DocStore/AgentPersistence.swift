@@ -1,5 +1,7 @@
 import Foundation
 
+// MARK: - Provenance: REQ-INV-005, REQ-LCM-004
+
 /// Manages persisting agents to the doc store
 public final class AgentPersistence: @unchecked Sendable {
 

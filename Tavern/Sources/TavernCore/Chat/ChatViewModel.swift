@@ -2,6 +2,8 @@ import Foundation
 import Combine
 import os.log
 
+// MARK: - Provenance: REQ-ARCH-003, REQ-ARCH-004, REQ-ARCH-008, REQ-OPM-001, REQ-OPM-002, REQ-OPM-003, REQ-V1-003
+
 /// View model for managing a chat conversation with an agent
 @MainActor
 public final class ChatViewModel: ObservableObject {

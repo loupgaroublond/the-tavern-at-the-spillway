@@ -8,6 +8,8 @@
 
 import Foundation
 import OSLog
+
+// MARK: - Provenance: REQ-DET-002, REQ-DOC-004, REQ-DOC-005
 import Darwin
 
 /// Implementation of Claude's native session storage that reads from ~/.claude/projects/

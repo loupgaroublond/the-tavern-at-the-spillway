@@ -158,7 +158,7 @@ struct TavernCoordinatorTests {
         #expect(coordinator.activeChatViewModel.messages.isEmpty)
     }
 
-    @Test("Jake MCP server is configured on coordinator init")
+    @Test("Jake MCP server is configured on coordinator init", .tags(.reqCOM008))
     @MainActor
     func jakeMCPServerConfigured() {
         let coordinator = createCoordinator()

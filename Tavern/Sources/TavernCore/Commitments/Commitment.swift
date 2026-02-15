@@ -1,5 +1,7 @@
 import Foundation
 
+// MARK: - Provenance: REQ-DET-005
+
 /// The verification status of a commitment
 public enum CommitmentStatus: String, Equatable, Sendable, Codable {
     /// Commitment has not been verified yet

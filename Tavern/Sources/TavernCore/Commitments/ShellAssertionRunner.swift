@@ -1,6 +1,8 @@
 import Foundation
 import os.log
 
+// MARK: - Provenance: REQ-INV-003
+
 /// Thread-safe boolean flag for coordinating between terminationHandler and launch failure
 private final class LockedFlag: @unchecked Sendable {
     private let lock = NSLock()

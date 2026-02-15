@@ -2,6 +2,8 @@ import SwiftUI
 import TavernCore
 import AppKit
 
+// MARK: - Provenance: REQ-UX-008, REQ-V1-001
+
 /// Shown when no project is open
 struct WelcomeView: View {
     @EnvironmentObject var projectManager: ProjectManager

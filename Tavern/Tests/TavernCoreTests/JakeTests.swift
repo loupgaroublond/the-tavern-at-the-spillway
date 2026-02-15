@@ -11,7 +11,7 @@ struct JakeTests {
             .appendingPathComponent("tavern-test-\(UUID().uuidString)")
     }
 
-    @Test("Jake has system prompt")
+    @Test("Jake has system prompt", .tags(.reqAGT001))
     func jakeHasSystemPrompt() {
         // The system prompt should be non-empty and contain key character elements
         let prompt = Jake.systemPrompt
@@ -23,7 +23,7 @@ struct JakeTests {
         #expect(prompt.contains("Slop Squad"))
     }
 
-    @Test("Jake initializes with correct state")
+    @Test("Jake initializes with correct state", .tags(.reqAGT001))
     func jakeInitializesCorrectly() {
         let jake = Jake(projectURL: Self.testProjectURL(), loadSavedSession: false)
 
@@ -49,7 +49,7 @@ struct JakeTests {
         #expect(jake.projectPath == projectURL.path)
     }
 
-    @Test("Jake MCP server can be set")
+    @Test("Jake MCP server can be set", .tags(.reqCOM008))
     func jakeMCPServerCanBeSet() async throws {
         let jake = Jake(projectURL: Self.testProjectURL(), loadSavedSession: false)
 
@@ -78,7 +78,7 @@ struct JakeTests {
 
     // MARK: - Grade 2 Mock Tests (using MockMessenger)
 
-    @Test("Jake responds to message")
+    @Test("Jake responds to message", .tags(.reqAGT008, .reqARCH009))
     func jakeRespondsToMessage() async throws {
         let mock = MockMessenger(responses: ["Well WELL, look who showed up!"])
         let jake = Jake(projectURL: Self.testProjectURL(), messenger: mock, loadSavedSession: false)
@@ -184,7 +184,7 @@ struct JakeTests {
         SessionStore.clearJakeSession(projectPath: projectURL.path)
     }
 
-    @Test("Jake with tool handler passes through when no feedback")
+    @Test("Jake with tool handler passes through when no feedback", .tags(.reqCOM008))
     func jakeWithToolHandlerPassesThroughWhenNoFeedback() async throws {
         let mock = MockMessenger(responses: ["Response with MCP registered"])
         let jake = Jake(projectURL: Self.testProjectURL(), messenger: mock, loadSavedSession: false)

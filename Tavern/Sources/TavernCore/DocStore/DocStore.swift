@@ -1,5 +1,7 @@
 import Foundation
 
+// MARK: - Provenance: REQ-ARCH-004, REQ-DOC-001, REQ-DOC-002, REQ-DOC-003, REQ-INV-005
+
 /// Errors that can occur during doc store operations
 public enum DocStoreError: Error, Equatable {
     case documentNotFound(String)

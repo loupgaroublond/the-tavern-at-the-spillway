@@ -2,6 +2,8 @@ import Foundation
 import ClodKit
 import os.log
 
+// MARK: - Provenance: REQ-AGT-001, REQ-AGT-008, REQ-ARCH-007, REQ-COM-008, REQ-DET-001, REQ-DOC-005, REQ-LCM-007, REQ-OBS-011, REQ-V1-001, REQ-V1-002
+
 /// Jake - The Proprietor of the Tavern
 /// The top-level coordinating agent with the voice of a used car salesman
 /// and the execution of a surgical team.

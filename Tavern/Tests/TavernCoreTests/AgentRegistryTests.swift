@@ -42,7 +42,7 @@ final class TestAgent: Agent, @unchecked Sendable {
 @Suite("AgentRegistry Tests")
 struct AgentRegistryTests {
 
-    @Test("Registry adds agent")
+    @Test("Registry adds agent", .tags(.reqSPN005))
     func registryAddsAgent() throws {
         let registry = AgentRegistry()
         let agent = TestAgent(name: "TestAgent1")
@@ -98,7 +98,7 @@ struct AgentRegistryTests {
         #expect(names.contains("Agent3"))
     }
 
-    @Test("Registry removes agent")
+    @Test("Registry removes agent", .tags(.reqARCH006))
     func registryRemovesAgent() throws {
         let registry = AgentRegistry()
         let agent = TestAgent(name: "ToBeRemoved")
@@ -111,7 +111,7 @@ struct AgentRegistryTests {
         #expect(registry.agent(id: agent.id) == nil)
     }
 
-    @Test("Registry enforces unique names")
+    @Test("Registry enforces unique names", .tags(.reqSPN005))
     func registryEnforcesUniqueNames() throws {
         let registry = AgentRegistry()
         let agent1 = TestAgent(name: "DuplicateName")

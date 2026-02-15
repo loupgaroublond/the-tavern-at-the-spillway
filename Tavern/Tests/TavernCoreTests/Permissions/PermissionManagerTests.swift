@@ -16,7 +16,7 @@ struct PermissionManagerTests {
 
     // MARK: - Bypass Mode
 
-    @Test("Bypass mode auto-approves all tools")
+    @Test("Bypass mode auto-approves all tools", .tags(.reqOBS005))
     func bypassModeApprovesAll() {
         let manager = Self.makeManager(mode: .bypassPermissions)
 
@@ -27,7 +27,7 @@ struct PermissionManagerTests {
 
     // MARK: - Plan Mode
 
-    @Test("Plan mode auto-denies all tools")
+    @Test("Plan mode auto-denies all tools", .tags(.reqOBS005))
     func planModeDeniesAll() {
         let manager = Self.makeManager(mode: .plan)
 

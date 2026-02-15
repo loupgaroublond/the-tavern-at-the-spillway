@@ -2,6 +2,8 @@ import SwiftUI
 import TavernCore
 import os.log
 
+// MARK: - Provenance: REQ-OPM-004, REQ-UX-002, REQ-UX-003, REQ-V1-003, REQ-VIW-004
+
 /// A list view showing all agents in the Tavern
 struct AgentListView: View {
     private static let logger = Logger(subsystem: "com.tavern.spillway", category: "agents")

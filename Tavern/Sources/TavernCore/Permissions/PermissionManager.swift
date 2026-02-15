@@ -1,6 +1,8 @@
 import Foundation
 import os.log
 
+// MARK: - Provenance: REQ-OBS-005
+
 /// Central permission logic: checks rules, evaluates mode, and coordinates tool approval.
 ///
 /// PermissionManager sits between the SDK tool callbacks and the UI. When a tool

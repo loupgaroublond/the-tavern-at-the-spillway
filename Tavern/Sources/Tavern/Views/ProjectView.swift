@@ -2,6 +2,8 @@ import SwiftUI
 import TavernCore
 import os.log
 
+// MARK: - Provenance: REQ-UX-001, REQ-V1-001
+
 // MARK: - Project Window View
 
 /// View for a project window

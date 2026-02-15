@@ -1,6 +1,8 @@
 import Foundation
 import ClodKit
 
+// MARK: - Provenance: REQ-QA-002
+
 /// Mock helpers for testing with ClodKit
 /// Since ClodKit uses static functions and AsyncSequence, mocking requires
 /// different patterns than the old protocol-based SDK.

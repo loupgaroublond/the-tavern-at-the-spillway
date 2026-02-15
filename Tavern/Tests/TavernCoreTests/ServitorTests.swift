@@ -13,7 +13,7 @@ struct ServitorTests {
 
     // MARK: - Grade 1 Property Tests (no mocks needed)
 
-    @Test("Servitor has assignment")
+    @Test("Servitor has assignment", .tags(.reqAGT002, .reqSPN009))
     func servitorHasAssignment() {
         let servitor = Servitor(
             name: "TestWorker",
@@ -26,7 +26,7 @@ struct ServitorTests {
         #expect(servitor.name == "TestWorker")
     }
 
-    @Test("Servitor initializes with idle state")
+    @Test("Servitor initializes with idle state", .tags(.reqAGT002, .reqAGT005))
     func servitorInitializesIdle() {
         let servitor = Servitor(
             name: "IdleWorker",
@@ -69,7 +69,7 @@ struct ServitorTests {
         #expect(servitor.state == .done)
     }
 
-    @Test("Servitor done state is terminal")
+    @Test("Servitor done state is terminal", .tags(.reqAGT009))
     func servitorDoneStateIsTerminal() {
         let servitor = Servitor(
             name: "TerminalWorker",
@@ -174,7 +174,7 @@ struct ServitorTests {
 
     // MARK: - Grade 2 Mock Tests (using MockMessenger)
 
-    @Test("Servitor responds to messages")
+    @Test("Servitor responds to messages", .tags(.reqARCH009))
     func servitorRespondsToMessages() async throws {
         let mock = MockMessenger(responses: ["Task acknowledged"])
         let servitor = Servitor(
@@ -217,7 +217,7 @@ struct ServitorTests {
         #expect(servitor.state == .idle)
     }
 
-    @Test("Servitor transitions to done via response")
+    @Test("Servitor transitions to done via response", .tags(.reqAGT009))
     func servitorTransitionsToDone() async throws {
         let mock = MockMessenger(responses: ["Assignment complete. DONE"])
         let servitor = Servitor(
@@ -233,7 +233,7 @@ struct ServitorTests {
         #expect(servitor.state == .done)
     }
 
-    @Test("Servitor transitions to waiting via response")
+    @Test("Servitor transitions to waiting via response", .tags(.reqAGT009))
     func servitorTransitionsToWaiting() async throws {
         let mock = MockMessenger(responses: ["I need clarification. WAITING for your input."])
         let servitor = Servitor(
@@ -313,7 +313,7 @@ struct ServitorTests {
         #expect(servitor.state == .done)
     }
 
-    @Test("Done triggers verification when commitments exist")
+    @Test("Done triggers verification when commitments exist", .tags(.reqDET004))
     func doneTriggersVerification() async throws {
         let commitments = CommitmentList()
         commitments.add(description: "Always passes", assertion: "true")
@@ -335,7 +335,7 @@ struct ServitorTests {
         #expect(servitor.allCommitmentsPassed == true)
     }
 
-    @Test("Verification pass marks done")
+    @Test("Verification pass marks done", .tags(.reqDET004))
     func verificationPassMarksDone() async throws {
         let commitments = CommitmentList()
         commitments.add(description: "Check 1", assertion: "true")
@@ -356,7 +356,7 @@ struct ServitorTests {
         #expect(servitor.state == .done)
     }
 
-    @Test("Verification fail continues work")
+    @Test("Verification fail continues work", .tags(.reqDET004))
     func verificationFailContinuesWork() async throws {
         let commitments = CommitmentList()
         commitments.add(description: "Always fails", assertion: "false")

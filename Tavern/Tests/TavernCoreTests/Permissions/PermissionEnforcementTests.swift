@@ -23,7 +23,7 @@ struct PermissionEnforcementTests {
 
     // MARK: - Mode Tests via PermissionManager.evaluateTool
 
-    @Test("Bypass mode allows all tools")
+    @Test("Bypass mode allows all tools", .tags(.reqOBS005))
     func bypassModeAllowsAll() {
         let manager = Self.makeManager(mode: .bypassPermissions)
 
@@ -153,7 +153,7 @@ struct PermissionEnforcementTests {
 
     // MARK: - Always-Allow Rule Persistence via Approval
 
-    @Test("processApprovalResponse creates always-allow rule when alwaysAllow is true")
+    @Test("processApprovalResponse creates always-allow rule when alwaysAllow is true", .tags(.reqOBS006))
     func alwaysAllowCreatesRule() {
         let manager = Self.makeManager(mode: .normal)
 

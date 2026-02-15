@@ -1,5 +1,7 @@
 import Foundation
 
+// MARK: - Provenance: REQ-LCM-004, REQ-OPM-004, REQ-VIW-005
+
 /// View model for the agent list
 /// Manages the list of agents and selection state
 @MainActor

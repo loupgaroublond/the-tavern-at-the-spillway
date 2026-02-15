@@ -1,6 +1,8 @@
 import Foundation
 import os.log
 
+// MARK: - Provenance: REQ-ARCH-005
+
 /// Represents an open project in the Tavern
 /// A project is simply a directory that serves as the working context for agents
 @MainActor

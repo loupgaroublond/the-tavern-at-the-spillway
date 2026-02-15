@@ -1,5 +1,7 @@
 import os.log
 
+// MARK: - Provenance: REQ-INV-007, REQ-OBS-007, REQ-OBS-008, REQ-OBS-009
+
 /// Centralized logging for The Tavern at the Spillway
 ///
 /// Uses Apple's unified logging system (os.log) with the subsystem

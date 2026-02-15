@@ -1,5 +1,7 @@
 import Foundation
 
+// MARK: - Provenance: REQ-SPN-005, REQ-SPN-006, REQ-SPN-010
+
 /// Generates unique names for agents using a theme
 /// Thread-safe via serial dispatch queue
 public final class NameGenerator: @unchecked Sendable {

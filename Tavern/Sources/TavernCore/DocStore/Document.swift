@@ -1,5 +1,7 @@
 import Foundation
 
+// MARK: - Provenance: REQ-DOC-001, REQ-DOC-003
+
 /// A document in the doc store
 /// Documents are markdown files with optional YAML frontmatter
 public struct Document: Identifiable, Equatable, Sendable {

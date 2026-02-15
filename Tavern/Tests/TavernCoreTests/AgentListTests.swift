@@ -110,7 +110,7 @@ struct AgentListViewModelTests {
         return (viewModel, jake, spawner)
     }
 
-    @Test("List shows Jake by default")
+    @Test("List shows Jake by default", .tags(.reqUX002))
     @MainActor
     func listShowsJakeByDefault() {
         let (viewModel, jake, _) = createTestSetup()
@@ -120,7 +120,7 @@ struct AgentListViewModelTests {
         #expect(viewModel.items.first?.id == jake.id)
     }
 
-    @Test("List shows all spawned agents")
+    @Test("List shows all spawned agents", .tags(.reqUX003))
     @MainActor
     func listShowsAllSpawnedAgents() throws {
         let (viewModel, _, spawner) = createTestSetup()
@@ -144,7 +144,7 @@ struct AgentListViewModelTests {
         #expect(viewModel.items.first?.state == jake.state)
     }
 
-    @Test("Selection works")
+    @Test("Selection works", .tags(.reqOPM004))
     @MainActor
     func selectionWorks() throws {
         let (viewModel, jake, spawner) = createTestSetup()

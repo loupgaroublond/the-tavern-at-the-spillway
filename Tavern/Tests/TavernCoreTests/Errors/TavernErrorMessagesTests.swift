@@ -7,7 +7,7 @@ struct TavernErrorMessagesTests {
 
     // MARK: - Exhaustive coverage: every TavernError case produces a non-empty message
 
-    @Test("sessionCorrupt produces actionable message")
+    @Test("sessionCorrupt produces actionable message", .tags(.reqINV007))
     func sessionCorruptMessage() {
         let error = TavernError.sessionCorrupt(sessionId: "test-123", underlyingError: nil)
         let message = TavernErrorMessages.message(for: error)

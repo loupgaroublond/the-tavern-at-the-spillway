@@ -25,7 +25,7 @@ struct ServitorSpawnerTests {
 
     // MARK: - Summon Tests
 
-    @Test("Summon creates servitor with themed name")
+    @Test("Summon creates servitor with themed name", .tags(.reqSPN001, .reqSPN010))
     func summonCreatesServitorWithThemedName() throws {
         let (spawner, registry, _) = createSpawner()
 
@@ -37,7 +37,7 @@ struct ServitorSpawnerTests {
         #expect(servitor.assignment == "Test assignment")
     }
 
-    @Test("Summon registers servitor in registry")
+    @Test("Summon registers servitor in registry", .tags(.reqAGT007, .reqSPN001))
     func summonRegistersServitorInRegistry() throws {
         let (spawner, registry, _) = createSpawner()
 
@@ -47,7 +47,7 @@ struct ServitorSpawnerTests {
         #expect(registry.agent(named: servitor.name) != nil)
     }
 
-    @Test("Summoned servitor has assignment")
+    @Test("Summoned servitor has assignment", .tags(.reqSPN002))
     func summonedServitorHasAssignment() throws {
         let (spawner, _, _) = createSpawner()
 
@@ -109,7 +109,7 @@ struct ServitorSpawnerTests {
 
     // MARK: - Dismiss Tests
 
-    @Test("Dismiss removes servitor from registry")
+    @Test("Dismiss removes servitor from registry", .tags(.reqSPN003))
     func dismissRemovesServitorFromRegistry() throws {
         let (spawner, registry, _) = createSpawner()
 
@@ -188,7 +188,7 @@ struct ServitorSpawnerTests {
 
     // MARK: - MessengerFactory Tests (Bead 96m + p70)
 
-    @Test("Spawner uses default LiveMessenger factory")
+    @Test("Spawner uses default LiveMessenger factory", .tags(.reqSPN010))
     func spawnerUsesDefaultFactory() throws {
         // Default init should not crash — uses LiveMessenger
         let registry = AgentRegistry()

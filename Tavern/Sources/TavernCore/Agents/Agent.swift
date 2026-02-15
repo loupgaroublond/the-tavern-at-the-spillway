@@ -1,5 +1,7 @@
 import Foundation
 
+// MARK: - Provenance: REQ-AGT-005, REQ-AGT-010, REQ-ARCH-004
+
 /// State of an agent in the Tavern
 public enum AgentState: String, Equatable, Sendable {
     /// Agent is idle, waiting for work

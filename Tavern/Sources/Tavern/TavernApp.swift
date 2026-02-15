@@ -1,6 +1,8 @@
 import SwiftUI
 import TavernCore
 
+// MARK: - Provenance: REQ-UX-007, REQ-UX-008
+
 // MARK: - UI Testing Support
 
 /// Check if the app was launched with --ui-testing flag

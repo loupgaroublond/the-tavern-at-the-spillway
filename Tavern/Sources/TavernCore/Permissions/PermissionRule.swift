@@ -1,5 +1,7 @@
 import Foundation
 
+// MARK: - Provenance: REQ-OBS-005
+
 /// A rule that defines whether a specific tool type is always allowed or always denied.
 ///
 /// Rules are evaluated before prompting the user. If a matching rule exists,

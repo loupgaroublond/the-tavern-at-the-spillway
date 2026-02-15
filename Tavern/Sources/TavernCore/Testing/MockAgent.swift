@@ -1,5 +1,7 @@
 import Foundation
 
+// MARK: - Provenance: REQ-ARCH-009, REQ-QA-002
+
 /// A mock agent for testing ViewModels and coordinators without real Claude calls
 /// Conforms to `Agent` protocol — pops canned responses from a queue.
 ///

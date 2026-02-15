@@ -5,7 +5,7 @@ import Testing
 @Suite("Commitment Tests")
 struct CommitmentTests {
 
-    @Test("Commitment is created with correct initial state")
+    @Test("Commitment is created with correct initial state", .tags(.reqDET005))
     func commitmentCreated() {
         let commitment = Commitment(
             description: "All tests pass",
@@ -21,7 +21,7 @@ struct CommitmentTests {
         #expect(commitment.isVerified == false)
     }
 
-    @Test("Commitment status transitions work correctly")
+    @Test("Commitment status transitions work correctly", .tags(.reqDET005))
     func commitmentStatusTransitions() {
         var commitment = Commitment(
             description: "Test",
@@ -273,7 +273,7 @@ struct CommitmentListTests {
 @Suite("CommitmentVerifier Tests")
 struct CommitmentVerifierTests {
 
-    @Test("Verifier runs assertion")
+    @Test("Verifier runs assertion", .tags(.reqINV003, .reqDET004))
     func verifierRunsAssertion() async throws {
         let mockRunner = MockAssertionRunner()
         mockRunner.setPass(for: "echo test", output: "test\n")
@@ -346,7 +346,7 @@ struct CommitmentVerifierTests {
         #expect(updated?.status == .passed)
     }
 
-    @Test("VerifyAll verifies all pending commitments")
+    @Test("VerifyAll verifies all pending commitments", .tags(.reqINV003, .reqDET004))
     func verifyAllVerifiesAllPending() async throws {
         let mockRunner = MockAssertionRunner()
         mockRunner.setPass(for: "echo 1")

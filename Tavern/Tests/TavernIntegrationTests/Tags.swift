@@ -1,0 +1,15 @@
+import Testing
+
+// Tag declarations for provenance tracking (ADR-007).
+// Convention: REQ-AGT-001 → .reqAGT001
+extension Tag {
+    // 017-v1-scope (integration tests)
+    @Tag static var reqV1001: Self
+    @Tag static var reqV1002: Self
+    @Tag static var reqV1003: Self
+    @Tag static var reqV1005: Self
+    @Tag static var reqV1006: Self
+
+    // 016-quality (integration tests)
+    @Tag static var reqQA004: Self
+}
