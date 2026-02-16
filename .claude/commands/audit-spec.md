@@ -110,18 +110,75 @@ On first run with zero provenance markers, note: "All must-have requirements lac
 (none found)
 ```
 
-### 9. Summary Statistics
+### 9. Output Section 4 — PRD Pipeline Flow (Top-to-Bottom)
+
+Trace each PRD section through the full pipeline to show what percentage of the PRD appears downstream in implementation and testing.
+
+**Per-PRD-Section Table:** Group PRD sections by their spec module. For each group, show the PRD section(s), spec module, total requirements, implemented count, tested count, Code%, and Test%.
+
+```
+## PRD Pipeline Flow (Top-to-Bottom)
+
+### Per-PRD-Section Downstream Coverage
+
+| PRD Section(s) | Spec Module | Reqs | Impl'd | Tested | Code% | Test% |
+|----------------|-------------|------|--------|--------|-------|-------|
+| §2 Invariants | 002-invariants | 8 | 4 | 3 | 50% | 38% |
+| §6.1 Tech Stack | 003-system-architecture | 10 | 8 | 3 | 80% | 30% |
+...
+```
+
+**Aggregate Pipeline Flow:** Show the full pipeline as a flow diagram with counts and percentages at each layer transition:
+
+```
+### Aggregate Pipeline Flow
+
+PRD  ━━━  N sections
+       │ X% coverage
+       ▼
+Spec ━━━  N requirements across N modules
+       │ X% have code provenance
+       ▼
+Code ━━━  N requirements traced to source
+       │ X% of implemented reqs have test tags
+       ▼
+Tests ━━━  N requirements traced to tests
+```
+
+Plus a transition rate table:
+
+| Layer Transition | Rate |
+|-----------------|------|
+| PRD → Spec | X% |
+| Spec → Code | X% (N/N) |
+| Spec → Tests | X% (N/N) |
+| Code → Tests | X% (N/N) |
+
+**Unimplemented Breakdown:** Categorize the unimplemented requirements into:
+- **Explicitly deferred** — items marked deferred in v1 scope or spec
+- **Meta/process** — requirements that describe standards/processes with no code artifact
+- **Genuinely unimplemented** — features that need building
+- **Arguably provenance-able** — existing code that could be tagged but isn't
+
+**Test Coverage Gaps:** Identify modules with the widest gap between implementation and test coverage (highest leverage for adding tests). Show module, Code%, Test%, and gap in percentage points.
+
+### 10. Summary Statistics
 
 ```
 ## Summary
 
-- **PRD sections:** 45 total, 41 covered, 4 context-only
-- **Spec modules:** 17 total, all present
-- **Total requirements:** 162
-- **Implementation coverage:** 0/162 (0%)
-- **Test coverage:** 0/162 (0%)
-- **Index accuracy:** X/17 modules match claimed counts
+- **PRD sections:** N total, N covered, N context-only
+- **Spec modules:** N total, all present
+- **Total requirements:** N
+- **Implementation coverage:** N/N (X%)
+- **Test coverage:** N/N (X%)
+- **Index accuracy:** X/N modules match claimed counts
 - **Downstream references:** X/Y directories verified
+- **Deferred (no code expected):** ~N requirements
+- **Meta/process (no code artifact):** ~N requirements
+- **Adjusted code provenance:** N/N active reqs (X%)
+- **Orphaned provenance:** N
+- **Unmapped PRD sections:** N
 ```
 
 ## Key Files
