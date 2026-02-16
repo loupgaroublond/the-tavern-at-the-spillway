@@ -9,9 +9,12 @@ REPORT_DIR="$HOME/.local/builds/tavern/test-reports"
 mkdir -p "$REPORT_DIR"
 
 echo "Running Grade 1+2 tests..." >&2
-if swift test --skip TavernIntegrationTests --skip TavernStressTests 2>&1 | tee "$REPORT_DIR/grade1-2-output.txt" >&2; then
+swift test --skip TavernIntegrationTests --skip TavernStressTests >"$REPORT_DIR/grade1-2-output.txt" 2>&1
+TEST_EXIT=$?
+if [ $TEST_EXIT -eq 0 ]; then
     echo "All Grade 1+2 tests passed" >&2
 else
     echo "Tests failed — see $REPORT_DIR/grade1-2-output.txt" >&2
+    tail -20 "$REPORT_DIR/grade1-2-output.txt" | LC_ALL=C tr -cd '[:print:]\n' >&2
     exit 1
 fi

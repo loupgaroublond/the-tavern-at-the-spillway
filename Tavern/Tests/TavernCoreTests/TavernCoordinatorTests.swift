@@ -22,7 +22,7 @@ struct TavernCoordinatorTests {
             projectURL: projectURL
         )
 
-        return TavernCoordinator(jake: jake, spawner: spawner, projectURL: projectURL)
+        return TavernCoordinator(jake: jake, spawner: spawner, projectURL: projectURL, restoreState: false)
     }
 
     // MARK: - Initialization Tests
@@ -222,7 +222,7 @@ struct TavernCoordinatorTests {
             nameGenerator: nameGenerator,
             projectURL: projectURL
         )
-        return TavernCoordinator(jake: jake, spawner: spawner, projectURL: projectURL)
+        return TavernCoordinator(jake: jake, spawner: spawner, projectURL: projectURL, restoreState: false)
     }
 
     @Test("Switching preserves both chat histories")
@@ -298,7 +298,7 @@ struct TavernCoordinatorTests {
             nameGenerator: nameGenerator,
             projectURL: projectURL
         )
-        let coordinator = TavernCoordinator(jake: jake, spawner: spawner, projectURL: projectURL)
+        let coordinator = TavernCoordinator(jake: jake, spawner: spawner, projectURL: projectURL, restoreState: false)
 
         // Send message that will fail via mock messenger
         coordinator.activeChatViewModel.inputText = "Summon a worker"

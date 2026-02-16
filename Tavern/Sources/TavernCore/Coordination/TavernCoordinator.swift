@@ -56,7 +56,8 @@ public final class TavernCoordinator: ObservableObject {
     ///   - spawner: Servitor spawner for the Slop Squad
     ///   - projectURL: The project directory URL
     ///   - permissionManager: Permission manager for tool checks (default: new instance with standard store)
-    public init(jake: Jake, spawner: ServitorSpawner, projectURL: URL, permissionManager: PermissionManager = PermissionManager(store: PermissionStore())) {
+    ///   - restoreState: Whether to restore persisted state (session history, custom commands, saved servitors). Pass false in tests.
+    public init(jake: Jake, spawner: ServitorSpawner, projectURL: URL, permissionManager: PermissionManager = PermissionManager(store: PermissionStore()), restoreState: Bool = true) {
         self.jake = jake
         self.spawner = spawner
         self.projectURL = projectURL
@@ -65,7 +66,7 @@ public final class TavernCoordinator: ObservableObject {
         self.commandContext = CommandContext()
 
         // Create Jake's chat view model
-        self.jakeChatViewModel = ChatViewModel(jake: jake)
+        self.jakeChatViewModel = ChatViewModel(jake: jake, loadHistory: restoreState)
         self.chatViewModels[jake.id] = jakeChatViewModel
 
         // Start with Jake's chat as active
@@ -79,9 +80,11 @@ public final class TavernCoordinator: ObservableObject {
 
         // Post-init setup (all stored properties must be initialized above)
         registerCoreCommands()
-        loadCustomCommands()
         setupMCPServer()
-        restoreServitors()
+        if restoreState {
+            loadCustomCommands()
+            restoreServitors()
+        }
     }
 
     /// Setup the MCP server for Jake - called after init completes
