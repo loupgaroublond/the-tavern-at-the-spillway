@@ -387,6 +387,7 @@ See `docs/pipeline.md` for full spec.
 | `/spec-status` | Live provenance coverage dashboard across all spec modules |
 | `/trace` | Trace a single requirement through PRD → spec → code → tests |
 | `/audit-spec` | Full PRD-to-spec coverage verification and gap analysis |
+| `/attest` | Semantic conformance analysis — verify code satisfies spec properties |
 
 
 ## Debugging

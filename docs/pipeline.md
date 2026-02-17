@@ -110,3 +110,4 @@ Each pipeline stage can be verified against its upstream:
 | ADR coverage | Spec | ADRs | ADR references in spec modules |
 | Code coverage | Spec | Code | `grep "MARK: - Provenance"` in source files (ADR-007) |
 | Test coverage | Spec | Tests | `grep "MARK: - Provenance"` + `.tags()` in test files (ADR-007) |
+| Semantic conformance | Spec properties | Code + Tests | `/attest` — verifies code satisfies behavioral properties, not just structural links |
