@@ -487,7 +487,7 @@ Design discussions use a formalized interview methodology:
 
 The **reader document** synthesizes all transcripts into a standalone reference. Find the latest at `docs/0-transcripts/reader_*.md` (most recent by datetime suffix). The current reader is `reader_2026-02-12.md`.
 
-**Read the reader before making design decisions.** It contains the open questions index (?1–?19), the two-level orchestration model, two-mode spawning, and all key decision points traced to their source transcripts.
+**Read the reader before making design decisions.** It contains the open questions index (?1–?19), the two-level orchestration model, two-mode spawning, and all key decision points traced to their source transcripts. The current reader is `reader_2026-02-21.md`.
 
 **Proactive update:** When starting a session that touches seed design, compare transcripts against the reader's "Source Files" section. If there are 2+ unaccounted transcripts, say *"Mind if I run some updates?"* and invoke `Skill(skill: "reader")`.
 
