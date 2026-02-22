@@ -1,7 +1,7 @@
 # 014 — View Architecture Specification
 
 **Status:** complete
-**Last Updated:** 2026-02-10
+**Last Updated:** 2026-02-16
 
 ## Upstream References
 - PRD: (none directly -- derived from Reader and transcripts)
@@ -35,18 +35,19 @@ View architecture for the dynamic tile-based UI, view modes, context cards, and 
 
 **Testable assertion:** Views can be rearranged by the user. The layout is not hardcoded. Multiple layout configurations can coexist.
 
-### REQ-VIW-002: View Modes
+### REQ-VIW-002: View Representations
 **Source:** Reader §8
 **Priority:** should-have
 **Status:** specified
 
 **Properties:**
-- The same agent data can be rendered in multiple view modes (like Finder's list/icon/column views)
-- Switching view modes does not lose data
-- Two tiles showing the same agent in different modes stay in sync
-- The response stream (thinking, tools, text) stays in one place; view modes select which parts to show
+- The same agent data can be rendered in multiple representations (like Finder's list/icon/column views)
+- UI language: "view as ..." — the word "representation" appears in code only, not in the UI
+- Switching representations does not lose data
+- Two tiles showing the same agent in different representations stay in sync
+- The response stream (thinking, tools, text) stays in one place; representations select which parts to show
 
-**Testable assertion:** The same agent's data can be rendered in at least two different view modes. Switching view modes does not lose data. Two tiles showing the same agent in different modes stay in sync.
+**Testable assertion:** The same agent's data can be rendered in at least two different representations. Switching representations does not lose data. Two tiles showing the same agent in different representations stay in sync.
 
 ### REQ-VIW-003: Granular View Primitives
 **Source:** Reader §8
@@ -83,6 +84,8 @@ View architecture for the dynamic tile-based UI, view modes, context cards, and 
 - Dead agents leave persistent views showing their final state
 - Dead agent views are accessible for review and debugging
 - The user must manually dismiss dead agent views (initial cleanup is manual)
+
+**Note:** This requirement is about agent behavior (dead agent artifact preservation), not view architecture. See §004 and §019 for servitor state/lifecycle.
 
 **Testable assertion:** After an agent dies, its view remains accessible. The view shows the agent's final state, last output, and status. The user must manually dismiss dead agent views.
 
@@ -134,6 +137,28 @@ View architecture for the dynamic tile-based UI, view modes, context cards, and 
 
 **Testable assertion:** Deferred. When implemented: each agent has a context card. The card shows name, assignment, and status. Clicking a card navigates to the agent's chat.
 
+### REQ-VIW-010: Drag and Drop
+**Source:** Reader §8
+**Priority:** should-have
+**Status:** specified
+
+**Properties:**
+- Tiles and views support drag-and-drop rearrangement
+- Other rearranging tools are available (resize, snap, etc.)
+
+**Testable assertion:** Tiles can be rearranged via drag and drop. At least one additional rearrangement tool (resize or snap) is available.
+
+### REQ-VIW-011: Animation Properties
+**Source:** Reader §8
+**Priority:** should-have
+**Status:** specified
+
+**Properties:**
+- Layout transitions have animation properties (duration, easing, etc.)
+- Spec covers animation properties, not specific animations
+
+**Testable assertion:** Layout transitions apply animation properties. Duration and easing are configurable per transition type.
+
 ## 3. Properties Summary
 
 ### View Properties
@@ -141,18 +166,18 @@ View architecture for the dynamic tile-based UI, view modes, context cards, and 
 | Property | Holds When | Violated When |
 |----------|-----------|---------------|
 | View-hierarchy independence | View layout is independent of agent tree | Agent hierarchy constrains view layout |
-| Multi-mode sync | Two tiles of same agent in different modes stay in sync | Mode change desynchronizes tiles |
-| Data preservation | Switching view modes doesn't lose data | Data disappears on mode switch |
+| Multi-representation sync | Two tiles of same agent in different representations stay in sync | Representation change desynchronizes tiles |
+| Data preservation | Switching representations doesn't lose data | Data disappears on representation switch |
 | Dead body persistence | Dead agent views remain until manually dismissed | Dead agent views auto-disappear |
 | Session restore | Quit + relaunch restores layout | Layout lost on restart |
 
-### View Mode Concept
+### View Representation Concept
 
 ```mermaid
 flowchart TD
-    Data[Agent Response Data] --> VM1[Full View Mode]
-    Data --> VM2[Chat-Only Mode]
-    Data --> VM3[Tools-Only Mode]
+    Data[Agent Response Data] --> VM1[Full Representation]
+    Data --> VM2[Chat-Only Representation]
+    Data --> VM3[Tools-Only Representation]
 
     VM1 --> All[Thinking + Tools + Text]
     VM2 --> Chat[Text only]
@@ -161,16 +186,18 @@ flowchart TD
 
 ## 4. Open Questions
 
-- **UI stream separation details:** PRD §14 lists this as TBD. The specific component-based chat view implementation is not yet designed.
+- **UI stream separation details:** Resolved: View architecture concern, addressed in view representations.
 
-- **Tile sizing and constraints:** No specification for minimum/maximum tile sizes, or how tiles share space when the window is resized.
+- **Tile sizing and constraints:** Pinned: Tiling constraints need design.
 
-- **Multi-monitor support:** No specification for whether tiles can be detached to separate windows on different monitors.
+- **Multi-monitor support:** Resolved: Tiles exist within a window. Windows serve as the multi-monitor solution.
+
+- **Responsive layout:** Pinned for future design.
 
 ## 5. Coverage Gaps
 
-- **Drag and drop:** No specification for drag-and-drop tile rearrangement. Is it supported? What are the valid drop targets?
+- **Drag and drop:** Resolved: REQ-VIW-010 specifies drag-and-drop rearrangement and other rearranging tools.
 
-- **Animation:** No specification for layout transition animations when tiles are added, removed, or rearranged.
+- **Animation:** Resolved: REQ-VIW-011 specifies animation properties for layout transitions.
 
-- **Responsive layout:** No specification for how the layout adapts to very small or very large window sizes.
+- **Responsive layout:** Pinned for future design.

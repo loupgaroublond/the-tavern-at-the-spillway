@@ -57,9 +57,9 @@ struct JakeTests {
         #expect(jake.mcpServer == nil)
 
         // Create a mock MCP server
-        let registry = AgentRegistry()
+        let registry = ServitorRegistry()
         let nameGenerator = NameGenerator(theme: .lotr)
-        let spawner = ServitorSpawner(
+        let spawner = MortalSpawner(
             registry: registry,
             nameGenerator: nameGenerator,
             projectURL: Self.testProjectURL()
@@ -190,9 +190,9 @@ struct JakeTests {
         let jake = Jake(projectURL: Self.testProjectURL(), messenger: mock, loadSavedSession: false)
 
         // Register MCP server (tools available but not called by mock)
-        let registry = AgentRegistry()
+        let registry = ServitorRegistry()
         let nameGenerator = NameGenerator(theme: .lotr)
-        let spawner = ServitorSpawner(
+        let spawner = MortalSpawner(
             registry: registry,
             nameGenerator: nameGenerator,
             projectURL: Self.testProjectURL()

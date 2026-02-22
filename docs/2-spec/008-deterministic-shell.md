@@ -1,7 +1,7 @@
 # 008 — Deterministic Shell Specification
 
 **Status:** complete
-**Last Updated:** 2026-02-10
+**Last Updated:** 2026-02-16
 
 ## Upstream References
 - PRD: §4.7 (Deterministic Shell)
@@ -29,6 +29,7 @@ The deterministic shell wraps non-deterministic LLM agents with deterministic in
 - Agent prompts are constructed by deterministic code, not by previous agent responses
 - Each message to an agent includes all necessary context regardless of conversation history length
 - The system never relies on the agent "remembering" previous instructions
+- Invariants in prompts are enforced by the system, even when a parent servitor composes the prompt to a child
 
 **Testable assertion:** System prompts include all required instructions regardless of conversation history length. No prompt depends on the agent having seen prior messages.
 
@@ -38,11 +39,15 @@ The deterministic shell wraps non-deterministic LLM agents with deterministic in
 **Status:** specified
 
 **Properties:**
+- All content blocks the user sees are passthrough — not reinterpreted by any agent
+- Agent responses (thinking blocks, messages) shown verbatim as received
+- Tool call responses rendered by deterministic components in the app
+- User can trust that blocks are not hallucinated — data from store is verbatim, not agent interpretation
+- If user views a record or file on disk, it is rendered accurately from the data store, and everything inside that block is guaranteed not hallucinated
 - Content shown to the user from the doc store is byte-identical to the file on disk
 - No LLM summarization or rephrasing occurs between storage and display
-- Displayed agent responses are the actual responses received, not re-processed versions
 
-**Testable assertion:** Content displayed with a "direct from store" indicator is byte-identical to the file on disk. Agent responses are displayed as received.
+**Testable assertion:** Content displayed with a "direct from store" indicator is byte-identical to the file on disk. Agent responses are displayed as received. Tool call results are rendered by deterministic app components, not by agents.
 
 ### REQ-DET-003: Structured Outputs via Tools
 **Source:** PRD §4.7.3
@@ -50,9 +55,10 @@ The deterministic shell wraps non-deterministic LLM agents with deterministic in
 **Status:** specified
 
 **Properties:**
-- Operations requiring precision (calculations, file paths, agent spawning) go through typed tool calls
+- Operations requiring precision (calculations, file paths, servitor summoning) go through typed tool calls
 - Tool calls have validated parameters; tool results have typed return values
 - No free-text parsing is used for structured operations
+- This uses at minimum structural typing, if not nominal typing (as in the type theory distinction between structural and nominal types)
 
 **Testable assertion:** No precision operation uses free-text parsing. All such operations go through tool calls with validated parameters.
 
@@ -62,10 +68,12 @@ The deterministic shell wraps non-deterministic LLM agents with deterministic in
 **Status:** specified
 
 **Properties:**
-- An agent is done IFF all its commitments pass independent verification
+- Done = agent requests commitment check. Verification may incorporate non-deterministic agent evaluation if properly surfaced to user.
+- Invariant: servitor is not Complete until independently verified. Done does not equal Complete.
+- An agent is Complete IFF all its commitments pass independent verification
 - Verification is performed by code external to the agent's session (`CommitmentVerifier`)
-- The agent's self-assessment of completion ("I'm done") has no bearing on actual done-ness
-- Verification failure leaves the agent in a non-done state regardless of what the agent claims
+- The agent's self-assessment of completion ("I'm done") has no bearing on actual completeness
+- Verification failure leaves the agent in a non-complete state regardless of what the agent claims
 - Both parent-assigned and agent-supplemented commitments must pass
 - The parent is notified of both verification success and failure
 
@@ -86,7 +94,7 @@ The deterministic shell wraps non-deterministic LLM agents with deterministic in
 
 **Testable assertion:** Commitments can be created, read, and listed for any agent. Commitments survive app restart. Each commitment has a verifiable assertion.
 
-### REQ-DET-006: Jake's Tool Handler Protocol
+<!-- DROPPED: Jake works like every other agent for tool calls --> ### REQ-DET-006: Jake's Tool Handler Protocol
 **Source:** Reader §9 (Jake's JSON Response Format)
 **Priority:** must-have
 **Status:** specified
@@ -98,7 +106,7 @@ The deterministic shell wraps non-deterministic LLM agents with deterministic in
 
 **Testable assertion:** `JakeToolHandler` protocol can be implemented by different handlers. Swapping the handler does not require changes to Jake's core logic. The current handler correctly parses Jake's JSON format.
 
-### REQ-DET-007: Continuation Loop
+<!-- DROPPED: describes native Claude behavior, not a Tavern requirement --> ### REQ-DET-007: Continuation Loop
 **Source:** Reader §9 (Continuation Loop)
 **Priority:** must-have
 **Status:** specified
@@ -117,13 +125,13 @@ The deterministic shell wraps non-deterministic LLM agents with deterministic in
 **Status:** specified
 
 **Properties:**
-- Jake's MCP server provides structured tools: `summon_servitor` and `dismiss_servitor`
+- Other servitors have access to tools as well (not just Jake)
+- Structured tools include `summon_servitor` and `dismiss_servitor`
 - `summon_servitor` accepts optional `assignment` and `name` parameters; auto-generates name if not provided
-- `dismiss_servitor` accepts a UUID and removes the corresponding agent
-- Both tools use callbacks (`onSummon`, `onDismiss`) for UI updates
-- New Jake tools follow this pattern: MCPTool with handler + callbacks for side effects
+- Unique identifiers required for servitors, but not necessarily UUIDs
+- Dismissing removes from UI only, not from registry
 
-**Testable assertion:** `summon_servitor` with an assignment creates a working agent. `summon_servitor` without a name auto-generates one. `dismiss_servitor` removes the agent from the registry and UI.
+**Testable assertion:** `summon_servitor` with an assignment creates a working servitor. `summon_servitor` without a name auto-generates one. `dismiss_servitor` removes the servitor from the UI but not the registry.
 
 ## 3. Properties Summary
 
@@ -131,7 +139,7 @@ The deterministic shell wraps non-deterministic LLM agents with deterministic in
 
 | Property | Holds When | Violated When |
 |----------|-----------|---------------|
-| Done IFF verified | Agent marked done only after all commitments pass | Agent in done state with failing commitments |
+| Done does not equal Complete | Agent signals Done (requests check), Complete only after verification | Agent in Complete state with failing commitments |
 | Verification independence | Verifier runs outside agent's session | Verifier uses agent's self-report |
 | Failure preserves state | Failed verification leaves agent in working state | Failed verification marks agent done anyway |
 | Parent notification | Parent notified on both pass and fail | Pass/fail outcome not communicated to parent |
@@ -146,6 +154,8 @@ The deterministic shell wraps non-deterministic LLM agents with deterministic in
 | Termination guarantee | Loop ends when handler returns nil | Loop runs indefinitely |
 | Handler swappability | Replacing handler requires zero changes to Jake | Handler change requires Jake modification |
 
+Note: Jake's multi-action turns are a property of ClodKit/Claude, not specific to Jake.
+
 ### Agent State Machine — Verification Transitions
 
 ```mermaid
@@ -158,11 +168,13 @@ stateDiagram-v2
 
 ## 4. Open Questions
 
-- **?2 -- Deterministic Shell Meaning:** What does "deterministic shell" mean concretely beyond the four mechanisms listed? Is it a full workflow DSL or state machine? The PRD establishes principles but the boundary between deterministic and non-deterministic is not fully specified.
+- **?2 -- Deterministic Shell Meaning:** Resolved: Everything managed by the app vs a servitor. The deterministic state machines that dictate behavior and display. Deterministic rules for setting up servitors. New features follow this principle (e.g., workflow state machines).
 
-- **Commitment assertion language:** What format do shell assertions take? Are they arbitrary shell commands? A restricted DSL? How are assertion failures reported?
+- **Commitment assertions:** Resolved: Big TBD — vague on purpose, to be developed as we learn what works.
 
-- **Standard agent tool set:** PRD §14 lists this as TBD. What tools beyond summon/dismiss should all agents have?
+- **Standard tool set:** Resolved: Standard Claude tool set, modulated by capabilities. See §021.
+
+- **Prompt composition:** Pinned for ongoing development.
 
 ## 5. Coverage Gaps
 

@@ -22,29 +22,29 @@ final class ViewInstrumentationTests: XCTestCase {
 
     // MARK: - Helper Factories
 
-    private func makeAgentListViewModel() -> AgentListViewModel {
+    private func makeServitorListViewModel() -> ServitorListViewModel {
         let projectURL = URL(fileURLWithPath: "/tmp/tavern-instrumentation-test")
         let jake = Jake(projectURL: projectURL, loadSavedSession: false)
-        let registry = AgentRegistry()
+        let registry = ServitorRegistry()
         let nameGen = NameGenerator(theme: .lotr)
-        let spawner = ServitorSpawner(
+        let spawner = MortalSpawner(
             registry: registry,
             nameGenerator: nameGen,
             projectURL: projectURL
         )
-        return AgentListViewModel(jake: jake, spawner: spawner)
+        return ServitorListViewModel(jake: jake, spawner: spawner)
     }
 
     // MARK: - Non-Compliant Views (dow, 7jj) - Full Instrumentation
 
-    /// AgentListView renders with all 5 instrumentation categories without crashing
-    func testAgentListViewRendersWithInstrumentation() throws {
-        let viewModel = makeAgentListViewModel()
-        let view = AgentListView(viewModel: viewModel)
+    /// ServitorListView renders with all 5 instrumentation categories without crashing
+    func testServitorListViewRendersWithInstrumentation() throws {
+        let viewModel = makeServitorListViewModel()
+        let view = ServitorListView(viewModel: viewModel)
         let sut = try view.inspect()
 
         // View renders — proves body evaluation logging doesn't break rendering
-        let list = try sut.find(viewWithAccessibilityIdentifier: "agentList")
+        let list = try sut.find(viewWithAccessibilityIdentifier: "servitorList")
         XCTAssertNotNil(list)
     }
 
@@ -165,7 +165,7 @@ final class ViewInstrumentationTests: XCTestCase {
     /// this count assertion will fail.
     func testAllViewsHaveLoggerProperty() {
         // As of this commit, all 15 view files have loggers (some shared via parent struct).
-        // The views: AgentListView, BackgroundTasksView, ChatView, CodeBlockView,
+        // The views: ServitorListView, BackgroundTasksView, ChatView, CodeBlockView,
         // CollapsibleBlockView, DiffView, FileContentView, FileTreeView,
         // LineNumberedText, MessageRowView, MultiLineTextInput, PermissionSettingsView,
         // ResourcePanelView, TodoListView, ToolApprovalView

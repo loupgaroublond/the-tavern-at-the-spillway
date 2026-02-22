@@ -17,7 +17,7 @@ struct ChatView: View {
         VStack(spacing: 0) {
             // Header with agent name, token display, and new conversation button
             ChatHeader(
-                agentName: viewModel.agentName,
+                agentName: viewModel.servitorName,
                 isEnabled: !viewModel.isCogitating,
                 tokenDisplay: viewModel.hasUsageData ? viewModel.formattedTokens : nil,
                 onNewConversation: {
@@ -50,13 +50,13 @@ struct ChatView: View {
                             }
 
                             ForEach(viewModel.messages) { message in
-                                MessageRowView(message: message, agentName: viewModel.agentName)
+                                MessageRowView(message: message, agentName: viewModel.servitorName)
                             }
 
                             // Cogitating indicator (shown before streaming starts)
                             if viewModel.isCogitating && !viewModel.isStreaming {
                                 CogitatingIndicator(
-                                    agentName: viewModel.agentName,
+                                    agentName: viewModel.servitorName,
                                     verb: viewModel.cogitationVerb
                                 )
                                 .id("cogitating")
@@ -165,7 +165,7 @@ struct ChatView: View {
 
             // Input area
             InputBar(
-                agentName: viewModel.agentName,
+                agentName: viewModel.servitorName,
                 text: $viewModel.inputText,
                 isEnabled: !viewModel.isCogitating,
                 isStreaming: viewModel.isStreaming,
@@ -182,10 +182,10 @@ struct ChatView: View {
             )
         }
         .onAppear {
-            Self.logger.debug("[ChatView] onAppear - agent: \(viewModel.agentName), messages: \(viewModel.messages.count)")
+            Self.logger.debug("[ChatView] onAppear - agent: \(viewModel.servitorName), messages: \(viewModel.messages.count)")
         }
         .onDisappear {
-            Self.logger.debug("[ChatView] onDisappear - agent: \(viewModel.agentName)")
+            Self.logger.debug("[ChatView] onDisappear - agent: \(viewModel.servitorName)")
         }
         .onChange(of: viewModel.inputText) {
             autocomplete.update(for: viewModel.inputText)

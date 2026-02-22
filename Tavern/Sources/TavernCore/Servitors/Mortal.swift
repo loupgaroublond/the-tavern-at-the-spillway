@@ -4,35 +4,35 @@ import os.log
 
 // MARK: - Provenance: REQ-AGT-002, REQ-AGT-005, REQ-AGT-009, REQ-DET-001, REQ-DET-004, REQ-LCM-007, REQ-OBS-011, REQ-OPM-005, REQ-SPN-009, REQ-V1-005
 
-/// A servitor - a worker spawned by Jake to handle specific assignments
-/// Unlike Jake (who is eternal), servitors are created for a purpose
+/// A mortal - a worker spawned by Jake to handle specific assignments
+/// Unlike Jake (who is eternal), mortals are created for a purpose
 /// and eventually complete their work.
 ///
 /// Terminology:
 /// - Jake calls them "Regulars" (individuals)
 /// - The whole team is the "Slop Squad"
-public final class Servitor: Agent, @unchecked Sendable {
+public final class Mortal: Servitor, @unchecked Sendable {
 
-    // MARK: - Agent Protocol
+    // MARK: - Servitor Protocol
 
     public let id: UUID
     public let name: String
 
-    /// The agent's current state
-    public var state: AgentState {
+    /// The servitor's current state
+    public var state: ServitorState {
         queue.sync { _state }
     }
 
-    // MARK: - Servitor Properties
+    // MARK: - Mortal Properties
 
-    /// The assignment given to this servitor (their purpose)
-    /// nil for user-spawned servitors that wait for user's first message
+    /// The assignment given to this mortal (their purpose)
+    /// nil for user-spawned mortals that wait for user's first message
     public let assignment: String?
 
     /// User-editable description shown in the sidebar
     public var chatDescription: String?
 
-    /// Commitments this servitor must verify before completing
+    /// Commitments this mortal must verify before completing
     public let commitments: CommitmentList
 
     /// Verifier used to check commitments (injected for testability)
@@ -41,10 +41,10 @@ public final class Servitor: Agent, @unchecked Sendable {
     // MARK: - Private State
 
     private let projectURL: URL
-    private let messenger: AgentMessenger
-    private let queue = DispatchQueue(label: "com.tavern.Servitor")
+    private let messenger: ServitorMessenger
+    private let queue = DispatchQueue(label: "com.tavern.Mortal")
 
-    private var _state: AgentState = .idle
+    private var _state: ServitorState = .idle
     private var _sessionId: String?
     private var _sessionMode: PermissionMode = .plan
 
@@ -61,7 +61,7 @@ public final class Servitor: Agent, @unchecked Sendable {
 
     // MARK: - System Prompt
 
-    /// Generate the system prompt for this servitor
+    /// Generate the system prompt for this mortal
     private var systemPrompt: String {
         if let assignment = assignment {
             // Jake-summoned: has an assignment, start working immediately
@@ -106,11 +106,11 @@ public final class Servitor: Agent, @unchecked Sendable {
 
     // MARK: - Initialization
 
-    /// Create a servitor, optionally with an assignment
+    /// Create a mortal, optionally with an assignment
     /// - Parameters:
     ///   - id: Unique identifier (auto-generated if not provided)
-    ///   - name: Display name for this servitor
-    ///   - assignment: The assignment this servitor is responsible for (nil for user-spawned servitors)
+    ///   - name: Display name for this mortal
+    ///   - assignment: The assignment this mortal is responsible for (nil for user-spawned mortals)
     ///   - chatDescription: User-editable description shown in sidebar
     ///   - projectURL: The project directory URL
     ///   - commitments: List of commitments to verify before completion (defaults to empty)
@@ -125,7 +125,7 @@ public final class Servitor: Agent, @unchecked Sendable {
         projectURL: URL,
         commitments: CommitmentList = CommitmentList(),
         verifier: CommitmentVerifier = CommitmentVerifier(),
-        messenger: AgentMessenger = LiveMessenger(),
+        messenger: ServitorMessenger = LiveMessenger(),
         loadSavedSession: Bool = true
     ) {
         self.id = id
@@ -138,7 +138,7 @@ public final class Servitor: Agent, @unchecked Sendable {
         self.messenger = messenger
 
         // Restore session from previous run (useful if servitor was persisted)
-        if loadSavedSession, let savedSession = SessionStore.loadAgentSession(agentId: id) {
+        if loadSavedSession, let savedSession = SessionStore.loadServitorSession(servitorId: id) {
             self._sessionId = savedSession
             TavernLogger.agents.info("[\(name)] restored session: \(savedSession)")
         }
@@ -177,7 +177,7 @@ public final class Servitor: Agent, @unchecked Sendable {
             // Save session ID
             if let newSessionId = result.sessionId {
                 queue.sync { _sessionId = newSessionId }
-                SessionStore.saveAgentSession(agentId: id, sessionId: newSessionId)
+                SessionStore.saveServitorSession(servitorId: id, sessionId: newSessionId)
                 TavernLogger.agents.info("[\(self.name)] received response, length: \(response.count), sessionId: \(newSessionId)")
             } else {
                 TavernLogger.agents.info("[\(self.name)] received response, length: \(response.count), no sessionId")
@@ -232,7 +232,7 @@ public final class Servitor: Agent, @unchecked Sendable {
                         case .completed(let sessionId, _):
                             if let sessionId, let self {
                                 self.queue.sync { self._sessionId = sessionId }
-                                SessionStore.saveAgentSession(agentId: self.id, sessionId: sessionId)
+                                SessionStore.saveServitorSession(servitorId: self.id, sessionId: sessionId)
                                 TavernLogger.agents.info("[\(self.name)] streaming completed, sessionId: \(sessionId)")
                             }
                             self?.updateStateAfterResponse()
@@ -272,7 +272,7 @@ public final class Servitor: Agent, @unchecked Sendable {
         return (stream: wrappedStream, cancel: cancel)
     }
 
-    /// Reset the servitor's conversation state
+    /// Reset the mortal's conversation state
     public func resetConversation() {
         TavernLogger.agents.info("[\(self.name)] conversation reset")
         queue.sync {
@@ -284,20 +284,20 @@ public final class Servitor: Agent, @unchecked Sendable {
         }
 
         // Clear persisted session
-        SessionStore.clearAgentSession(agentId: id)
+        SessionStore.clearServitorSession(servitorId: id)
     }
 
     /// Update the chat description and persist it
     /// - Parameter description: The new description (nil to clear)
     public func updateChatDescription(_ description: String?) {
         self.chatDescription = description
-        SessionStore.updateAgent(id: id, chatDescription: description)
+        SessionStore.updateServitor(id: id, chatDescription: description)
         TavernLogger.agents.debug("[\(self.name)] chat description updated: \(description ?? "nil")")
     }
 
     // MARK: - State Management
 
-    /// Explicitly mark this servitor as waiting for input
+    /// Explicitly mark this mortal as waiting for input
     public func markWaiting() {
         queue.sync {
             if _state != .done {
@@ -306,7 +306,7 @@ public final class Servitor: Agent, @unchecked Sendable {
         }
     }
 
-    /// Explicitly mark this servitor as done
+    /// Explicitly mark this mortal as done
     public func markDone() {
         queue.sync { _state = .done }
     }
@@ -347,7 +347,7 @@ public final class Servitor: Agent, @unchecked Sendable {
         }
     }
 
-    /// Handle when the servitor signals completion
+    /// Handle when the mortal signals completion
     /// Verifies all commitments before actually marking done
     private func handleCompletionAttempt() async {
         // If no commitments or all already passed, mark done immediately

@@ -254,19 +254,19 @@ final class SDKLiveIntegrationTests: XCTestCase {
     func testHandlerWithTavernLogger() async throws {
         print("\n=== testHandlerWithTavernLogger ===")
 
-        let registry = AgentRegistry()
+        let registry = ServitorRegistry()
         let nameGenerator = NameGenerator(theme: .lotr)
         let projectURL = URL(fileURLWithPath: NSTemporaryDirectory())
             .appendingPathComponent("test-logger-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: projectURL, withIntermediateDirectories: true)
 
-        let spawner = ServitorSpawner(
+        let spawner = MortalSpawner(
             registry: registry,
             nameGenerator: nameGenerator,
             projectURL: projectURL
         )
 
-        let onSummon: @Sendable (Servitor) async -> Void = { servitor in
+        let onSummon: @Sendable (Mortal) async -> Void = { servitor in
             print("  onSummon: \(servitor.name)")
         }
         let onDismiss: @Sendable (UUID) async -> Void = { id in
@@ -296,19 +296,19 @@ final class SDKLiveIntegrationTests: XCTestCase {
                         TavernLogger.coordination.info("MCP summon_servitor: assignment=\(assignment ?? "<none>"), name=\(name ?? "<auto>")")
 
                         do {
-                            let servitor: Servitor
+                            let mortal: Mortal
                             if let name = name {
-                                servitor = try spawner.summon(name: name, assignment: assignment)
+                                mortal = try spawner.summon(name: name, assignment: assignment)
                             } else if let assignment = assignment {
-                                servitor = try spawner.summon(assignment: assignment)
+                                mortal = try spawner.summon(assignment: assignment)
                             } else {
-                                servitor = try spawner.summon()
+                                mortal = try spawner.summon()
                             }
 
-                            await onSummon(servitor)
+                            await onSummon(mortal)
 
-                            TavernLogger.coordination.info("MCP summon_servitor: summoned \(servitor.name) (id: \(servitor.id))")
-                            return .text("Summoned \(servitor.name) (id: \(servitor.id))")
+                            TavernLogger.coordination.info("MCP summon_servitor: summoned \(mortal.name) (id: \(mortal.id))")
+                            return .text("Summoned \(mortal.name) (id: \(mortal.id))")
                         } catch {
                             TavernLogger.coordination.error("MCP summon_servitor failed: \(error.localizedDescription)")
                             return .error("Failed to summon servitor: \(error.localizedDescription)")
@@ -392,21 +392,21 @@ final class SDKLiveIntegrationTests: XCTestCase {
         print("\n=== testHandlerWithCallbackCapture ===")
 
         // Create callbacks like Tavern does
-        let onSummon: @Sendable (Servitor) async -> Void = { servitor in
-            print("  onSummon called for: \(servitor.name)")
+        let onSummon: @Sendable (Mortal) async -> Void = { mortal in
+            print("  onSummon called for: \(mortal.name)")
         }
         let onDismiss: @Sendable (UUID) async -> Void = { id in
             print("  onDismiss called for: \(id)")
         }
 
         // Create real spawner
-        let registry = AgentRegistry()
+        let registry = ServitorRegistry()
         let nameGenerator = NameGenerator(theme: .lotr)
         let projectURL = URL(fileURLWithPath: NSTemporaryDirectory())
             .appendingPathComponent("test-callback-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: projectURL, withIntermediateDirectories: true)
 
-        let spawner = ServitorSpawner(
+        let spawner = MortalSpawner(
             registry: registry,
             nameGenerator: nameGenerator,
             projectURL: projectURL
@@ -431,9 +431,9 @@ final class SDKLiveIntegrationTests: XCTestCase {
                     handler: { args in
                         // Capture like real Tavern handler
                         do {
-                            let servitor = try spawner.summon()
-                            await onSummon(servitor)
-                            return .text("Summoned \(servitor.name)")
+                            let mortal = try spawner.summon()
+                            await onSummon(mortal)
+                            return .text("Summoned \(mortal.name)")
                         } catch {
                             return .error("Failed: \(error)")
                         }
@@ -509,13 +509,13 @@ final class SDKLiveIntegrationTests: XCTestCase {
         print("\n=== testHandlerWithSpawnerCapture ===")
 
         // Create real spawner like Tavern does
-        let registry = AgentRegistry()
+        let registry = ServitorRegistry()
         let nameGenerator = NameGenerator(theme: .lotr)
         let projectURL = URL(fileURLWithPath: NSTemporaryDirectory())
             .appendingPathComponent("test-capture-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: projectURL, withIntermediateDirectories: true)
 
-        let spawner = ServitorSpawner(
+        let spawner = MortalSpawner(
             registry: registry,
             nameGenerator: nameGenerator,
             projectURL: projectURL
@@ -539,7 +539,7 @@ final class SDKLiveIntegrationTests: XCTestCase {
                     ),
                     handler: { args in
                         // Capture spawner in closure like real Tavern
-                        _ = spawner.servitorCount  // Force capture
+                        _ = spawner.mortalCount  // Force capture
                         return .text("Summoned")
                     }
                 ),
@@ -553,7 +553,7 @@ final class SDKLiveIntegrationTests: XCTestCase {
                         required: ["id"]
                     ),
                     handler: { _ in
-                        _ = spawner.servitorCount  // Force capture
+                        _ = spawner.mortalCount  // Force capture
                         return .text("Dismissed")
                     }
                 )
@@ -605,13 +605,13 @@ final class SDKLiveIntegrationTests: XCTestCase {
     func testCreateTavernMCPServerDirect() async throws {
         print("\n=== testCreateTavernMCPServerDirect ===")
 
-        let registry = AgentRegistry()
+        let registry = ServitorRegistry()
         let nameGenerator = NameGenerator(theme: .lotr)
         let projectURL = URL(fileURLWithPath: NSTemporaryDirectory())
             .appendingPathComponent("test-direct-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: projectURL, withIntermediateDirectories: true)
 
-        let spawner = ServitorSpawner(
+        let spawner = MortalSpawner(
             registry: registry,
             nameGenerator: nameGenerator,
             projectURL: projectURL
@@ -622,8 +622,8 @@ final class SDKLiveIntegrationTests: XCTestCase {
         // This is the ONLY difference - using createTavernMCPServer instead of inline
         let tavernServer = createTavernMCPServer(
             spawner: spawner,
-            onSummon: { servitor in
-                print("  onSummon: \(servitor.name)")
+            onSummon: { mortal in
+                print("  onSummon: \(mortal.name)")
             },
             onDismiss: { id in
                 print("  onDismiss: \(id)")
@@ -727,13 +727,13 @@ final class SDKLiveIntegrationTests: XCTestCase {
         print("\n=== testTavernMCPServerConfiguration ===")
 
         // Create the same MCP server configuration Tavern uses
-        let registry = AgentRegistry()
+        let registry = ServitorRegistry()
         let nameGenerator = NameGenerator(theme: .lotr)
         let projectURL = URL(fileURLWithPath: NSTemporaryDirectory())
             .appendingPathComponent("tavern-test-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: projectURL, withIntermediateDirectories: true)
 
-        let spawner = ServitorSpawner(
+        let spawner = MortalSpawner(
             registry: registry,
             nameGenerator: nameGenerator,
             projectURL: projectURL

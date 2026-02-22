@@ -1,7 +1,7 @@
 # 016 — Quality Specification
 
 **Status:** complete
-**Last Updated:** 2026-02-10
+**Last Updated:** 2026-02-16
 
 ## Upstream References
 - PRD: §17 (Testability Requirements), §19 (Development Standards), §19.1 (Logging Standards), §19.2 (Testing Standards), §19.3 (Stress Testing Standards), §21 (Performance Requirements)
@@ -165,9 +165,10 @@ Testability requirements, development standards, the five testing principles, th
 |-------|--------|------|------|
 | 1 | TavernCoreTests | Property/unit tests, no mocks | Every change |
 | 2 | TavernCoreTests, TavernTests | Unit tests with mocks | Every change |
+| 2.9 | TBD | Local LLM testing (llama-ish, Apple Intelligence) | Development iteration |
 | 3 | TavernIntegrationTests | Real Claude, headless | Once per unit of work |
 | 4 | TavernUITests | XCUITest (steals focus) | When user not active |
-| 5 | TavernStressTests | Stress/pre-release | Pre-release |
+| 5 | TavernStressTests | Stress/pre-release | Pre-release and as-needed |
 
 - Grade 3 tests are the canonical source of truth
 - Grade 2 mocks mirror Grade 3 assertions but can never be more correct than real behavior
@@ -180,6 +181,7 @@ Testability requirements, development standards, the five testing principles, th
 **Status:** specified
 
 **Properties:**
+- This is specifically for debug compilation builds
 - All new code is instrumented with logging using `TavernLogger`
 - Required logging: entry/exit for async operations, state transitions, errors with full context, key events
 - Every new file includes `import os` and declares a static `Logger`
@@ -203,6 +205,7 @@ Testability requirements, development standards, the five testing principles, th
 
 **Testable assertion:** UI interactions (click, type, tab switch) complete within one frame (~16ms). Long operations show feedback within 100ms. Adding 10x more history does not measurably degrade current-content display performance.
 
+<!-- DROPPED: not spec material — maybe ADR if framed differently -->
 ### REQ-QA-015: RAM Budget
 **Source:** PRD §21
 **Priority:** must-have
@@ -227,6 +230,30 @@ Testability requirements, development standards, the five testing principles, th
 
 **Testable assertion:** Long-running operations support cancellation. Cancelled operations clean up resources without leaving the system in an inconsistent state.
 
+### REQ-QA-017: Full Coverage and Clean Builds
+**Source:** Development Standards
+**Priority:** must-have
+**Status:** specified
+
+**Properties:**
+- 100% code coverage for full test runs
+- No warnings in builds
+
+**Testable assertion:** Full test suite achieves 100% code coverage. Build produces zero warnings.
+
+### REQ-QA-018: Grade 2.9 — Local LLM Testing
+**Source:** Development Standards
+**Priority:** should-have
+**Status:** specified
+
+**Properties:**
+- Grade 2.9: Local LLM testing using llama-ish models and Apple Intelligence
+- Purpose: cheaper/faster Grade 3 alternative for frequent iteration during development
+- Saves real Grade 3 for wrap-up stages
+- TBD on exact setup
+
+**Testable assertion:** Grade 2.9 test target exists and runs against a local LLM. Tests produce results comparable to Grade 3 for basic scenarios.
+
 ## 3. Properties Summary
 
 ### Testing Grade Properties
@@ -235,9 +262,10 @@ Testability requirements, development standards, the five testing principles, th
 |-------|-----------|----------------------|---------------|---------------|
 | 1 | No | No | Every change | No |
 | 2 | No | No | Every change | No |
+| 2.9 | No | No (local LLM) | Development iteration | No |
 | 3 | Yes (source of truth) | Yes | Once per unit of work | No |
 | 4 | No | Yes | When user not active | Yes |
-| 5 | No | No (synthetic load) | Pre-release | No |
+| 5 | No | No (synthetic load) | Pre-release and as-needed | No |
 
 ### Performance Properties
 
@@ -252,14 +280,18 @@ Testability requirements, development standards, the five testing principles, th
 
 - **Stress test thresholds:** PRD says "Specific thresholds TBD after initial testing identifies natural limits." Current baselines need to be established and documented.
 
-- **Grade 3 cost management:** Real Claude calls cost money. How frequently should Grade 3 tests run? Is there a budget per CI run?
+- **Grade 3 cost management:** Resolved: Grade 3 must pass before merging. Not part of dev iteration cycle (grades 1+2 for that).
+
+- **Grade 5 frequency:** Resolved: Pre-release and as-needed.
+
+- **Regressions:** Resolved: All tests must continue to pass — this policy prevents regressions.
 
 - **Perception boundary catalog:** The PRD says perception boundaries are "discovered and documented as development proceeds." The current catalog needs to be maintained.
 
 ## 5. Coverage Gaps
 
-- **Code coverage targets:** No numeric code coverage target is specified. The principles require comprehensive coverage but do not set a percentage floor.
+- **Code coverage targets:** Resolved: 100% coverage required (REQ-QA-017).
 
-- **Mutation testing:** No specification for mutation testing to verify test quality beyond code coverage.
+- **Mutation testing:** Mutation testing is a technique that introduces small bugs into the code to verify that tests catch them, ensuring test quality beyond simple code coverage. No specification yet for mutation testing tooling.
 
 - **Performance regression testing:** Stress tests verify baselines, but there is no specification for automated performance regression detection in CI.

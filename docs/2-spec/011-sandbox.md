@@ -1,7 +1,7 @@
 # 011 — Sandbox Specification
 
 **Status:** complete
-**Last Updated:** 2026-02-10
+**Last Updated:** 2026-02-16
 
 ## Upstream References
 - PRD: §4.6 (Sandbox Primitives), §6.4 (Preflight Checks)
@@ -26,14 +26,17 @@ Sandbox primitives for file protection, preflight checks, and the changeset mode
 **Status:** specified
 
 **Properties:**
-- Five orthogonal primitives exist: Changeset, Platform, Isolation, Outputs, Software
+- Five orthogonal primitives exist: Changeset, Platform, Isolation, Connectors, Software
 - Primitives are orthogonal — any combination is valid; no primitive depends on another
 - Parent picks settings at spawn time per agent
 - Changeset: overlay filesystem protecting originals; the diff between original and overlay
 - Platform: where the agent runs (Mac, container, cloud, hybrid)
 - Isolation: VMs, containers, OS-level sandboxes — agent can trash its environment and be reaped
-- Outputs: network access control per agent
+- Connectors: network access control per agent
 - Software: OS choice (macOS, Linux, FreeBSD, etc.)
+- The sandbox MUST make boundary violations impossible, not just detectable
+- Agents cannot see paths outside the sandbox. Unauthorized network calls are dropped and reported. There is no escape.
+- Pin: Sandbox integrity verification (detecting vulnerability exploitation) pinned for if it ever becomes important.
 
 **Testable assertion:** Architecture supports specifying each primitive independently per agent spawn. Primitives do not depend on each other (orthogonal). (Implementation deferred for v1 — agents work on actual files.)
 
@@ -47,6 +50,7 @@ Sandbox primitives for file protection, preflight checks, and the changeset mode
 - Original files remain untouched until the changeset is explicitly applied (REQ-INV-008)
 - Another agent can review the changeset independently before application
 - Application is an explicit, irreversible action
+- Changeset and diff capabilities depend on the sandbox configuration — some configurations may not support them
 
 **Testable assertion:** Deferred. When implemented: a changeset can be extracted as a diff. The diff is reviewable. Applying the diff modifies original files. Before application, original files are untouched.
 
@@ -110,7 +114,7 @@ Sandbox primitives for file protection, preflight checks, and the changeset mode
 
 **Testable assertion:** Deferred. When implemented: an agent in container isolation cannot modify host files. Destroying and recreating the container produces a clean environment.
 
-### REQ-SBX-008: Output Control
+### REQ-SBX-008: Connector Control
 **Source:** PRD §4.6
 **Priority:** deferred
 **Status:** specified
@@ -128,11 +132,11 @@ Sandbox primitives for file protection, preflight checks, and the changeset mode
 
 | Primitive | Controls | Independent Of |
 |-----------|---------|----------------|
-| Changeset | File mutation isolation | Platform, Isolation, Outputs, Software |
-| Platform | Execution environment | Changeset, Isolation, Outputs, Software |
-| Isolation | Environment containment | Changeset, Platform, Outputs, Software |
-| Outputs | Network access | Changeset, Platform, Isolation, Software |
-| Software | Operating system | Changeset, Platform, Isolation, Outputs |
+| Changeset | File mutation isolation | Platform, Isolation, Connectors, Software |
+| Platform | Execution environment | Changeset, Isolation, Connectors, Software |
+| Isolation | Environment containment | Changeset, Platform, Connectors, Software |
+| Connectors | Network access | Changeset, Platform, Isolation, Software |
+| Software | Operating system | Changeset, Platform, Isolation, Connectors |
 
 Any combination of these five primitives is valid.
 
@@ -153,24 +157,29 @@ stateDiagram-v2
     Active --> Review : agent signals done
     Review --> Applied : reviewer approves
     Review --> Rejected : reviewer rejects
-    Applied --> [*]
+    Applied --> Merged : merge queue processes
+    Merged --> [*]
     Rejected --> Active : agent reworks
+    Rejected --> Abandoned : reviewer abandons
     Active --> Abandoned : agent reaped
-    Abandoned --> [*]
+    Abandoned --> Deleted : cleanup
+    Deleted --> [*]
 ```
 
 ## 4. Open Questions
 
-- **Changeset lifecycle specifics:** PRD §14 lists this as TBD ("Per environment flavor"). How long do changesets persist? What happens to unapplied changesets when the project closes?
+- **Changeset lifecycle specifics:** Resolved: Changesets belong to the sandbox, generally.
 
-- **Hybrid platform protocol:** For cloud agents communicating with the local macOS app, what protocol is used? gRPC? WebSocket? HTTP?
+- **Hybrid platform protocol:** Resolved: ADR material.
 
-- **Isolation cost:** Container and VM isolation have startup costs. How does this interact with the "fast test execution" requirement (REQ-QA-004)?
+- **Isolation cost:** Resolved: Testing path must be as fast as possible for agent iteration. Ensure fastest testing path is available.
+
+- **Sandbox escape:** Resolved: Sandbox makes escape impossible by design. Integrity verification pinned for future.
 
 ## 5. Coverage Gaps
 
-- **Changeset merge conflicts:** When two agents have overlapping changesets, how are conflicts resolved? Serial merge queue (REQ-WRK-006) reduces but does not eliminate this.
+- **Changeset merge conflicts:** Resolved: Merge queue. See §012.
 
-- **Sandbox escape detection:** No specification for detecting when an agent escapes its sandbox boundary (other than violation monitoring, REQ-OBS-005).
+- **Sandbox escape detection:** Resolved: Sandbox makes escape impossible. Integrity verification pinned.
 
-- **Resource limits per sandbox:** No specification for CPU, memory, or disk limits within a sandboxed environment.
+- **Resource limits per sandbox:** Resolved: Not application requirements.

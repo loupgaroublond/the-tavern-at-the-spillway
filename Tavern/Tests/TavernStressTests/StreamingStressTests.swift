@@ -4,7 +4,7 @@ import XCTest
 /// Stress tests for streaming under concurrent load (Bead 618c)
 ///
 /// Verifies:
-/// - 10+ concurrent streaming sessions via MockAgent complete correctly
+/// - 10+ concurrent streaming sessions via MockServitor complete correctly
 /// - Content matches expected per-stream (no interleaving)
 /// - Rapid cancel/restart (100 cycles) doesn't deadlock
 /// - Memory doesn't grow unbounded from accumulated messages
@@ -14,7 +14,7 @@ final class StreamingStressTests: XCTestCase {
 
     // MARK: - Test: 10 Concurrent Streams
 
-    /// Run 10 concurrent streaming sessions. Each MockAgent returns a known response.
+    /// Run 10 concurrent streaming sessions. Each MockServitor returns a known response.
     /// Verify all streams complete and content matches expected.
     func testConcurrentStreamingSessions() async throws {
         let streamCount = 10
@@ -28,8 +28,8 @@ final class StreamingStressTests: XCTestCase {
             for i in 0..<streamCount {
                 group.addTask {
                     let expectedResponse = String(repeating: "Stream\(i)-", count: 50)
-                    let mock = MockAgent(
-                        name: "StreamAgent-\(i)",
+                    let mock = MockServitor(
+                        name: "StreamServitor-\(i)",
                         responses: [expectedResponse]
                     )
                     mock.streamingChunkSize = 10
@@ -89,8 +89,8 @@ final class StreamingStressTests: XCTestCase {
         let timeBudget: TimeInterval = 10.0
         let startTime = Date()
 
-        let mock = MockAgent(
-            name: "CancelTestAgent",
+        let mock = MockServitor(
+            name: "CancelTestServitor",
             responses: Array(repeating: String(repeating: "X", count: 1000), count: cycleCount + 1),
             defaultResponse: String(repeating: "Y", count: 1000)
         )
@@ -146,8 +146,8 @@ final class StreamingStressTests: XCTestCase {
         let response = String(repeating: "A", count: responseSize)
         let timeBudget: TimeInterval = 5.0
 
-        let mock = MockAgent(
-            name: "LargeStreamAgent",
+        let mock = MockServitor(
+            name: "LargeStreamServitor",
             responses: [response]
         )
         mock.streamingChunkSize = 100
@@ -190,8 +190,8 @@ final class StreamingStressTests: XCTestCase {
             for i in 0..<streamCount {
                 group.addTask {
                     let response = "Response-\(i)-content"
-                    let mock = MockAgent(
-                        name: "ToolStreamAgent-\(i)",
+                    let mock = MockServitor(
+                        name: "ToolStreamServitor-\(i)",
                         responses: [response]
                     )
                     mock.streamingChunkSize = 3

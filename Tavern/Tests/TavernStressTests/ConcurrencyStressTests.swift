@@ -1,9 +1,9 @@
 import XCTest
 @testable import TavernCore
 
-/// Stress tests for concurrent agent spawning and dismissal (Bead 1z56)
+/// Stress tests for concurrent servitor spawning and dismissal (Bead 1z56)
 ///
-/// Verifies AgentRegistry stays consistent under concurrent load:
+/// Verifies ServitorRegistry stays consistent under concurrent load:
 /// - 50+ concurrent spawn/dismiss cycles complete without deadlock
 /// - Registry count matches expected state after all operations
 /// - No duplicate names produced
@@ -19,13 +19,13 @@ final class ConcurrencyStressTests: XCTestCase {
 
     // MARK: - Test: 50 Concurrent Spawn/Dismiss Cycles
 
-    /// Rapidly spawn and dismiss 50+ servitors concurrently.
+    /// Rapidly spawn and dismiss 50+ mortals concurrently.
     /// Each of 10 tasks performs 5 spawn/dismiss cycles in parallel.
     /// Verifies: no deadlock, registry empty at end, completes within budget.
     func testConcurrentSpawnDismiss50Cycles() async throws {
-        let registry = AgentRegistry()
+        let registry = ServitorRegistry()
         let nameGenerator = NameGenerator(theme: .lotr)
-        let spawner = ServitorSpawner(
+        let spawner = MortalSpawner(
             registry: registry,
             nameGenerator: nameGenerator,
             projectURL: testProjectURL()
@@ -44,9 +44,9 @@ final class ConcurrencyStressTests: XCTestCase {
                     var successCount = 0
                     for i in 0..<cyclesPerTask {
                         do {
-                            let agent = try spawner.summon(assignment: "Concurrent-\(taskIndex)-\(i)")
+                            let mortal = try spawner.summon(assignment: "Concurrent-\(taskIndex)-\(i)")
                             try? await Task.sleep(nanoseconds: UInt64.random(in: 100...1000))
-                            try spawner.dismiss(agent)
+                            try spawner.dismiss(mortal)
                             successCount += 1
                         } catch {
                             // Name collision under concurrency is acceptable
@@ -68,9 +68,9 @@ final class ConcurrencyStressTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(totalSuccess, expectedMinimum,
             "At least \(expectedMinimum) of \(taskCount * cyclesPerTask) cycles should succeed, got \(totalSuccess)")
 
-        // Registry must be empty — all spawned agents were dismissed
+        // Registry must be empty — all spawned mortals were dismissed
         XCTAssertEqual(registry.count, 0,
-            "Registry should be empty after all dismiss operations, found \(registry.count) agents")
+            "Registry should be empty after all dismiss operations, found \(registry.count) servitors")
 
         // Must complete within budget
         XCTAssertLessThanOrEqual(duration, timeBudget,
@@ -81,43 +81,43 @@ final class ConcurrencyStressTests: XCTestCase {
 
     // MARK: - Test: Registry Thread Safety Under Heavy Concurrent Access
 
-    /// Register 100 agents, then bombard the registry with concurrent lookups.
+    /// Register 100 mortals, then bombard the registry with concurrent lookups.
     /// 20 threads performing simultaneous reads should not cause data corruption.
     func testRegistryThreadSafetyHeavyReads() async throws {
-        let registry = AgentRegistry()
+        let registry = ServitorRegistry()
         let projectURL = testProjectURL()
         let timeBudget: TimeInterval = 5.0
 
-        // Pre-register 100 agents
-        let agentCount = 100
-        var agents: [Servitor] = []
-        for i in 0..<agentCount {
-            let servitor = Servitor(
+        // Pre-register 100 mortals
+        let mortalCount = 100
+        var mortals: [Mortal] = []
+        for i in 0..<mortalCount {
+            let mortal = Mortal(
                 name: "ReadTest-\(i)",
                 assignment: "Test \(i)",
                 projectURL: projectURL,
                 loadSavedSession: false
             )
-            try registry.register(servitor)
-            agents.append(servitor)
+            try registry.register(mortal)
+            mortals.append(mortal)
         }
-        XCTAssertEqual(registry.count, agentCount)
+        XCTAssertEqual(registry.count, mortalCount)
 
         let startTime = Date()
         let readTaskCount = 20
         let queriesPerTask = 500
 
-        // Concurrent reads: id lookup, name lookup, allAgents
+        // Concurrent reads: id lookup, name lookup, allServitors
         await withTaskGroup(of: Int.self) { group in
             for _ in 0..<readTaskCount {
                 let registryRef = registry
-                let agentsCopy = agents
+                let mortalsCopy = mortals
                 group.addTask {
                     var queryCount = 0
-                    for agent in agentsCopy.prefix(queriesPerTask / 3) {
-                        _ = registryRef.agent(id: agent.id)
-                        _ = registryRef.agent(named: agent.name)
-                        _ = registryRef.allAgents()
+                    for mortal in mortalsCopy.prefix(queriesPerTask / 3) {
+                        _ = registryRef.servitor(id: mortal.id)
+                        _ = registryRef.servitor(named: mortal.name)
+                        _ = registryRef.allServitors()
                         queryCount += 3
                     }
                     return queryCount
@@ -132,8 +132,8 @@ final class ConcurrencyStressTests: XCTestCase {
         let duration = Date().timeIntervalSince(startTime)
 
         // Registry must remain consistent
-        XCTAssertEqual(registry.count, agentCount,
-            "Registry count changed during concurrent reads: expected \(agentCount), got \(registry.count)")
+        XCTAssertEqual(registry.count, mortalCount,
+            "Registry count changed during concurrent reads: expected \(mortalCount), got \(registry.count)")
 
         XCTAssertLessThanOrEqual(duration, timeBudget,
             "Heavy concurrent reads must complete within \(timeBudget)s, took \(String(format: "%.2f", duration))s")
@@ -206,31 +206,31 @@ final class ConcurrencyStressTests: XCTestCase {
 
     // MARK: - Test: Concurrent Registration and Removal
 
-    /// Simultaneously register new agents while removing others.
+    /// Simultaneously register new mortals while removing others.
     /// Verifies no data corruption (registry count matches expected).
     func testConcurrentRegisterAndRemove() async throws {
-        let registry = AgentRegistry()
+        let registry = ServitorRegistry()
         let projectURL = testProjectURL()
         let timeBudget: TimeInterval = 5.0
 
-        // Pre-register 50 agents to remove
-        var agentsToRemove: [Servitor] = []
+        // Pre-register 50 mortals to remove
+        var mortalsToRemove: [Mortal] = []
         for i in 0..<50 {
-            let servitor = Servitor(
+            let mortal = Mortal(
                 name: "Remove-\(i)",
                 assignment: nil,
                 projectURL: projectURL,
                 loadSavedSession: false
             )
-            try registry.register(servitor)
-            agentsToRemove.append(servitor)
+            try registry.register(mortal)
+            mortalsToRemove.append(mortal)
         }
         XCTAssertEqual(registry.count, 50)
 
-        // Prepare 50 agents to add
-        var agentsToAdd: [Servitor] = []
+        // Prepare 50 mortals to add
+        var mortalsToAdd: [Mortal] = []
         for i in 0..<50 {
-            agentsToAdd.append(Servitor(
+            mortalsToAdd.append(Mortal(
                 name: "Add-\(i)",
                 assignment: nil,
                 projectURL: projectURL,
@@ -241,12 +241,12 @@ final class ConcurrencyStressTests: XCTestCase {
         let startTime = Date()
 
         // Capture IDs for removal (UUIDs are Sendable)
-        let removeIds = agentsToRemove.map { $0.id }
-        let addAgents = agentsToAdd
+        let removeIds = mortalsToRemove.map { $0.id }
+        let addMortals = mortalsToAdd
 
         // Run add and remove in parallel
         await withTaskGroup(of: Void.self) { group in
-            // Task 1: Remove pre-registered agents
+            // Task 1: Remove pre-registered mortals
             let registryRef = registry
             group.addTask {
                 for id in removeIds {
@@ -254,10 +254,10 @@ final class ConcurrencyStressTests: XCTestCase {
                 }
             }
 
-            // Task 2: Register new agents
+            // Task 2: Register new mortals
             group.addTask {
-                for agent in addAgents {
-                    _ = try? registryRef.register(agent)
+                for mortal in addMortals {
+                    _ = try? registryRef.register(mortal)
                 }
             }
         }
@@ -266,18 +266,18 @@ final class ConcurrencyStressTests: XCTestCase {
 
         // Final count should be 50 (all old removed, all new added)
         XCTAssertEqual(registry.count, 50,
-            "After concurrent add/remove, registry should have 50 agents, got \(registry.count)")
+            "After concurrent add/remove, registry should have 50 servitors, got \(registry.count)")
 
-        // Verify all new agents are findable
-        for agent in agentsToAdd {
-            XCTAssertNotNil(registry.agent(id: agent.id),
-                "Newly added agent \(agent.name) should be in registry")
+        // Verify all new mortals are findable
+        for mortal in mortalsToAdd {
+            XCTAssertNotNil(registry.servitor(id: mortal.id),
+                "Newly added mortal \(mortal.name) should be in registry")
         }
 
-        // Verify all old agents are gone
-        for agent in agentsToRemove {
-            XCTAssertNil(registry.agent(id: agent.id),
-                "Removed agent \(agent.name) should not be in registry")
+        // Verify all old mortals are gone
+        for mortal in mortalsToRemove {
+            XCTAssertNil(registry.servitor(id: mortal.id),
+                "Removed mortal \(mortal.name) should not be in registry")
         }
 
         XCTAssertLessThanOrEqual(duration, timeBudget,
@@ -288,11 +288,11 @@ final class ConcurrencyStressTests: XCTestCase {
 
     // MARK: - Test: Name Uniqueness Under Concurrent Spawning
 
-    /// Spawn 50 servitors concurrently and verify all names are unique.
+    /// Spawn 50 mortals concurrently and verify all names are unique.
     func testNameUniquenessUnderConcurrentSpawning() async throws {
-        let registry = AgentRegistry()
+        let registry = ServitorRegistry()
         let nameGenerator = NameGenerator(theme: .lotr)
-        let spawner = ServitorSpawner(
+        let spawner = MortalSpawner(
             registry: registry,
             nameGenerator: nameGenerator,
             projectURL: testProjectURL()
@@ -303,9 +303,9 @@ final class ConcurrencyStressTests: XCTestCase {
         let startTime = Date()
 
         // Spawn all concurrently
-        var spawned: [Servitor] = []
+        var spawned: [Mortal] = []
 
-        await withTaskGroup(of: Servitor?.self) { group in
+        await withTaskGroup(of: Mortal?.self) { group in
             for i in 0..<spawnCount {
                 group.addTask {
                     return try? spawner.summon(assignment: "NameTest-\(i)")
@@ -313,9 +313,9 @@ final class ConcurrencyStressTests: XCTestCase {
             }
 
             // for-await on TaskGroup is sequential — no lock needed
-            for await agent in group {
-                if let agent = agent {
-                    spawned.append(agent)
+            for await mortal in group {
+                if let mortal = mortal {
+                    spawned.append(mortal)
                 }
             }
         }
@@ -325,7 +325,7 @@ final class ConcurrencyStressTests: XCTestCase {
         // All names must be unique
         let names = Set(spawned.map { $0.name })
         XCTAssertEqual(names.count, spawned.count,
-            "All \(spawned.count) spawned agents must have unique names, found \(names.count) unique")
+            "All \(spawned.count) spawned mortals must have unique names, found \(names.count) unique")
 
         // Registry count matches spawned count
         XCTAssertEqual(registry.count, spawned.count,

@@ -12,7 +12,7 @@ public final class TavernCoordinator: ObservableObject {
     // MARK: - Published State
 
     /// The agent list view model (manages selection)
-    @Published public private(set) var agentListViewModel: AgentListViewModel
+    @Published public private(set) var servitorListViewModel: ServitorListViewModel
 
     /// Currently active chat view model
     @Published public private(set) var activeChatViewModel: ChatViewModel
@@ -23,7 +23,7 @@ public final class TavernCoordinator: ObservableObject {
     public let jake: Jake
 
     /// Spawner for servitors
-    public let spawner: ServitorSpawner
+    public let spawner: MortalSpawner
 
     /// Permission manager shared across all agents in this project
     public let permissionManager: PermissionManager
@@ -57,7 +57,7 @@ public final class TavernCoordinator: ObservableObject {
     ///   - projectURL: The project directory URL
     ///   - permissionManager: Permission manager for tool checks (default: new instance with standard store)
     ///   - restoreState: Whether to restore persisted state (session history, custom commands, saved servitors). Pass false in tests.
-    public init(jake: Jake, spawner: ServitorSpawner, projectURL: URL, permissionManager: PermissionManager = PermissionManager(store: PermissionStore()), restoreState: Bool = true) {
+    public init(jake: Jake, spawner: MortalSpawner, projectURL: URL, permissionManager: PermissionManager = PermissionManager(store: PermissionStore()), restoreState: Bool = true) {
         self.jake = jake
         self.spawner = spawner
         self.projectURL = projectURL
@@ -76,7 +76,7 @@ public final class TavernCoordinator: ObservableObject {
         self.jakeChatViewModel.commandDispatcher = commandDispatcher
 
         // Create the agent list view model
-        self.agentListViewModel = AgentListViewModel(jake: jake, spawner: spawner)
+        self.servitorListViewModel = ServitorListViewModel(jake: jake, spawner: spawner)
 
         // Post-init setup (all stored properties must be initialized above)
         registerCoreCommands()
@@ -95,7 +95,7 @@ public final class TavernCoordinator: ObservableObject {
                 guard let coordinator = self else { return }
                 await MainActor.run {
                     coordinator.persistServitor(servitor)
-                    coordinator.agentListViewModel.agentsDidChange()
+                    coordinator.servitorListViewModel.servitorsDidChange()
                 }
                 TavernLogger.coordination.info("Jake summoned servitor: \(servitor.name)")
             },
@@ -103,8 +103,8 @@ public final class TavernCoordinator: ObservableObject {
                 guard let coordinator = self else { return }
                 await MainActor.run {
                     coordinator.chatViewModels.removeValue(forKey: servitorId)
-                    SessionStore.removeAgent(id: servitorId)
-                    coordinator.agentListViewModel.agentsDidChange()
+                    SessionStore.removeServitor(id: servitorId)
+                    coordinator.servitorListViewModel.servitorsDidChange()
                     coordinator.updateActiveChatViewModel()
                 }
                 TavernLogger.coordination.info("Jake dismissed servitor: \(servitorId)")
@@ -119,14 +119,14 @@ public final class TavernCoordinator: ObservableObject {
 
     /// Restore servitors from UserDefaults on app launch
     private func restoreServitors() {
-        let persistedAgents = SessionStore.loadAgentList()
-        TavernLogger.coordination.info("Restoring \(persistedAgents.count) persisted servitors")
+        let persistedServitors = SessionStore.loadServitorList()
+        TavernLogger.coordination.info("Restoring \(persistedServitors.count) persisted servitors")
 
-        for persisted in persistedAgents {
-            let servitor = Servitor(
+        for persisted in persistedServitors {
+            let mortal = Mortal(
                 id: persisted.id,
                 name: persisted.name,
-                assignment: nil,  // Restored servitors don't have original assignment
+                assignment: nil,  // Restored mortals don't have original assignment
                 chatDescription: persisted.chatDescription,
                 projectURL: projectURL,
                 messenger: LiveMessenger(
@@ -137,30 +137,30 @@ public final class TavernCoordinator: ObservableObject {
             )
 
             do {
-                try spawner.register(servitor)
-                TavernLogger.coordination.info("Restored servitor: \(persisted.name) (id: \(persisted.id))")
+                try spawner.register(mortal)
+                TavernLogger.coordination.info("Restored mortal: \(persisted.name) (id: \(persisted.id))")
             } catch {
-                TavernLogger.coordination.error("Failed to restore servitor \(persisted.name): \(error.localizedDescription)")
+                TavernLogger.coordination.error("Failed to restore mortal \(persisted.name): \(error.localizedDescription)")
             }
         }
 
         // Refresh UI
-        agentListViewModel.agentsDidChange()
+        servitorListViewModel.servitorsDidChange()
     }
 
-    // MARK: - Agent Selection
+    // MARK: - Servitor Selection
 
-    /// Select an agent to chat with
-    /// - Parameter agentId: The ID of the agent to select
-    public func selectAgent(id agentId: UUID) {
-        TavernLogger.coordination.info("Agent selection changed to: \(agentId)")
-        agentListViewModel.selectAgent(id: agentId)
+    /// Select a servitor to chat with
+    /// - Parameter servitorId: The ID of the servitor to select
+    public func selectServitor(id servitorId: UUID) {
+        TavernLogger.coordination.info("Servitor selection changed to: \(servitorId)")
+        servitorListViewModel.selectServitor(id: servitorId)
         updateActiveChatViewModel()
     }
 
     /// Update the active chat view model based on selection
     private func updateActiveChatViewModel() {
-        guard let selectedId = agentListViewModel.selectedAgentId else {
+        guard let selectedId = servitorListViewModel.selectedServitorId else {
             // Fallback to Jake
             TavernLogger.coordination.info("updateActiveChatViewModel: no selection, using Jake")
             activeChatViewModel = jakeChatViewModel
@@ -176,10 +176,10 @@ public final class TavernCoordinator: ObservableObject {
         } else {
             // Create a new chat view model for this servitor
             // We need to get the servitor from spawner
-            if let anyAgent = spawner.activeServitors.first(where: { $0.id == selectedId }) {
-                TavernLogger.coordination.info("updateActiveChatViewModel: creating new viewModel for \(anyAgent.name)")
-                // Pass project path so servitors can load their session history
-                let viewModel = ChatViewModel(agent: anyAgent, projectPath: jake.projectPath)
+            if let anyServitor = spawner.activeMortals.first(where: { $0.id == selectedId }) {
+                TavernLogger.coordination.info("updateActiveChatViewModel: creating new viewModel for \(anyServitor.name)")
+                // Pass project path so mortals can load their session history
+                let viewModel = ChatViewModel(servitor: anyServitor, projectPath: jake.projectPath)
                 viewModel.commandDispatcher = commandDispatcher
                 chatViewModels[selectedId] = viewModel
                 activeChatViewModel = viewModel
@@ -189,17 +189,17 @@ public final class TavernCoordinator: ObservableObject {
                 activeChatViewModel = jakeChatViewModel
             }
         }
-        TavernLogger.coordination.info("Active chat now: \(self.activeChatViewModel.agentName)")
+        TavernLogger.coordination.info("Active chat now: \(self.activeChatViewModel.servitorName)")
     }
 
-    // MARK: - Agent Lifecycle
+    // MARK: - Servitor Lifecycle
 
     /// Summon a new servitor for user interaction (no assignment)
     /// The servitor waits for the user's first message
     /// - Parameter selectAfterSummon: Whether to switch to the new servitor's chat
     /// - Returns: The summoned servitor
     @discardableResult
-    public func summonServitor(selectAfterSummon: Bool = true) throws -> Servitor {
+    public func summonServitor(selectAfterSummon: Bool = true) throws -> Mortal {
         TavernLogger.coordination.info("Summoning new servitor (user-spawned, no assignment)")
 
         let servitor = try spawner.summon()
@@ -209,11 +209,11 @@ public final class TavernCoordinator: ObservableObject {
         persistServitor(servitor)
 
         // Refresh the list
-        agentListViewModel.agentsDidChange()
+        servitorListViewModel.servitorsDidChange()
 
         // Optionally select the new servitor
         if selectAfterSummon {
-            selectAgent(id: servitor.id)
+            selectServitor(id: servitor.id)
         }
 
         return servitor
@@ -225,7 +225,7 @@ public final class TavernCoordinator: ObservableObject {
     ///   - selectAfterSummon: Whether to switch to the new servitor's chat
     /// - Returns: The summoned servitor
     @discardableResult
-    public func summonServitor(assignment: String, selectAfterSummon: Bool = true) throws -> Servitor {
+    public func summonServitor(assignment: String, selectAfterSummon: Bool = true) throws -> Mortal {
         TavernLogger.coordination.info("Summoning new servitor with assignment: \(assignment)")
 
         let servitor = try spawner.summon(assignment: assignment)
@@ -235,11 +235,11 @@ public final class TavernCoordinator: ObservableObject {
         persistServitor(servitor)
 
         // Refresh the list
-        agentListViewModel.agentsDidChange()
+        servitorListViewModel.servitorsDidChange()
 
         // Optionally select the new servitor
         if selectAfterSummon {
-            selectAgent(id: servitor.id)
+            selectServitor(id: servitor.id)
         }
 
         return servitor
@@ -254,14 +254,14 @@ public final class TavernCoordinator: ObservableObject {
         chatViewModels.removeValue(forKey: servitorId)
 
         // Remove from persistence (doesn't delete Claude session)
-        SessionStore.removeAgent(id: servitorId)
+        SessionStore.removeServitor(id: servitorId)
 
         // Dismiss from spawner
         try spawner.dismiss(id: servitorId)
         TavernLogger.coordination.info("Servitor closed successfully: \(servitorId)")
 
         // Update the list (will select Jake if closed servitor was selected)
-        agentListViewModel.agentsDidChange()
+        servitorListViewModel.servitorsDidChange()
 
         // Update active view model
         updateActiveChatViewModel()
@@ -276,15 +276,15 @@ public final class TavernCoordinator: ObservableObject {
     // MARK: - Servitor Persistence
 
     /// Persist a servitor to UserDefaults
-    private func persistServitor(_ servitor: Servitor) {
-        let persisted = SessionStore.PersistedAgent(
-            id: servitor.id,
-            name: servitor.name,
-            sessionId: servitor.sessionId,
-            chatDescription: servitor.chatDescription
+    private func persistServitor(_ mortal: Mortal) {
+        let persisted = SessionStore.PersistedServitor(
+            id: mortal.id,
+            name: mortal.name,
+            sessionId: mortal.sessionId,
+            chatDescription: mortal.chatDescription
         )
-        SessionStore.addAgent(persisted)
-        TavernLogger.coordination.debug("Persisted servitor: \(servitor.name) (id: \(servitor.id))")
+        SessionStore.addServitor(persisted)
+        TavernLogger.coordination.debug("Persisted mortal: \(mortal.name) (id: \(mortal.id))")
     }
 
     // MARK: - Commands
@@ -300,8 +300,8 @@ public final class TavernCoordinator: ObservableObject {
             ContextCommand(context: commandContext),
             StatsCommand(context: commandContext),
             ThinkingCommand(context: commandContext),
-            AgentsCommand(agentListProvider: { [weak self] in
-                self?.agentListViewModel.items ?? []
+            ServitorsCommand(servitorListProvider: { [weak self] in
+                self?.servitorListViewModel.items ?? []
             }),
             HooksCommand(projectPath: projectURL.path),
             MCPCommand(projectPath: projectURL.path)
@@ -330,7 +330,7 @@ public final class TavernCoordinator: ObservableObject {
 
     /// Refresh all state
     public func refresh() {
-        agentListViewModel.refreshItems()
+        servitorListViewModel.refreshItems()
         updateActiveChatViewModel()
     }
 }

@@ -1,7 +1,7 @@
 # 004 — Agents Specification
 
 **Status:** complete
-**Last Updated:** 2026-02-10
+**Last Updated:** 2026-02-16
 
 ## Upstream References
 - PRD: §4.1 (Agent Types), §4.2 (Agent States), §4.3 (Task Modes)
@@ -16,7 +16,7 @@
 ---
 
 ## 1. Overview
-Agent types (Jake daemon, mortal agents, drones, monitor daemons), their states, task modes, and the sidecar I/O pattern. Defines the two-level orchestration model where Tavern agents are persistent tracked work and Task subagents are ephemeral parallel workers.
+Servitor types (Jake daemon, mortal servitors, drones, monitor daemons), their states, task modes, and the async/non-blocking I/O pattern. Defines how the Tavern manages its own trees of servitors, each running a Claude session that may internally have its own agents and subagents.
 
 ## 2. Requirements
 
@@ -26,11 +26,13 @@ Agent types (Jake daemon, mortal agents, drones, monitor daemons), their states,
 **Status:** specified
 
 **Properties:**
-- Jake is the top-level coordinating daemon agent — exactly one per open project
+- Jake is the top-level coordinating daemon servitor — exactly one per open project
 - Jake's lifecycle is tied to the project: starts when the project opens, stops when it closes
-- Jake has the highest authority to spawn and manage other agents
+- Jake has the highest authority to summon and manage other servitors
 - Jake has few direct capabilities himself — he coordinates, not executes
 - Jake's session persists across app restarts (keyed per-project in UserDefaults)
+- Jake has the authority to delegate capabilities to servitors, with stipulations enforced by the deterministic shell (see §021 Capability Delegation)
+- Jake cannot delegate capabilities beyond what he himself has
 
 **Testable assertion:** When a project is opened, Jake is instantiated. When the project closes, Jake is stopped. Jake's session persists across app restarts.
 
@@ -40,12 +42,15 @@ Agent types (Jake daemon, mortal agents, drones, monitor daemons), their states,
 **Status:** specified
 
 **Properties:**
-- Mortal agents are task-scoped — their lifecycle is bound to task completion
-- Mortal agents can spawn children, forming tree structures of arbitrary depth (Erlang-style)
+- Mortal servitors are task-scoped — their lifecycle is bound to task completion
+- Mortal servitors can summon children, forming tree structures of arbitrary depth (Erlang-style)
 - Parent-child relationships are tracked
 - Called "Servitors" in the codebase and "The Regulars" in Jake's vocabulary
+- These servitors are children of Jake — this is a fundamental property
+- Immortal servitors (daemons) are always resuscitated when their session context becomes invalid — daemon resuscitation is a key property
+- Resuscitated servitors can either run stateless or persist their state frequently, providing context to the replacement session
 
-**Testable assertion:** A mortal agent can be spawned, receives an assignment, works on it, and transitions to done. A mortal agent can spawn child agents. Parent-child relationships are tracked.
+**Testable assertion:** A mortal servitor can be summoned, receives an assignment, works on it, and transitions to done. A mortal servitor can summon child servitors. Parent-child relationships are tracked. Daemon servitors are resuscitated when their session context becomes invalid.
 
 ### REQ-AGT-003: Drone Agents
 **Source:** PRD §4.1
@@ -67,7 +72,8 @@ Agent types (Jake daemon, mortal agents, drones, monitor daemons), their states,
 **Properties:**
 - Monitor daemons run in the background, reporting to Jake
 - Monitor daemons do not accept user tasks
-- Monitor daemons track system health, agent progress, and spending
+- Monitor daemons track system health, servitor progress, and spending
+- These are children of Jake, fundamentally — this is a key property
 
 **Testable assertion:** Deferred. When implemented: monitor daemons run in background, report to Jake, do not accept user tasks.
 
@@ -77,12 +83,16 @@ Agent types (Jake daemon, mortal agents, drones, monitor daemons), their states,
 **Status:** specified
 
 **Properties:**
-- Every agent has exactly one state at any time: Working, Waiting for Input, Waiting for Wakeup, Done, or Failed/Reaped
+- Every servitor has exactly one state at any time: Summoned, Working, Waiting for Input, Waiting for Wakeup, Done/DismissedReaped, or FailedReaped
+- Summoned is the initial state — servitors transition from Summoned to Working when they begin execution
+- DismissedReaped = successful dismissal (completed work or dismissed by parent); FailedReaped = error termination
+- Both reaped states transition to GC (garbage collection)
 - Only valid transitions are permitted; invalid transitions produce an error
-- All state transitions are logged at `.info` level
+- State transitions logged in debug only
 - Done requires verified commitments (REQ-DET-004); self-assessment has no bearing
+- See §019 for canonical state machine
 
-**Testable assertion:** Given an agent in state X, only valid transitions to states Y are permitted. Attempting an invalid transition produces an error. All transitions are logged at `.info` level.
+**Testable assertion:** Given a servitor in state X, only valid transitions to states Y are permitted. Attempting an invalid transition produces an error. State transitions are logged in debug builds.
 
 ### REQ-AGT-006: Task Modes
 **Source:** PRD §4.3
@@ -90,37 +100,41 @@ Agent types (Jake daemon, mortal agents, drones, monitor daemons), their states,
 **Status:** specified
 
 **Properties:**
-- Agents can operate in five task modes: Execute, Delegate, Plan, Break up, Unify
-- An agent can switch between any modes at any point during execution
+- Servitors can operate in five task modes: Execute, Delegate, Plan, Break up, Unify
+- A servitor can switch between any modes at any point during execution
 - Mode transitions are observable and logged
 - The current mode is queryable
 
-**Testable assertion:** An agent can transition between any task modes. Mode transitions are observable and logged. The current mode is queryable.
+Pin: Task modes need further design discussion and fleshing out.
 
-### REQ-AGT-007: Two-Level Orchestration
+**Testable assertion:** A servitor can transition between any task modes. Mode transitions are observable and logged. The current mode is queryable.
+
+### REQ-AGT-007: Servitor Trees vs Claude-Internal Agents
 **Source:** Reader §3 (Two-Level Orchestration Model)
 **Priority:** must-have
 **Status:** specified
 
 **Properties:**
-- Level 1 (Tavern Agents via spawn): Full Claude Code sessions, appear in sidebar, persist across sessions, for substantial independent work
-- Level 2 (Subagents via Task tool): Ephemeral parallel workers within a single session, do not appear in sidebar, do not persist
-- These two levels are orthogonal — any Tavern agent can use Task subagents internally
+- The Tavern manages its own trees of servitors — these are Tavern-managed entities with tracked lifecycle, state, and parent-child relationships
+- Each servitor runs a Claude session that may internally have its own agents and subagents
+- Tavern does not wrap or abstract Claude's internal agent/subagent mechanism — whatever happens inside a Claude session is opaque to the Tavern
+- The distinction is: Tavern servitors (managed by Tavern's tree, visible in sidebar, persisted) vs internal session agents (opaque, ephemeral from Tavern's perspective)
 
-**Testable assertion:** Tavern agents appear in the agent list and persist across app restarts. Task subagents do not appear in the agent list and do not persist.
+**Testable assertion:** Tavern servitors appear in the agent list and persist across app restarts. Claude-internal agents within a servitor's session are not visible in the Tavern UI.
 
-### REQ-AGT-008: Sidecar Pattern
+### REQ-AGT-008: Async/Non-Blocking I/O Pattern
 **Source:** Reader §9 (Sidecar Pattern), ADR-001
 **Priority:** must-have
 **Status:** specified
 
 **Properties:**
-- Each agent has two conceptual components: main actor (manages state, never blocks) and sidecar (handles slow Anthropic I/O)
-- The main actor remains responsive while the sidecar awaits API calls
+- Servitor state management never blocks — I/O operations (Anthropic API calls) are async and non-blocking
+- Promises for future values enable restart points and non-blocking coordination
 - A global semaphore limits concurrent Anthropic calls (~10) to prevent thread pool starvation
-- No agent's I/O can block another agent's state management
+- No servitor's I/O can block another servitor's state management
+- Configurable timeout for servitor pause without issuing wait/done signal — servitor is either prodded to respond or reaped. See §019 REQ-STM-006.
 
-**Testable assertion:** Agent main actor methods return immediately (never block). All SDK/API calls go through the sidecar. Global semaphore is respected (concurrent calls do not exceed limit).
+**Testable assertion:** Servitor state management methods return immediately (never block). All SDK/API calls are async. Global semaphore is respected (concurrent calls do not exceed limit).
 
 ### REQ-AGT-009: Done Signal Detection
 **Source:** Reader §3 (Mortal Agents), CLAUDE.md
@@ -128,12 +142,12 @@ Agent types (Jake daemon, mortal agents, drones, monitor daemons), their states,
 **Status:** specified
 
 **Properties:**
-- Mortal agents detect done signals (`DONE`, `COMPLETED`) in their responses
-- Detection triggers commitment verification (REQ-DET-004), not direct transition to done
-- A waiting signal (`WAITING`, `NEED INPUT`) transitions the agent to `.waiting` state
-- Responses without these signals leave the agent in working state
+- Mortal servitors detect done signals (`DONE`, `COMPLETED`) in their responses
+- Done signal triggers a request to check commitment. Commitment verification may pass (servitor transitions to Done/DismissedReaped) or fail (servitor is sent back to work with a gap report describing what failed)
+- A waiting signal (`WAITING`, `NEED INPUT`) transitions the servitor to `.waiting` state
+- Responses without these signals leave the servitor in working state
 
-**Testable assertion:** A response containing `DONE` triggers verification flow. A response containing `WAITING` transitions to waiting state. Responses without these signals leave the agent in working state.
+**Testable assertion:** A response containing `DONE` triggers verification flow. Verification pass → DismissedReaped. Verification fail → sent back to work with gap report. A response containing `WAITING` transitions to waiting state.
 
 ### REQ-AGT-010: Agent Protocol
 **Source:** CLAUDE.md (Agent Layer)
@@ -151,7 +165,7 @@ Agent types (Jake daemon, mortal agents, drones, monitor daemons), their states,
 
 ## 3. Properties Summary
 
-### Agent Type Properties
+### Servitor Type Properties
 
 | Property | Jake | Servitor | Drone (deferred) | Monitor (deferred) |
 |----------|------|----------|-------------------|-------------------|
@@ -160,42 +174,48 @@ Agent types (Jake daemon, mortal agents, drones, monitor daemons), their states,
 | Persists across restart | Yes | Yes | No | Yes |
 | Accepts user tasks | No (coordinates) | Yes | Yes (one) | No |
 
-### Agent State Machine
+### Servitor State Machine
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Working : spawn
+    [*] --> Summoned : summon
+    Summoned --> Working : begin execution
     Working --> WaitingForInput : needs human response
     Working --> WaitingForWakeup : idle
-    Working --> Done : task complete + verified
+    Working --> DismissedReaped : task complete + verified
     Working --> FailedReaped : fish-or-cut-bait
     WaitingForInput --> Working : user responds
     WaitingForInput --> FailedReaped : timeout / reap
     WaitingForWakeup --> Working : perseverance prod
     WaitingForWakeup --> FailedReaped : timeout / reap
-    Done --> [*]
-    FailedReaped --> [*]
+    DismissedReaped --> GC
+    FailedReaped --> GC
+    GC --> [*]
 ```
 
-### Two-Level Orchestration
+### Tavern Servitors vs Claude-Internal Agents
 
-| Property | Level 1 (Tavern Agents) | Level 2 (Subagents) |
-|----------|------------------------|---------------------|
-| Visibility | Sidebar, dashboard | Invisible to user |
-| Persistence | Across sessions | Ephemeral |
-| Session | Own Claude Code session | Within parent's session |
-| Use case | Substantial independent work | Quick parallel tasks |
+| Property | Tavern Servitors | Claude-Internal Agents |
+|----------|-----------------|----------------------|
+| Visibility | Sidebar, dashboard | Invisible to Tavern |
+| Persistence | Across sessions | Ephemeral (session-scoped) |
+| Session | Own Claude session | Within parent's session |
+| Managed by | Tavern tree | Claude session internals |
 
 ## 4. Open Questions
 
-- **?4 -- Agent "Done" Assertion:** How does the system know when a mortal agent's task is complete? Currently detection is keyword-based (DONE/COMPLETED in responses). A more robust signal mechanism may be needed.
+- **?4 -- Agent "Done" Assertion:** Resolved: Done signal triggers commitment test. Pass → DismissedReaped. Fail → sent back to work with gap report describing what failed.
 
-- **?6 -- Perseverance Prompts and Agent Lifecycle:** What exactly triggers the transition from WaitingForWakeup back to Working? What are the perseverance prompt contents?
+- **?6 -- Perseverance Prompts and Agent Lifecycle:** Resolved: Infinite loop. Only Done exits (after verification). Any wait attempt gets a perseverance response. See §019.
 
-- **Drone model selection:** PRD says drones use "cheaper models." Which models? Is this configurable per-spawn or system-wide?
+- **Model selection:** Pinned: Model selection is orthogonal — any session can use any model. Needs PRD + spec. See §019 pinned items.
+
+- **Failure boundaries:** Resolved: See §020 Servitor Trees for Erlang-style supervision strategies.
+
+- **Agent limits:** Resolved: Token budgets and delegated capabilities limit servitors. See §020, §021.
 
 ## 5. Coverage Gaps
 
-- **Child agent failure propagation:** PRD mentions Erlang-style hierarchies but does not specify what happens when a child agent fails. Does the parent retry? Escalate? Continue without the child?
+- **Child servitor failure propagation:** See §020 Servitor Trees for Erlang-style supervision strategies.
 
-- **Agent resource limits:** No specification for per-agent memory or token limits beyond the global semaphore for API calls.
+- **Servitor resource limits:** See §020 (token budgets) and §021 (capability delegation).

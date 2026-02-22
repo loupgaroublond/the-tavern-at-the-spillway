@@ -1,34 +1,34 @@
 import Foundation
 
-/// /agents — List and manage configured agents
+/// /servitors — List and manage configured servitors
 ///
 /// Shows all active agents in the current project with their status,
 /// type, and session information.
-public struct AgentsCommand: SlashCommand {
-    public let name = "agents"
-    public let description = "List agents and their status"
-    public let usage = "/agents"
+public struct ServitorsCommand: SlashCommand {
+    public let name = "servitors"
+    public let description = "List servitors and their status"
+    public let usage = "/servitors"
 
-    private let agentListProvider: @MainActor @Sendable () -> [AgentListItem]
+    private let servitorListProvider: @MainActor @Sendable () -> [ServitorListItem]
 
     /// Create the agents command with a provider for agent list data
-    /// - Parameter agentListProvider: Closure that returns current agent list items
-    public init(agentListProvider: @MainActor @escaping @Sendable () -> [AgentListItem]) {
-        self.agentListProvider = agentListProvider
+    /// - Parameter servitorListProvider: Closure that returns current agent list items
+    public init(servitorListProvider: @MainActor @escaping @Sendable () -> [ServitorListItem]) {
+        self.servitorListProvider = servitorListProvider
     }
 
     public func execute(arguments: String) async -> SlashCommandResult {
-        let items = await MainActor.run { agentListProvider() }
+        let items = await MainActor.run { servitorListProvider() }
 
         if items.isEmpty {
-            return .message("No agents configured.")
+            return .message("No servitors configured.")
         }
 
-        var lines: [String] = ["**Agents** (\(items.count))"]
+        var lines: [String] = ["**Servitors** (\(items.count))"]
         lines.append("")
 
         for item in items {
-            let role = item.isJake ? "Proprietor" : "Servitor"
+            let role = item.isJake ? "Proprietor" : "Mortal"
             let stateEmoji: String
             switch item.state {
             case .idle: stateEmoji = "○"

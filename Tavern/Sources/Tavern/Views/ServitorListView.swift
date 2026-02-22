@@ -5,82 +5,82 @@ import os.log
 // MARK: - Provenance: REQ-OPM-004, REQ-UX-002, REQ-UX-003, REQ-V1-003, REQ-VIW-004
 
 /// A list view showing all agents in the Tavern
-struct AgentListView: View {
+struct ServitorListView: View {
     private static let logger = Logger(subsystem: "com.tavern.spillway", category: "agents")
 
-    @ObservedObject var viewModel: AgentListViewModel
-    var onSpawnAgent: (() -> Void)?
-    var onCloseAgent: ((UUID) -> Void)?
+    @ObservedObject var viewModel: ServitorListViewModel
+    var onSpawnServitor: (() -> Void)?
+    var onCloseServitor: ((UUID) -> Void)?
     var onUpdateDescription: ((UUID, String?) -> Void)?
-    var onSelectAgent: ((UUID) -> Void)?
+    var onSelectServitor: ((UUID) -> Void)?
 
-    @State private var editingDescriptionForAgentId: UUID?
+    @State private var editingDescriptionForServitorId: UUID?
     @State private var editedDescription: String = ""
 
     var body: some View {
-        let _ = Self.logger.debug("[AgentListView] body - items: \(viewModel.items.count), selected: \(viewModel.selectedAgentId?.uuidString ?? "nil")")
+        let _ = Self.logger.debug("[ServitorListView] body - items: \(viewModel.items.count), selected: \(viewModel.selectedServitorId?.uuidString ?? "nil")")
 
-        List(selection: $viewModel.selectedAgentId) {
+        List(selection: $viewModel.selectedServitorId) {
             ForEach(viewModel.items) { item in
-                AgentListRow(
+                ServitorListRow(
                     item: item,
                     isSelected: viewModel.isSelected(id: item.id),
-                    onClose: item.isJake ? nil : { onCloseAgent?(item.id) }
+                    onClose: item.isJake ? nil : { onCloseServitor?(item.id) }
                 )
                     .tag(item.id)
                     .onTapGesture {
-                        onSelectAgent?(item.id)
+                        onSelectServitor?(item.id)
                     }
                     .contextMenu {
                         if !item.isJake {
                             Button("Edit Description...") {
                                 editedDescription = item.chatDescription ?? ""
-                                editingDescriptionForAgentId = item.id
+                                editingDescriptionForServitorId = item.id
                             }
 
                             Divider()
 
                             Button("Close", role: .destructive) {
-                                onCloseAgent?(item.id)
+                                onCloseServitor?(item.id)
                             }
                         }
                     }
             }
         }
         .listStyle(.sidebar)
-        .accessibilityIdentifier("agentList")
+        .accessibilityIdentifier("servitorList")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                Button(action: { onSpawnAgent?() }) {
+                Button(action: { onSpawnServitor?() }) {
                     Image(systemName: "plus")
                 }
                 .help("New chat")
-                .disabled(onSpawnAgent == nil)
-                .accessibilityIdentifier("spawnAgentButton")
+                .disabled(onSpawnServitor == nil)
+                .accessibilityIdentifier("spawnServitorButton")
             }
         }
         .onAppear {
-            Self.logger.debug("[AgentListView] onAppear - items: \(viewModel.items.count)")
+            Self.logger.debug("[ServitorListView] onAppear - items: \(viewModel.items.count)")
         }
         .onDisappear {
-            Self.logger.debug("[AgentListView] onDisappear")
+            Self.logger.debug("[ServitorListView] onDisappear")
         }
-        .onChange(of: viewModel.selectedAgentId) {
-            Self.logger.debug("[AgentListView] selectedAgentId changed: \(viewModel.selectedAgentId?.uuidString ?? "nil")")
+        .onChange(of: viewModel.selectedServitorId) {
+            Self.logger.debug("[ServitorListView] selectedServitorId changed: \(viewModel.selectedServitorId?.uuidString ?? "nil")")
         }
-        .onChange(of: editingDescriptionForAgentId) {
-            Self.logger.debug("[AgentListView] editingDescriptionForAgentId changed: \(editingDescriptionForAgentId?.uuidString ?? "nil")")
+        .onChange(of: editingDescriptionForServitorId) {
+            Self.logger.debug("[ServitorListView] editingDescriptionForServitorId changed: \(editingDescriptionForServitorId?.uuidString ?? "nil")")
         }
-        .sheet(item: $editingDescriptionForAgentId) { agentId in
+        .sheet(item: $editingDescriptionForServitorId) { servitorId in
             EditDescriptionSheet(
                 description: $editedDescription,
                 onSave: {
                     let desc = editedDescription.trimmingCharacters(in: .whitespacesAndNewlines)
-                    onUpdateDescription?(agentId, desc.isEmpty ? nil : desc)
-                    editingDescriptionForAgentId = nil
+                    onUpdateDescription?(servitorId, desc.isEmpty ? nil : desc)
+                    editingDescriptionForServitorId = nil
                 },
                 onCancel: {
-                    editingDescriptionForAgentId = nil
+                    editingDescriptionForServitorId = nil
                 }
             )
         }
@@ -154,17 +154,17 @@ extension UUID: @retroactive Identifiable {
 
 // MARK: - Agent Row
 
-private struct AgentListRow: View {
+private struct ServitorListRow: View {
     private static let logger = Logger(subsystem: "com.tavern.spillway", category: "agents")
 
-    let item: AgentListItem
+    let item: ServitorListItem
     let isSelected: Bool
     var onClose: (() -> Void)?
 
     @State private var isHovered = false
 
     var body: some View {
-        let _ = Self.logger.debug("[AgentListRow] body - name: \(item.name), isJake: \(item.isJake), state: \(String(describing: item.state)), selected: \(isSelected)")
+        let _ = Self.logger.debug("[ServitorListRow] body - name: \(item.name), isJake: \(item.isJake), state: \(String(describing: item.state)), selected: \(isSelected)")
 
         HStack(spacing: 12) {
             // State indicator
@@ -222,7 +222,7 @@ private struct AgentListRow: View {
 // MARK: - State Indicator
 
 private struct StateIndicator: View {
-    let state: AgentState
+    let state: ServitorState
     let isJake: Bool
 
     @State private var isPulsing = false
@@ -299,10 +299,10 @@ private struct AttentionBadge: View {
 // when views with @State or ObservableObject interact during initial preview layout.
 // See: TableViewListCore_Mac2.swift:5170
 //
-// Uses inline views instead of AgentListRow because @State (hover tracking,
+// Uses inline views instead of ServitorListRow because @State (hover tracking,
 // animation pulsing) in subviews also triggers the NSOutlineView inconsistency.
 
-#Preview("Agent List") {
+#Preview("Servitor List") {
     List {
         HStack(spacing: 12) {
             Circle().fill(.orange).frame(width: 10, height: 10)

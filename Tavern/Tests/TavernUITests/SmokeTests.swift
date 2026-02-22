@@ -27,7 +27,7 @@ final class SmokeTests: XCTestCase {
         XCTAssertTrue(app.windows.count > 0, "App should have at least one window")
     }
 
-    /// Jake appears in the sidebar agent list
+    /// Jake appears in the sidebar servitor list
     func testJakeAppearsInSidebar() throws {
         let jakeText = app.staticTexts["Jake"]
         XCTAssertTrue(
@@ -38,7 +38,9 @@ final class SmokeTests: XCTestCase {
 
     /// Chat input field exists and is enabled
     func testInputFieldExists() throws {
-        let inputField = app.textViews["chatInputField"]
+        // Use firstMatch — SwiftUI may restore a second project window,
+        // giving two chatInputField elements across windows
+        let inputField = app.textViews["chatInputField"].firstMatch
         XCTAssertTrue(
             inputField.waitForExistence(timeout: 10),
             "Chat input field should exist"
@@ -48,7 +50,7 @@ final class SmokeTests: XCTestCase {
 
     /// Can type text into the input field
     func testCanTypeInput() throws {
-        let inputField = app.textViews["chatInputField"]
+        let inputField = app.textViews["chatInputField"].firstMatch
         XCTAssertTrue(
             inputField.waitForExistence(timeout: 10),
             "Chat input field should exist"

@@ -41,12 +41,12 @@ public enum StreamEvent: Sendable, Equatable {
     case error(String)
 }
 
-// MARK: - AgentMessenger Protocol
+// MARK: - ServitorMessenger Protocol
 
 /// Protocol abstracting the Claude SDK communication layer.
-/// Jake and Servitor use this to send messages — `LiveMessenger` calls real Claude,
+/// Jake and Mortal use this to send messages — `LiveMessenger` calls real Claude,
 /// `MockMessenger` returns canned responses for testing.
-public protocol AgentMessenger: Sendable {
+public protocol ServitorMessenger: Sendable {
     /// Send a prompt to Claude and get a response (batch mode)
     /// - Parameters:
     ///   - prompt: The user's message

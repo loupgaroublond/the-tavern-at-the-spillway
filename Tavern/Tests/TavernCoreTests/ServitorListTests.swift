@@ -2,8 +2,8 @@ import Foundation
 import Testing
 @testable import TavernCore
 
-@Suite("AgentListItem Tests")
-struct AgentListItemTests {
+@Suite("ServitorListItem Tests")
+struct ServitorListItemTests {
 
     // Test helper
     private static func testProjectURL() -> URL {
@@ -13,9 +13,9 @@ struct AgentListItemTests {
 
     @Test("Item has all required properties")
     func itemHasRequiredProperties() {
-        let item = AgentListItem(
+        let item = ServitorListItem(
             id: UUID(),
-            name: "TestAgent",
+            name: "TestServitor",
             chatDescription: "Working on something",
             state: .working,
             isJake: false
@@ -30,7 +30,7 @@ struct AgentListItemTests {
     @Test("Item from Jake marks isJake true")
     func itemFromJakeMarksIsJake() {
         let jake = Jake(projectURL: Self.testProjectURL(), loadSavedSession: false)
-        let item = AgentListItem.from(jake: jake)
+        let item = ServitorListItem.from(jake: jake)
 
         #expect(item.isJake == true)
         #expect(item.name == "Jake")
@@ -38,57 +38,57 @@ struct AgentListItemTests {
         #expect(item.chatDescription == nil)
     }
 
-    @Test("Item from Servitor uses chatDescription")
-    func itemFromServitorUsesChatDescription() {
-        let agent = Servitor(
+    @Test("Item from Mortal uses chatDescription")
+    func itemFromMortalUsesChatDescription() {
+        let mortal = Mortal(
             name: "Frodo",
             assignment: "Carry the ring",
             chatDescription: "Ring duty",
             projectURL: Self.testProjectURL(),
             loadSavedSession: false
         )
-        let item = AgentListItem.from(servitor: agent)
+        let item = ServitorListItem.from(mortal: mortal)
 
         #expect(item.isJake == false)
         #expect(item.name == "Frodo")
         #expect(item.chatDescription == "Ring duty")
-        #expect(item.id == agent.id)
+        #expect(item.id == mortal.id)
     }
 
-    @Test("Item from Servitor without description has nil chatDescription")
-    func itemFromServitorWithoutDescription() {
-        let agent = Servitor(
+    @Test("Item from Mortal without description has nil chatDescription")
+    func itemFromMortalWithoutDescription() {
+        let mortal = Mortal(
             name: "Sam",
             assignment: "Help Frodo",
             projectURL: Self.testProjectURL(),
             loadSavedSession: false
         )
-        let item = AgentListItem.from(servitor: agent)
+        let item = ServitorListItem.from(mortal: mortal)
 
         #expect(item.chatDescription == nil)
     }
 
     @Test("State label returns human readable text")
     func stateLabelReturnsReadableText() {
-        #expect(AgentListItem(name: "A", state: .idle).stateLabel == "Idle")
-        #expect(AgentListItem(name: "A", state: .working).stateLabel == "Working")
-        #expect(AgentListItem(name: "A", state: .waiting).stateLabel == "Needs attention")
-        #expect(AgentListItem(name: "A", state: .done).stateLabel == "Done")
-        #expect(AgentListItem(name: "A", state: .error).stateLabel == "Error")
+        #expect(ServitorListItem(name: "A", state: .idle).stateLabel == "Idle")
+        #expect(ServitorListItem(name: "A", state: .working).stateLabel == "Working")
+        #expect(ServitorListItem(name: "A", state: .waiting).stateLabel == "Needs attention")
+        #expect(ServitorListItem(name: "A", state: .done).stateLabel == "Done")
+        #expect(ServitorListItem(name: "A", state: .error).stateLabel == "Error")
     }
 
     @Test("NeedsAttention is true for waiting and error states")
     func needsAttentionForWaitingAndError() {
-        #expect(AgentListItem(name: "A", state: .idle).needsAttention == false)
-        #expect(AgentListItem(name: "A", state: .working).needsAttention == false)
-        #expect(AgentListItem(name: "A", state: .waiting).needsAttention == true)
-        #expect(AgentListItem(name: "A", state: .done).needsAttention == false)
-        #expect(AgentListItem(name: "A", state: .error).needsAttention == true)
+        #expect(ServitorListItem(name: "A", state: .idle).needsAttention == false)
+        #expect(ServitorListItem(name: "A", state: .working).needsAttention == false)
+        #expect(ServitorListItem(name: "A", state: .waiting).needsAttention == true)
+        #expect(ServitorListItem(name: "A", state: .done).needsAttention == false)
+        #expect(ServitorListItem(name: "A", state: .error).needsAttention == true)
     }
 }
 
-@Suite("AgentListViewModel Tests")
-struct AgentListViewModelTests {
+@Suite("ServitorListViewModel Tests")
+struct ServitorListViewModelTests {
 
     private static func testProjectURL() -> URL {
         URL(fileURLWithPath: NSTemporaryDirectory())
@@ -96,17 +96,17 @@ struct AgentListViewModelTests {
     }
 
     @MainActor
-    func createTestSetup() -> (AgentListViewModel, Jake, ServitorSpawner) {
+    func createTestSetup() -> (ServitorListViewModel, Jake, MortalSpawner) {
         let projectURL = Self.testProjectURL()
         let jake = Jake(projectURL: projectURL, loadSavedSession: false)
-        let registry = AgentRegistry()
+        let registry = ServitorRegistry()
         let nameGenerator = NameGenerator(theme: .lotr)
-        let spawner = ServitorSpawner(
+        let spawner = MortalSpawner(
             registry: registry,
             nameGenerator: nameGenerator,
             projectURL: projectURL
         )
-        let viewModel = AgentListViewModel(jake: jake, spawner: spawner)
+        let viewModel = ServitorListViewModel(jake: jake, spawner: spawner)
         return (viewModel, jake, spawner)
     }
 
@@ -120,9 +120,9 @@ struct AgentListViewModelTests {
         #expect(viewModel.items.first?.id == jake.id)
     }
 
-    @Test("List shows all spawned agents", .tags(.reqUX003))
+    @Test("List shows all spawned servitors", .tags(.reqUX003))
     @MainActor
-    func listShowsAllSpawnedAgents() throws {
+    func listShowsAllSpawnedServitors() throws {
         let (viewModel, _, spawner) = createTestSetup()
 
         try spawner.summon(assignment: "Task 1")
@@ -131,14 +131,14 @@ struct AgentListViewModelTests {
 
         viewModel.refreshItems()
 
-        // Jake + 3 agents
+        // Jake + 3 servitors
         #expect(viewModel.items.count == 4)
         #expect(viewModel.items.first?.isJake == true)
     }
 
-    @Test("List shows agent state")
+    @Test("List shows servitor state")
     @MainActor
-    func listShowsAgentState() throws {
+    func listShowsServitorState() throws {
         let (viewModel, jake, _) = createTestSetup()
 
         #expect(viewModel.items.first?.state == jake.state)
@@ -149,18 +149,18 @@ struct AgentListViewModelTests {
     func selectionWorks() throws {
         let (viewModel, jake, spawner) = createTestSetup()
 
-        let agent = try spawner.summon(assignment: "Test task")
+        let mortal = try spawner.summon(assignment: "Test task")
         viewModel.refreshItems()
 
         // Initially Jake is selected
-        #expect(viewModel.selectedAgentId == jake.id)
+        #expect(viewModel.selectedServitorId == jake.id)
         #expect(viewModel.isSelected(id: jake.id) == true)
 
-        // Select the spawned agent
-        viewModel.selectAgent(id: agent.id)
+        // Select the spawned servitor
+        viewModel.selectServitor(id: mortal.id)
 
-        #expect(viewModel.selectedAgentId == agent.id)
-        #expect(viewModel.isSelected(id: agent.id) == true)
+        #expect(viewModel.selectedServitorId == mortal.id)
+        #expect(viewModel.isSelected(id: mortal.id) == true)
         #expect(viewModel.isSelected(id: jake.id) == false)
     }
 
@@ -169,7 +169,7 @@ struct AgentListViewModelTests {
     func jakeSelectedByDefault() {
         let (viewModel, jake, _) = createTestSetup()
 
-        #expect(viewModel.selectedAgentId == jake.id)
+        #expect(viewModel.selectedServitorId == jake.id)
     }
 
     @Test("SelectedItem returns correct item")
@@ -181,68 +181,68 @@ struct AgentListViewModelTests {
         #expect(viewModel.selectedItem?.id == jake.id)
         #expect(viewModel.selectedItem?.isJake == true)
 
-        // After selecting another agent
-        let agent = try spawner.summon(assignment: "Test")
+        // After selecting another servitor
+        let mortal = try spawner.summon(assignment: "Test")
         viewModel.refreshItems()
-        viewModel.selectAgent(id: agent.id)
+        viewModel.selectServitor(id: mortal.id)
 
-        #expect(viewModel.selectedItem?.id == agent.id)
+        #expect(viewModel.selectedItem?.id == mortal.id)
         #expect(viewModel.selectedItem?.isJake == false)
     }
 
-    @Test("AgentsDidChange updates list")
+    @Test("ServitorsDidChange updates list")
     @MainActor
-    func agentsDidChangeUpdateslist() throws {
+    func servitorsDidChangeUpdateslist() throws {
         let (viewModel, _, spawner) = createTestSetup()
 
         #expect(viewModel.items.count == 1) // Just Jake
 
         try spawner.summon(assignment: "Task")
-        viewModel.agentsDidChange()
+        viewModel.servitorsDidChange()
 
-        #expect(viewModel.items.count == 2) // Jake + agent
+        #expect(viewModel.items.count == 2) // Jake + servitor
     }
 
-    @Test("AgentsDidChange selects Jake when selected agent removed")
+    @Test("ServitorsDidChange selects Jake when selected servitor removed")
     @MainActor
-    func agentsDidChangeSelectsJakeWhenSelectedRemoved() throws {
+    func servitorsDidChangeSelectsJakeWhenSelectedRemoved() throws {
         let (viewModel, jake, spawner) = createTestSetup()
 
-        let agent = try spawner.summon(assignment: "Task")
+        let mortal = try spawner.summon(assignment: "Task")
         viewModel.refreshItems()
-        viewModel.selectAgent(id: agent.id)
+        viewModel.selectServitor(id: mortal.id)
 
-        #expect(viewModel.selectedAgentId == agent.id)
+        #expect(viewModel.selectedServitorId == mortal.id)
 
-        // Remove the selected agent
-        try spawner.dismiss(agent)
-        viewModel.agentsDidChange()
+        // Remove the selected servitor
+        try spawner.dismiss(mortal)
+        viewModel.servitorsDidChange()
 
         // Should fall back to Jake
-        #expect(viewModel.selectedAgentId == jake.id)
+        #expect(viewModel.selectedServitorId == jake.id)
     }
 
-    @Test("SelectAgent ignores invalid ID")
+    @Test("SelectServitor ignores invalid ID")
     @MainActor
-    func selectAgentIgnoresInvalidId() {
+    func selectServitorIgnoresInvalidId() {
         let (viewModel, jake, _) = createTestSetup()
 
         let fakeId = UUID()
-        viewModel.selectAgent(id: fakeId)
+        viewModel.selectServitor(id: fakeId)
 
         // Should still have Jake selected
-        #expect(viewModel.selectedAgentId == jake.id)
+        #expect(viewModel.selectedServitorId == jake.id)
     }
 
-    @Test("User-spawned agent has no assignment")
+    @Test("User-spawned servitor has no assignment")
     @MainActor
-    func userSpawnedAgentHasNoAssignment() throws {
+    func userSpawnedServitorHasNoAssignment() throws {
         let (viewModel, _, spawner) = createTestSetup()
 
-        let agent = try spawner.summon()  // No assignment
+        let mortal = try spawner.summon()  // No assignment
         viewModel.refreshItems()
 
-        let item = viewModel.items.first { $0.id == agent.id }
+        let item = viewModel.items.first { $0.id == mortal.id }
         #expect(item != nil)
         #expect(item?.chatDescription == nil)  // No description yet
     }

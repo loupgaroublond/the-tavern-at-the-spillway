@@ -16,7 +16,7 @@ import ClodKit
 /// // response == "Hello!"
 /// // mock.queryCalls.count == 1
 /// ```
-public final class MockMessenger: AgentMessenger, @unchecked Sendable {
+public final class MockMessenger: ServitorMessenger, @unchecked Sendable {
 
     /// Responses to return, popped from front on each `query()` call.
     /// When empty, returns `defaultResponse`.

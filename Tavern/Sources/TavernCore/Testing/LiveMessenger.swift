@@ -12,7 +12,7 @@ import os.log
 /// permission checks. Auto-decisions (allow/deny) are applied immediately.
 /// When the manager returns nil (prompt user), the `approvalHandler` is
 /// called to get the user's async decision.
-public struct LiveMessenger: AgentMessenger {
+public struct LiveMessenger: ServitorMessenger {
 
     private let permissionManager: PermissionManager?
     private let approvalHandler: ToolApprovalHandler?

@@ -59,13 +59,13 @@ struct ChatPolishTests {
         #expect(StreamEvent.toolUseFinished("X") == StreamEvent.toolUseFinished("X"))
     }
 
-    // MARK: - AgentState Error Case
+    // MARK: - ServitorState Error Case
 
-    @Test("AgentState error case exists and has correct raw value")
+    @Test("ServitorState error case exists and has correct raw value")
     func agentStateErrorCase() {
-        let state = AgentState.error
+        let state = ServitorState.error
         #expect(state.rawValue == "error")
-        #expect(AgentState(rawValue: "error") == .error)
+        #expect(ServitorState(rawValue: "error") == .error)
     }
 
     // MARK: - ChatViewModel Token Tracking
@@ -73,8 +73,8 @@ struct ChatPolishTests {
     @Test("ChatViewModel starts with zero tokens")
     @MainActor
     func viewModelStartsWithZeroTokens() {
-        let mock = MockAgent()
-        let vm = ChatViewModel(agent: mock, loadHistory: false)
+        let mock = MockServitor()
+        let vm = ChatViewModel(servitor: mock, loadHistory: false)
         #expect(vm.totalInputTokens == 0)
         #expect(vm.totalOutputTokens == 0)
         #expect(vm.hasUsageData == false)
@@ -83,8 +83,8 @@ struct ChatPolishTests {
     @Test("ChatViewModel formattedTokens shows correct format")
     @MainActor
     func viewModelFormattedTokens() {
-        let mock = MockAgent()
-        let vm = ChatViewModel(agent: mock, loadHistory: false)
+        let mock = MockServitor()
+        let vm = ChatViewModel(servitor: mock, loadHistory: false)
         // Zero state
         #expect(vm.formattedTokens == "0 in / 0 out")
     }
@@ -92,8 +92,8 @@ struct ChatPolishTests {
     @Test("ChatViewModel clearConversation resets tokens")
     @MainActor
     func viewModelClearResetsTokens() {
-        let mock = MockAgent(responses: ["Hi"])
-        let vm = ChatViewModel(agent: mock, loadHistory: false)
+        let mock = MockServitor(responses: ["Hi"])
+        let vm = ChatViewModel(servitor: mock, loadHistory: false)
         vm.clearConversation()
         #expect(vm.totalInputTokens == 0)
         #expect(vm.totalOutputTokens == 0)
@@ -104,8 +104,8 @@ struct ChatPolishTests {
     @Test("ChatViewModel starts with no tool active")
     @MainActor
     func viewModelStartsNoTool() {
-        let mock = MockAgent()
-        let vm = ChatViewModel(agent: mock, loadHistory: false)
+        let mock = MockServitor()
+        let vm = ChatViewModel(servitor: mock, loadHistory: false)
         #expect(vm.currentToolName == nil)
         #expect(vm.toolStartTime == nil)
     }
@@ -113,8 +113,8 @@ struct ChatPolishTests {
     @Test("ChatViewModel tool state is nil after streaming completes")
     @MainActor
     func viewModelToolStateNilAfterComplete() async {
-        let mock = MockAgent(responses: ["Done"])
-        let vm = ChatViewModel(agent: mock, loadHistory: false)
+        let mock = MockServitor(responses: ["Done"])
+        let vm = ChatViewModel(servitor: mock, loadHistory: false)
 
         vm.inputText = "Test"
         await vm.sendMessage()
@@ -126,8 +126,8 @@ struct ChatPolishTests {
     @Test("ChatViewModel cancelStreaming clears tool state")
     @MainActor
     func viewModelCancelClearsToolState() {
-        let mock = MockAgent(responses: ["x"])
-        let vm = ChatViewModel(agent: mock, loadHistory: false)
+        let mock = MockServitor(responses: ["x"])
+        let vm = ChatViewModel(servitor: mock, loadHistory: false)
 
         // cancelStreaming should not crash when not streaming
         vm.cancelStreaming()
@@ -140,16 +140,16 @@ struct ChatPolishTests {
     @Test("ChatViewModel starts with showScrollToBottom false")
     @MainActor
     func viewModelStartsScrollToBottomFalse() {
-        let mock = MockAgent()
-        let vm = ChatViewModel(agent: mock, loadHistory: false)
+        let mock = MockServitor()
+        let vm = ChatViewModel(servitor: mock, loadHistory: false)
         #expect(vm.showScrollToBottom == false)
     }
 
     @Test("ChatViewModel showScrollToBottom is settable")
     @MainActor
     func viewModelScrollToBottomSettable() {
-        let mock = MockAgent()
-        let vm = ChatViewModel(agent: mock, loadHistory: false)
+        let mock = MockServitor()
+        let vm = ChatViewModel(servitor: mock, loadHistory: false)
         vm.showScrollToBottom = true
         #expect(vm.showScrollToBottom == true)
         vm.showScrollToBottom = false

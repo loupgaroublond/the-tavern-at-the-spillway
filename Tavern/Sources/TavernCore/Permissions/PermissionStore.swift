@@ -6,7 +6,7 @@ import os.log
 /// Persists permission rules and the active permission mode using UserDefaults.
 ///
 /// Thread-safe via serial DispatchQueue, matching the project's concurrency pattern
-/// (see SessionStore, AgentRegistry, NameGenerator).
+/// (see SessionStore, ServitorRegistry, NameGenerator).
 public final class PermissionStore: @unchecked Sendable {
 
     // MARK: - Storage Keys

@@ -23,11 +23,11 @@ the-tavern-at-the-spillway/
 │   │   │   ├── TavernApp.swift      # Entry point, multi-window orchestration
 │   │   │   └── Views/               # SwiftUI views
 │   │   └── TavernCore/              # Framework target (all business logic)
-│   │       ├── Agents/              # Jake, Servitor, Agent protocol, ServitorSpawner
+│   │       ├── Servitors/              # Jake, Mortal, Servitor protocol, MortalSpawner
 │   │       ├── Chat/                # ChatViewModel, ChatMessage
 │   │       ├── Commitments/         # Commitment, CommitmentList, CommitmentVerifier
 │   │       ├── Coordination/        # TavernCoordinator
-│   │       ├── DocStore/            # DocStore, Document, AgentNode, AgentPersistence
+│   │       ├── DocStore/            # DocStore, Document, ServitorNode, ServitorPersistence
 │   │       ├── Errors/              # TavernError, TavernErrorMessages
 │   │       ├── Logging/             # TavernLogger
 │   │       ├── MCP/                 # TavernMCPServer (Jake's tools)
@@ -35,8 +35,8 @@ the-tavern-at-the-spillway/
 │   │       ├── Persistence/         # SessionStore, ClaudeNativeSessionStorage
 │   │       ├── Project/             # TavernProject, ProjectManager
 │   │       ├── Resources/           # FileTreeScanner, ResourcePanelViewModel
-│   │       ├── Testing/             # MockAgent, AgentMessenger, MockClaudeCode, TestFixtures
-│   │       └── UI/                  # AgentListViewModel, AgentListItem
+│   │       ├── Testing/             # MockServitor, ServitorMessenger, MockClaudeCode, TestFixtures
+│   │       └── UI/                  # ServitorListViewModel, ServitorListItem
 │   └── Tests/
 │       ├── TavernCoreTests/         # Grade 1+2 unit tests
 │       ├── TavernTests/             # Grade 1+2 wiring + SDK tests
@@ -47,7 +47,7 @@ the-tavern-at-the-spillway/
 │   ├── pipeline.md                  # Document pipeline spec
 │   ├── 0-transcripts/              # Design transcripts, readers, vocab, notes
 │   ├── 1-prd/                      # Product requirements
-│   ├── 2-spec/                     # Formal specifications (16 modules)
+│   ├── 2-spec/                     # Formal specifications (25 modules, §000–§025)
 │   ├── 3-adr/                      # Architecture Decision Records (001–005)
 │   └── 4-docs/                     # Post-implementation docs
 └── scripts/                        # Log helpers, LOC counter
@@ -129,8 +129,8 @@ From the PRD — these rules cannot be violated under any circumstances:
 ```
 UI Layer (thin, dumb)           ← layout + gestures + bindings only
 ViewModel Layer                 ← all UX logic (@MainActor)
-Application Layer               ← TavernCoordinator, ServitorSpawner
-Agent Layer                     ← Jake, Servitor
+Application Layer               ← TavernCoordinator, MortalSpawner
+Servitor Layer                  ← Jake, Mortal
 Domain Layer                    ← Commitment, Assignment
 Infrastructure Layer            ← DocStore, SessionStore, SDK
 ```
@@ -148,9 +148,7 @@ See `docs/3-adr/ADR-001-shape-selection.md` for full rationale (49 proposals acr
 
 3. **Shared Workspace** — Doc store is the blackboard. Agents communicate primarily through shared state in files. If it's not in a file, it doesn't exist.
 
-4. **Closed Plugin Set** — Plugins registered at startup, not dynamically loaded. All agent types known at compile time.
-
-5. **AsyncStream over Combine** — Long-term direction is language-level concurrency (async/await, actors, AsyncSequence). Combine bridges at ViewModel boundary only.
+4. **AsyncStream over Combine** — Long-term direction is language-level concurrency (async/await, actors, AsyncSequence). Combine used only as transitional bridge at ViewModel boundary.
 
 
 ### Concurrency Rules
@@ -170,10 +168,10 @@ ProjectManager.shared (singleton)
             │       ├── ClaudeCode instance (1)
             │       └── TavernCoordinator (1)
             │               ├── Jake (1)
-            │               ├── ServitorSpawner (1)
-            │               │       ├── AgentRegistry (1)
+            │               ├── MortalSpawner (1)
+            │               │       ├── ServitorRegistry (1)
             │               │       └── NameGenerator (1)
-            │               ├── AgentListViewModel (1)
+            │               ├── ServitorListViewModel (1)
             │               └── ChatViewModel cache (0..*)
             │
             └── TavernProject (~/project-b/)
@@ -190,20 +188,20 @@ All mutable state is protected by serial `DispatchQueue`:
 | Type | Queue Label | Protected State |
 |------|-------------|-----------------|
 | Jake | `com.tavern.Jake` | `_sessionId`, `_isCogitating`, `_mcpServer` |
-| Servitor | `com.tavern.Servitor` | `_state`, `_sessionId` |
-| AgentRegistry | `com.tavern.AgentRegistry` | `_agents`, `_nameToId` |
+| Mortal | `com.tavern.Mortal` | `_state`, `_sessionId` |
+| ServitorRegistry | `com.tavern.ServitorRegistry` | `_agents`, `_nameToId` |
 | NameGenerator | `com.tavern.NameGenerator` | `_usedNames`, indices |
 | CommitmentList | `com.tavern.CommitmentList` | `_commitments` |
 | DocStore | `com.tavern.DocStore` | file operations |
 
-UI-bound types (`TavernCoordinator`, `ChatViewModel`, `AgentListViewModel`) use `@MainActor`.
+UI-bound types (`TavernCoordinator`, `ChatViewModel`, `ServitorListViewModel`) use `@MainActor`.
 
 
 ### Session Persistence Model
 
 Session storage operates at two levels:
 
-1. **Session IDs** — `SessionStore` persists IDs in UserDefaults. Jake's sessions are keyed per-project (`com.tavern.jake.session.<encoded-path>`). Servitor sessions are keyed per-agent UUID.
+1. **Session IDs** — `SessionStore` persists IDs in UserDefaults. Jake's sessions are keyed per-project (`com.tavern.jake.session.<encoded-path>`). Mortal sessions are keyed per-servitor UUID.
 
 2. **Message History** — `ClaudeNativeSessionStorage` reads Claude CLI's native JSONL files from `~/.claude/projects/`. Display-only (no API calls).
 
@@ -223,7 +221,7 @@ Key gotchas:
 - **`.task(id:)` for dependent values** — plain `.task` can run on stale view instances
 
 
-## Agent Types
+## Servitor Types
 
 ### Jake (The Proprietor)
 
@@ -232,9 +230,9 @@ Key gotchas:
 - **Session:** Per-project, persisted in UserDefaults
 - **Communication:** Uses MCP tools (`summon_servitor`, `dismiss_servitor`) to manage the Slop Squad
 - **System prompt:** Establishes character voice + dispatcher role
-- **File:** `Sources/TavernCore/Agents/Jake.swift`
+- **File:** `Sources/TavernCore/Servitors/Jake.swift`
 
-### Servitor (The Regulars)
+### Mortal (The Regulars)
 
 - **Lifecycle:** Mortal — task-bound, created for a purpose, eventually completes
 - **Two spawn modes:**
@@ -244,11 +242,11 @@ Key gotchas:
 - **Waiting signal:** Detects `WAITING`, `NEED INPUT` → transitions to `.waiting` state
 - **States:** `idle` → `working` → `waiting`/`verifying` → `done`
 - **Commitments:** `CommitmentVerifier` runs shell assertions to verify before marking done
-- **File:** `Sources/TavernCore/Agents/Servitor.swift`
+- **File:** `Sources/TavernCore/Servitors/Mortal.swift`
 
 ### Two-Level Orchestration
 
-**Level 1 — Tavern Agents** (via spawn):
+**Level 1 — Tavern Servitors** (via spawn):
 - Full Claude Code sessions with their own context
 - Appear in sidebar, persist across sessions
 - For substantial, independent work streams
@@ -262,8 +260,8 @@ Key gotchas:
 
 `TavernMCPServer.swift` creates an `SDKMCPServer` with:
 
-- `summon_servitor` — Spawns a Servitor with optional `assignment` and `name`. Auto-generates name if not provided.
-- `dismiss_servitor` — Removes a Servitor by UUID.
+- `summon_servitor` — Spawns a Mortal with optional `assignment` and `name`. Auto-generates name if not provided.
+- `dismiss_servitor` — Removes a Mortal by UUID.
 
 Both tools use callbacks (`onSummon`, `onDismiss`) for UI updates from within the MCP handler context.
 
@@ -300,11 +298,11 @@ Debug builds must be instrumented thoroughly enough that issues can be diagnosed
 
 Two mocking layers for testing:
 
-1. **MockAgent** — Conforms to `Agent` protocol, returns canned responses. For testing `ChatViewModel` and `TavernCoordinator`.
+1. **MockServitor** — Conforms to `Servitor` protocol, returns canned responses. For testing `ChatViewModel` and `TavernCoordinator`.
 
-2. **AgentMessenger protocol** — Abstracts the SDK boundary. `LiveMessenger` (production) and `MockMessenger` (test double). Jake and Servitor accept via constructor injection, defaulting to `LiveMessenger()`.
+2. **ServitorMessenger protocol** — Abstracts the SDK boundary. `LiveMessenger` (production) and `MockMessenger` (test double). Jake and Mortal accept via constructor injection, defaulting to `LiveMessenger()`.
 
-**Rule:** Any new agent type that calls the SDK should accept `AgentMessenger` for testability.
+**Rule:** Any new servitor type that calls the SDK should accept `ServitorMessenger` for testability.
 
 
 ### Error Design
@@ -339,7 +337,7 @@ Grade 4 XCUITest launch arguments: `--ui-testing` (bypasses welcome window), `--
 
 2. **Feature Toggle Coverage** — When tests disable a feature (`loadHistory: false`), there MUST be other tests that exercise that feature enabled.
 
-3. **User Journey Integration Tests** — Test end-to-end paths users actually take. Spawn agent → send message → restart app → click agent → verify history appears.
+3. **User Journey Integration Tests** — Test end-to-end paths users actually take. Spawn servitor → send message → restart app → click servitor → verify history appears.
 
 4. **Symmetry Assertions** — When multiple APIs should behave consistently, add explicit tests that assert symmetry.
 
@@ -365,7 +363,7 @@ Every document belongs to exactly one pipeline stage. Documents flow forward onl
 |-------|----------|----------|
 | 0 | `docs/0-transcripts/` | Interview transcripts, reader syntheses, vocabulary, notes |
 | 1 | `docs/1-prd/` | Product requirements (canonical statement of what the system must do) |
-| 2 | `docs/2-spec/` | Testable, traceable specs (18 numbered modules, §000–§017) |
+| 2 | `docs/2-spec/` | Testable, traceable specs (25 modules, §000–§025) |
 | 3 | `docs/3-adr/` | Architecture Decision Records (the "why" behind technical choices) |
 | 4–6 | `Tavern/` | Code, tests, built application |
 | 7 | `docs/4-docs/` | Post-implementation documentation |
@@ -505,7 +503,7 @@ The **reader document** synthesizes all transcripts into a standalone reference.
 - Multi-project support with per-project session persistence
 - Session history restoration from Claude's native storage
 - Multi-window architecture (welcome window + per-project windows)
-- Agent spawning with themed names + UI (toolbar + button)
+- Servitor spawning with themed names + UI (toolbar + button)
 - Content block rendering infrastructure (MessageType enum)
 - Window restoration on app restart
 - Resource panel (file tree browser + read-only file viewer)
@@ -513,9 +511,9 @@ The **reader document** synthesizes all transcripts into a standalone reference.
 
 **Not Implemented:**
 - Real verification logic (commitments use mock)
-- Real Claude for spawned agents (currently mock)
-- Background agent execution
-- Agent-to-agent communication
+- Real Claude for spawned servitors (currently mock)
+- Background servitor execution
+- Servitor-to-servitor communication
 - Streaming responses (batch only)
 
 
@@ -524,16 +522,16 @@ The **reader document** synthesizes all transcripts into a standalone reference.
 | File | Purpose |
 |------|---------|
 | `Sources/Tavern/TavernApp.swift` | Entry point, multi-window orchestration |
-| `Sources/TavernCore/Agents/Jake.swift` | The Proprietor (daemon agent) |
-| `Sources/TavernCore/Agents/Servitor.swift` | Worker agents (mortal) |
-| `Sources/TavernCore/Agents/ServitorSpawner.swift` | Factory for creating/dismissing servitors |
+| `Sources/TavernCore/Servitors/Jake.swift` | The Proprietor (daemon servitor) |
+| `Sources/TavernCore/Servitors/Mortal.swift` | Worker servitors (mortal) |
+| `Sources/TavernCore/Servitors/MortalSpawner.swift` | Factory for creating/dismissing mortals |
 | `Sources/TavernCore/MCP/TavernMCPServer.swift` | Jake's MCP tools (summon/dismiss) |
 | `Sources/TavernCore/Coordination/TavernCoordinator.swift` | Central hub per project |
 | `Sources/TavernCore/Project/TavernProject.swift` | Single project representation |
 | `Sources/TavernCore/Project/ProjectManager.swift` | Multi-project management |
 | `Sources/TavernCore/Chat/ChatViewModel.swift` | Conversation view model |
 | `Sources/TavernCore/Persistence/SessionStore.swift` | Session ID persistence (UserDefaults) |
-| `Sources/TavernCore/Testing/AgentMessenger.swift` | SDK abstraction for testability |
+| `Sources/TavernCore/Testing/ServitorMessenger.swift` | SDK abstraction for testability |
 | `Sources/TavernCore/Errors/TavernErrorMessages.swift` | Error mapping |
 | `docs/0-transcripts/reader_2026-02-05.md` | Latest reader (design synthesis) |
 | `docs/4-docs/architecture-v1.md` | Architecture guide with ownership + data flows |
@@ -567,7 +565,7 @@ Claude must adhere to development standards:
 - Every feature requires tests per Testing Principles (parallel paths, user journeys, symmetry)
 - New entity types require equivalent test coverage to existing types
 - No silent failures — every error logged with context
-- New agent types accept `AgentMessenger` for testability
+- New servitor types accept `ServitorMessenger` for testability
 - Every SwiftUI view file must include at least one `#Preview` block (ADR-006)
 - New code implementing a specified requirement includes `// MARK: - Provenance: REQ-PREFIX-NNN` (ADR-007)
 - New tests for specified requirements include `.tags()` with requirement-derived tags (ADR-007)

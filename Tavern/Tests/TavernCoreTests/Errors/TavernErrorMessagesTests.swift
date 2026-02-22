@@ -16,9 +16,9 @@ struct TavernErrorMessagesTests {
         #expect(message.contains("Start Fresh"))
     }
 
-    @Test("agentNameConflict produces actionable message")
-    func agentNameConflictMessage() {
-        let error = TavernError.agentNameConflict(name: "Marcos Antonio")
+    @Test("servitorNameConflict produces actionable message")
+    func servitorNameConflictMessage() {
+        let error = TavernError.servitorNameConflict(name: "Marcos Antonio")
         let message = TavernErrorMessages.message(for: error)
         #expect(!message.isEmpty)
         #expect(message.contains("Marcos Antonio"))
@@ -74,7 +74,7 @@ struct TavernErrorMessagesTests {
     func genericHandlerRoutesTavernError() {
         let errors: [TavernError] = [
             .sessionCorrupt(sessionId: "s1", underlyingError: nil),
-            .agentNameConflict(name: "n1"),
+            .servitorNameConflict(name: "n1"),
             .commitmentTimeout(commitmentId: "c1"),
             .mcpServerFailed(reason: "r1"),
             .permissionDenied(toolName: "t1"),
@@ -95,7 +95,7 @@ struct TavernErrorMessagesTests {
     func allCasesHaveErrorDescription() {
         let errors: [TavernError] = [
             .sessionCorrupt(sessionId: "s", underlyingError: nil),
-            .agentNameConflict(name: "n"),
+            .servitorNameConflict(name: "n"),
             .commitmentTimeout(commitmentId: "c"),
             .mcpServerFailed(reason: "r"),
             .permissionDenied(toolName: "t"),

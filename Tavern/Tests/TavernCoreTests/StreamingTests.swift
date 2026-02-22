@@ -165,11 +165,11 @@ struct StreamingTests {
         #expect(chunkCount <= 10)
     }
 
-    // MARK: - MockAgent Streaming Tests
+    // MARK: - MockServitor Streaming Tests
 
-    @Test("MockAgent sendStreaming yields chunks and completes")
-    func mockAgentStreamingYieldsChunks() async throws {
-        let mock = MockAgent(responses: ["Test response"])
+    @Test("MockServitor sendStreaming yields chunks and completes")
+    func mockServitorStreamingYieldsChunks() async throws {
+        let mock = MockServitor(responses: ["Test response"])
         mock.streamingChunkSize = 4
 
         let (stream, _) = mock.sendStreaming("Hello")
@@ -195,9 +195,9 @@ struct StreamingTests {
         #expect(mock.sendCalls == ["Hello"])
     }
 
-    @Test("MockAgent sendStreaming throws on error")
-    func mockAgentStreamingThrowsOnError() async {
-        let mock = MockAgent()
+    @Test("MockServitor sendStreaming throws on error")
+    func mockServitorStreamingThrowsOnError() async {
+        let mock = MockServitor()
         mock.errorToThrow = TavernError.internalError("Test error")
 
         let (stream, _) = mock.sendStreaming("Hi")
@@ -248,9 +248,9 @@ struct StreamingTests {
     @Test("ChatViewModel streaming adds partial then completes message")
     @MainActor
     func viewModelStreamingAddsPartialMessage() async {
-        let mock = MockAgent(responses: ["Streamed response"])
+        let mock = MockServitor(responses: ["Streamed response"])
         mock.streamingChunkSize = 8
-        let viewModel = ChatViewModel(agent: mock, loadHistory: false)
+        let viewModel = ChatViewModel(servitor: mock, loadHistory: false)
 
         viewModel.inputText = "Hello"
         await viewModel.sendMessage()
@@ -267,8 +267,8 @@ struct StreamingTests {
     @Test("ChatViewModel isStreaming is false after completion")
     @MainActor
     func viewModelIsStreamingFalseAfterCompletion() async {
-        let mock = MockAgent(responses: ["Done"])
-        let viewModel = ChatViewModel(agent: mock, loadHistory: false)
+        let mock = MockServitor(responses: ["Done"])
+        let viewModel = ChatViewModel(servitor: mock, loadHistory: false)
 
         viewModel.inputText = "Test"
         await viewModel.sendMessage()
@@ -280,9 +280,9 @@ struct StreamingTests {
     @Test("ChatViewModel streaming error adds error message")
     @MainActor
     func viewModelStreamingErrorAddsErrorMessage() async {
-        let mock = MockAgent()
+        let mock = MockServitor()
         mock.errorToThrow = TavernError.internalError("Stream boom")
-        let viewModel = ChatViewModel(agent: mock, loadHistory: false)
+        let viewModel = ChatViewModel(servitor: mock, loadHistory: false)
 
         viewModel.inputText = "Trigger error"
         await viewModel.sendMessage()
@@ -298,10 +298,10 @@ struct StreamingTests {
     @MainActor
     func viewModelCancelStreamingStops() async {
         // Use a mock that delays enough for us to cancel
-        let mock = MockAgent(responses: [String(repeating: "x", count: 1000)])
+        let mock = MockServitor(responses: [String(repeating: "x", count: 1000)])
         mock.streamingChunkSize = 1
         mock.responseDelay = .milliseconds(50)
-        let viewModel = ChatViewModel(agent: mock, loadHistory: false)
+        let viewModel = ChatViewModel(servitor: mock, loadHistory: false)
 
         viewModel.inputText = "Long response"
 
@@ -327,7 +327,7 @@ struct StreamingTests {
     @MainActor
     func viewModelCancelStreamingPreservesContent() {
         // Directly test that cancellation marks message as not streaming
-        let viewModel = ChatViewModel(agent: MockAgent(responses: ["x"]), loadHistory: false)
+        let viewModel = ChatViewModel(servitor: MockServitor(responses: ["x"]), loadHistory: false)
 
         // Simulate a streaming message manually to test cancelStreaming logic
         // (The real streaming test is covered by the integration test above)
@@ -336,18 +336,18 @@ struct StreamingTests {
 
     // MARK: - Symmetry Tests
 
-    @Test("Both MockAgent and MockMessenger produce equivalent streaming results")
-    func streamingSymmetryMockAgentAndMessenger() async throws {
+    @Test("Both MockServitor and MockMessenger produce equivalent streaming results")
+    func streamingSymmetryMockServitorAndMessenger() async throws {
         let agentResponse = "Symmetry test"
 
-        // MockAgent streaming
-        let mockAgent = MockAgent(responses: [agentResponse])
-        mockAgent.streamingChunkSize = 5
-        let (agentStream, _) = mockAgent.sendStreaming("test")
-        var agentContent = ""
-        for try await event in agentStream {
+        // MockServitor streaming
+        let mockServitor = MockServitor(responses: [agentResponse])
+        mockServitor.streamingChunkSize = 5
+        let (servitorStream, _) = mockServitor.sendStreaming("test")
+        var servitorContent = ""
+        for try await event in servitorStream {
             if case .textDelta(let delta) = event {
-                agentContent += delta
+                servitorContent += delta
             }
         }
 
@@ -363,9 +363,9 @@ struct StreamingTests {
         }
 
         // Both should produce the same content
-        #expect(agentContent == agentResponse)
+        #expect(servitorContent == agentResponse)
         #expect(messengerContent == agentResponse)
-        #expect(agentContent == messengerContent)
+        #expect(servitorContent == messengerContent)
     }
 
     // MARK: - Streaming Cancellation Race Condition Regression Tests
@@ -399,13 +399,13 @@ struct StreamingTests {
         #expect(jake.isCogitating == false)
     }
 
-    @Test("Servitor state is idle after rapid cancel during streaming")
-    func servitorStateIdleAfterRapidCancel() async throws {
+    @Test("Mortal state is idle after rapid cancel during streaming")
+    func mortalStateIdleAfterRapidCancel() async throws {
         let mock = MockMessenger(responses: [String(repeating: "x", count: 200)])
         mock.streamingChunkSize = 1
         mock.responseDelay = .milliseconds(10)
 
-        let servitor = Servitor(
+        let mortal = Mortal(
             name: "CancelTest",
             assignment: "Test",
             projectURL: Self.testProjectURL(),
@@ -413,7 +413,7 @@ struct StreamingTests {
             loadSavedSession: false
         )
 
-        let (stream, cancel) = servitor.sendStreaming("Test")
+        let (stream, cancel) = mortal.sendStreaming("Test")
 
         var eventCount = 0
         for try await _ in stream {
@@ -425,7 +425,7 @@ struct StreamingTests {
         }
 
         // State must be idle after cancel
-        #expect(servitor.state == .idle)
+        #expect(mortal.state == .idle)
     }
 
     @Test("Jake cancel and completion do not produce inconsistent state")
@@ -460,20 +460,20 @@ struct StreamingTests {
         }
     }
 
-    @Test("Servitor cancel and completion do not produce inconsistent state")
-    func servitorCancelCompletionConsistency() async throws {
+    @Test("Mortal cancel and completion do not produce inconsistent state")
+    func mortalCancelCompletionConsistency() async throws {
         for _ in 0..<10 {
             let mock = MockMessenger(responses: ["Short"])
             mock.streamingChunkSize = 5
 
-            let servitor = Servitor(
+            let mortal = Mortal(
                 name: "RaceTest-\(UUID().uuidString.prefix(4))",
                 projectURL: Self.testProjectURL(),
                 messenger: mock,
                 loadSavedSession: false
             )
 
-            let (stream, cancel) = servitor.sendStreaming("Test")
+            let (stream, cancel) = mortal.sendStreaming("Test")
 
             let consumeTask = Task {
                 for try await _ in stream {}
@@ -484,15 +484,15 @@ struct StreamingTests {
 
             try? await consumeTask.value
 
-            #expect(servitor.state == .idle)
+            #expect(mortal.state == .idle)
         }
     }
 
     @Test("ChatViewModel tool state is nil after streaming completes")
     @MainActor
     func viewModelToolStateNilAfterStreamComplete() async {
-        let mock = MockAgent(responses: ["Done"])
-        let viewModel = ChatViewModel(agent: mock, loadHistory: false)
+        let mock = MockServitor(responses: ["Done"])
+        let viewModel = ChatViewModel(servitor: mock, loadHistory: false)
 
         viewModel.inputText = "Test"
         await viewModel.sendMessage()
@@ -504,10 +504,10 @@ struct StreamingTests {
     @Test("ChatViewModel cancelStreaming clears tool state")
     @MainActor
     func viewModelCancelClearsToolState() async {
-        let mock = MockAgent(responses: [String(repeating: "x", count: 1000)])
+        let mock = MockServitor(responses: [String(repeating: "x", count: 1000)])
         mock.streamingChunkSize = 1
         mock.responseDelay = .milliseconds(50)
-        let viewModel = ChatViewModel(agent: mock, loadHistory: false)
+        let viewModel = ChatViewModel(servitor: mock, loadHistory: false)
 
         viewModel.inputText = "Long response"
 

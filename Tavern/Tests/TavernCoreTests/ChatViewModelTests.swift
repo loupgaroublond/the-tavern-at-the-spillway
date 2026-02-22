@@ -53,10 +53,10 @@ struct ChatViewModelTests {
     // MARK: - Symmetry Tests (Testing Principle #4)
     // These tests ensure parallel code paths behave consistently
 
-    @Test("ChatViewModel for servitor agent accepts projectPath parameter")
+    @Test("ChatViewModel for mortal servitor accepts projectPath parameter")
     @MainActor
-    func servitorAgentViewModelAcceptsProjectPath() {
-        let agent = Servitor(
+    func mortalServitorViewModelAcceptsProjectPath() {
+        let mortal = Mortal(
             name: "Worker",
             assignment: "Test task",
             projectURL: Self.testProjectURL(),
@@ -64,25 +64,25 @@ struct ChatViewModelTests {
         )
 
         // This should compile and work - the bug was that this parameter didn't exist
-        let viewModel = ChatViewModel(agent: agent, projectPath: "/test/path", loadHistory: false)
+        let viewModel = ChatViewModel(servitor: mortal, projectPath: "/test/path", loadHistory: false)
 
-        #expect(viewModel.agentId == agent.id)
-        #expect(viewModel.agentName == "Worker")
+        #expect(viewModel.servitorId == mortal.id)
+        #expect(viewModel.servitorName == "Worker")
     }
 
-    @Test("ChatViewModel for servitor agent without assignment works")
+    @Test("ChatViewModel for mortal servitor without assignment works")
     @MainActor
-    func servitorAgentViewModelWithoutAssignment() {
-        let agent = Servitor(
+    func mortalServitorViewModelWithoutAssignment() {
+        let mortal = Mortal(
             name: "User-Spawned",
             projectURL: Self.testProjectURL(),
             loadSavedSession: false
         )
 
-        let viewModel = ChatViewModel(agent: agent, projectPath: "/test/path", loadHistory: false)
+        let viewModel = ChatViewModel(servitor: mortal, projectPath: "/test/path", loadHistory: false)
 
-        #expect(viewModel.agentId == agent.id)
-        #expect(viewModel.agentName == "User-Spawned")
+        #expect(viewModel.servitorId == mortal.id)
+        #expect(viewModel.servitorName == "User-Spawned")
     }
 
     @Test("Both initializers have loadHistory parameter - symmetry check")
@@ -91,34 +91,34 @@ struct ChatViewModelTests {
         let projectURL = Self.testProjectURL()
 
         let jake = Jake(projectURL: projectURL, loadSavedSession: false)
-        let servitor = Servitor(name: "Worker", projectURL: projectURL, loadSavedSession: false)
+        let mortal = Mortal(name: "Worker", projectURL: projectURL, loadSavedSession: false)
 
         // Jake initializer with loadHistory
         let jakeVM = ChatViewModel(jake: jake, loadHistory: false)
 
-        // Mortal agent initializer with loadHistory (this was the bug - parameter didn't exist)
-        let servitorVM = ChatViewModel(agent: servitor, projectPath: "/test", loadHistory: false)
+        // Mortal servitor initializer with loadHistory (this was the bug - parameter didn't exist)
+        let mortalVM = ChatViewModel(servitor: mortal, projectPath: "/test", loadHistory: false)
 
         #expect(jakeVM.messages.isEmpty)
-        #expect(servitorVM.messages.isEmpty)
+        #expect(mortalVM.messages.isEmpty)
     }
 
-    @Test("Agent ID and name are accessible")
+    @Test("Servitor ID and name are accessible")
     @MainActor
-    func agentIdAndNameAccessible() {
+    func servitorIdAndNameAccessible() {
         let projectURL = Self.testProjectURL()
         let jake = Jake(projectURL: projectURL, loadSavedSession: false)
         let viewModel = ChatViewModel(jake: jake, loadHistory: false)
 
-        #expect(viewModel.agentId == jake.id)
-        #expect(viewModel.agentName == "Jake")
+        #expect(viewModel.servitorId == jake.id)
+        #expect(viewModel.servitorName == "Jake")
     }
 
     @Test("isLoadingHistory is false when no project path")
     @MainActor
     func isLoadingHistoryFalseWithNoProject() async {
-        let mock = MockAgent()
-        let viewModel = ChatViewModel(agent: mock, projectPath: nil, loadHistory: false)
+        let mock = MockServitor()
+        let viewModel = ChatViewModel(servitor: mock, projectPath: nil, loadHistory: false)
 
         await viewModel.loadSessionHistory()
 
@@ -128,9 +128,9 @@ struct ChatViewModelTests {
     @Test("isLoadingHistory is false after loading completes with no matching session")
     @MainActor
     func isLoadingHistoryFalseAfterLoad() async {
-        let mock = MockAgent()
+        let mock = MockServitor()
         // Use a path that won't have any matching sessions
-        let viewModel = ChatViewModel(agent: mock, projectPath: "/nonexistent/project", loadHistory: false)
+        let viewModel = ChatViewModel(servitor: mock, projectPath: "/nonexistent/project", loadHistory: false)
 
         await viewModel.loadSessionHistory()
 
@@ -139,13 +139,13 @@ struct ChatViewModelTests {
         #expect(viewModel.messages.isEmpty)
     }
 
-    // MARK: - Grade 2 Mock Tests (using MockAgent)
+    // MARK: - Grade 2 Mock Tests (using MockServitor)
 
-    @Test("Sending message adds user and agent messages", .tags(.reqAGT010))
+    @Test("Sending message adds user and servitor messages", .tags(.reqAGT010))
     @MainActor
     func sendingMessageAddsMessages() async {
-        let mock = MockAgent(responses: ["Hello from mock!"])
-        let viewModel = ChatViewModel(agent: mock, loadHistory: false)
+        let mock = MockServitor(responses: ["Hello from mock!"])
+        let viewModel = ChatViewModel(servitor: mock, loadHistory: false)
 
         viewModel.inputText = "Hello"
         await viewModel.sendMessage()
@@ -160,8 +160,8 @@ struct ChatViewModelTests {
     @Test("Input text clears after send")
     @MainActor
     func inputTextClearsAfterSend() async {
-        let mock = MockAgent(responses: ["OK"])
-        let viewModel = ChatViewModel(agent: mock, loadHistory: false)
+        let mock = MockServitor(responses: ["OK"])
+        let viewModel = ChatViewModel(servitor: mock, loadHistory: false)
 
         viewModel.inputText = "Test message"
         await viewModel.sendMessage()
@@ -172,9 +172,9 @@ struct ChatViewModelTests {
     @Test("Cogitating state during send")
     @MainActor
     func cogitatingStateDuringSend() async {
-        let mock = MockAgent(responses: ["OK"])
+        let mock = MockServitor(responses: ["OK"])
         mock.responseDelay = .milliseconds(50)
-        let viewModel = ChatViewModel(agent: mock, loadHistory: false)
+        let viewModel = ChatViewModel(servitor: mock, loadHistory: false)
 
         #expect(viewModel.isCogitating == false)
 
@@ -188,8 +188,8 @@ struct ChatViewModelTests {
     @Test("Cogitation verb is set during send")
     @MainActor
     func cogitationVerbIsSet() async {
-        let mock = MockAgent(responses: ["OK"])
-        let viewModel = ChatViewModel(agent: mock, loadHistory: false)
+        let mock = MockServitor(responses: ["OK"])
+        let viewModel = ChatViewModel(servitor: mock, loadHistory: false)
 
         viewModel.inputText = "Test"
         await viewModel.sendMessage()
@@ -201,9 +201,9 @@ struct ChatViewModelTests {
     @Test("Error is captured and displayed")
     @MainActor
     func errorIsCapturedAndDisplayed() async {
-        let mock = MockAgent()
+        let mock = MockServitor()
         mock.errorToThrow = TavernError.internalError("Mock error for testing")
-        let viewModel = ChatViewModel(agent: mock, loadHistory: false)
+        let viewModel = ChatViewModel(servitor: mock, loadHistory: false)
 
         viewModel.inputText = "Trigger error"
         await viewModel.sendMessage()
@@ -218,8 +218,8 @@ struct ChatViewModelTests {
     @Test("Multiple messages accumulate")
     @MainActor
     func multipleMessagesAccumulate() async {
-        let mock = MockAgent(responses: ["First response", "Second response"])
-        let viewModel = ChatViewModel(agent: mock, loadHistory: false)
+        let mock = MockServitor(responses: ["First response", "Second response"])
+        let viewModel = ChatViewModel(servitor: mock, loadHistory: false)
 
         viewModel.inputText = "Message 1"
         await viewModel.sendMessage()
@@ -230,36 +230,36 @@ struct ChatViewModelTests {
         #expect(viewModel.messages.count == 4) // 2 user + 2 agent
     }
 
-    @Test("Servitor agent can send messages via ChatViewModel")
+    @Test("Mortal servitor can send messages via ChatViewModel")
     @MainActor
-    func servitorAgentCanSendMessages() async {
-        let mock = MockAgent(name: "ServitorMock", responses: ["Servitor response"])
-        let viewModel = ChatViewModel(agent: mock, loadHistory: false)
+    func mortalServitorCanSendMessages() async {
+        let mock = MockServitor(name: "MortalMock", responses: ["Mortal response"])
+        let viewModel = ChatViewModel(servitor: mock, loadHistory: false)
 
-        viewModel.inputText = "Hello servitor"
+        viewModel.inputText = "Hello mortal"
         await viewModel.sendMessage()
 
         #expect(viewModel.messages.count == 2)
-        #expect(viewModel.agentName == "ServitorMock")
-        #expect(viewModel.messages[1].content == "Servitor response")
+        #expect(viewModel.servitorName == "MortalMock")
+        #expect(viewModel.messages[1].content == "Mortal response")
     }
 
     // MARK: - Session Mode Tests
 
-    @Test("ChatViewModel inherits agent's session mode", .tags(.reqOPM001, .reqOPM002))
+    @Test("ChatViewModel inherits servitor's session mode", .tags(.reqOPM001, .reqOPM002))
     @MainActor
-    func chatViewModelInheritsAgentSessionMode() {
-        let mock = MockAgent(name: "ModeAgent")
+    func chatViewModelInheritsServitorSessionMode() {
+        let mock = MockServitor(name: "ModeServitor")
         #expect(mock.sessionMode == .plan) // default
-        let viewModel = ChatViewModel(agent: mock, loadHistory: false)
+        let viewModel = ChatViewModel(servitor: mock, loadHistory: false)
         #expect(viewModel.sessionMode == .plan)
     }
 
-    @Test("ChatViewModel mode change propagates to agent", .tags(.reqOPM001, .reqOPM002))
+    @Test("ChatViewModel mode change propagates to servitor", .tags(.reqOPM001, .reqOPM002))
     @MainActor
     func chatViewModelModeChangePropagates() {
-        let mock = MockAgent(name: "ModeAgent")
-        let viewModel = ChatViewModel(agent: mock, loadHistory: false)
+        let mock = MockServitor(name: "ModeServitor")
+        let viewModel = ChatViewModel(servitor: mock, loadHistory: false)
 
         viewModel.sessionMode = .bypassPermissions
         #expect(mock.sessionMode == .bypassPermissions)

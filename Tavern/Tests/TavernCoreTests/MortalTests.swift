@@ -2,8 +2,8 @@ import Foundation
 import Testing
 @testable import TavernCore
 
-@Suite("Servitor Tests")
-struct ServitorTests {
+@Suite("Mortal Tests")
+struct MortalTests {
 
     // Test helper - temp directory for testing
     private static func testProjectURL() -> URL {
@@ -13,86 +13,86 @@ struct ServitorTests {
 
     // MARK: - Grade 1 Property Tests (no mocks needed)
 
-    @Test("Servitor has assignment", .tags(.reqAGT002, .reqSPN009))
-    func servitorHasAssignment() {
-        let servitor = Servitor(
+    @Test("Mortal has assignment", .tags(.reqAGT002, .reqSPN009))
+    func mortalHasAssignment() {
+        let mortal = Mortal(
             name: "TestWorker",
             assignment: "Parse the input file and extract data",
             projectURL: Self.testProjectURL(),
             loadSavedSession: false
         )
 
-        #expect(servitor.assignment == "Parse the input file and extract data")
-        #expect(servitor.name == "TestWorker")
+        #expect(mortal.assignment == "Parse the input file and extract data")
+        #expect(mortal.name == "TestWorker")
     }
 
-    @Test("Servitor initializes with idle state", .tags(.reqAGT002, .reqAGT005))
-    func servitorInitializesIdle() {
-        let servitor = Servitor(
+    @Test("Mortal initializes with idle state", .tags(.reqAGT002, .reqAGT005))
+    func mortalInitializesIdle() {
+        let mortal = Mortal(
             name: "IdleWorker",
             assignment: "Do something",
             projectURL: Self.testProjectURL(),
             loadSavedSession: false
         )
 
-        #expect(servitor.state == .idle)
-        #expect(servitor.sessionId == nil)
+        #expect(mortal.state == .idle)
+        #expect(mortal.sessionId == nil)
     }
 
-    @Test("Servitor can be explicitly marked waiting")
-    func servitorExplicitlyMarkedWaiting() {
-        let servitor = Servitor(
+    @Test("Mortal can be explicitly marked waiting")
+    func mortalExplicitlyMarkedWaiting() {
+        let mortal = Mortal(
             name: "ExplicitWorker",
             assignment: "Task",
             projectURL: Self.testProjectURL(),
             loadSavedSession: false
         )
 
-        #expect(servitor.state == .idle)
+        #expect(mortal.state == .idle)
 
-        servitor.markWaiting()
+        mortal.markWaiting()
 
-        #expect(servitor.state == .waiting)
+        #expect(mortal.state == .waiting)
     }
 
-    @Test("Servitor can be explicitly marked done")
-    func servitorExplicitlyMarkedDone() {
-        let servitor = Servitor(
+    @Test("Mortal can be explicitly marked done")
+    func mortalExplicitlyMarkedDone() {
+        let mortal = Mortal(
             name: "DoneWorker",
             assignment: "Task",
             projectURL: Self.testProjectURL(),
             loadSavedSession: false
         )
 
-        servitor.markDone()
+        mortal.markDone()
 
-        #expect(servitor.state == .done)
+        #expect(mortal.state == .done)
     }
 
-    @Test("Servitor done state is terminal", .tags(.reqAGT009))
-    func servitorDoneStateIsTerminal() {
-        let servitor = Servitor(
+    @Test("Mortal done state is terminal", .tags(.reqAGT009))
+    func mortalDoneStateIsTerminal() {
+        let mortal = Mortal(
             name: "TerminalWorker",
             assignment: "Task",
             projectURL: Self.testProjectURL(),
             loadSavedSession: false
         )
 
-        servitor.markDone()
-        #expect(servitor.state == .done)
+        mortal.markDone()
+        #expect(mortal.state == .done)
 
         // Reset conversation should not change done state
-        servitor.resetConversation()
-        #expect(servitor.state == .done)
+        mortal.resetConversation()
+        #expect(mortal.state == .done)
 
         // markWaiting should not change done state
-        servitor.markWaiting()
-        #expect(servitor.state == .done)
+        mortal.markWaiting()
+        #expect(mortal.state == .done)
     }
 
-    @Test("Servitor reset clears session")
-    func servitorResetClearsSession() async throws {
-        let servitor = Servitor(
+    @Test("Mortal reset clears session")
+    func mortalResetClearsSession() async throws {
+        let mortal = Mortal(
             name: "ResetWorker",
             assignment: "Task",
             projectURL: Self.testProjectURL(),
@@ -100,38 +100,38 @@ struct ServitorTests {
         )
 
         // Session starts nil
-        #expect(servitor.sessionId == nil)
+        #expect(mortal.sessionId == nil)
 
         // Reset should keep it nil and return to idle
-        servitor.resetConversation()
-        #expect(servitor.sessionId == nil)
-        #expect(servitor.state == .idle)
+        mortal.resetConversation()
+        #expect(mortal.sessionId == nil)
+        #expect(mortal.state == .idle)
     }
 
     @Test("Add commitment helper works")
     func addCommitmentHelperWorks() {
-        let servitor = Servitor(
+        let mortal = Mortal(
             name: "CommitHelper",
             assignment: "Task",
             projectURL: Self.testProjectURL(),
             loadSavedSession: false
         )
 
-        #expect(servitor.commitments.count == 0)
+        #expect(mortal.commitments.count == 0)
 
-        let c1 = servitor.addCommitment(description: "First", assertion: "cmd1")
-        let c2 = servitor.addCommitment(description: "Second", assertion: "cmd2")
+        let c1 = mortal.addCommitment(description: "First", assertion: "cmd1")
+        let c2 = mortal.addCommitment(description: "Second", assertion: "cmd2")
 
-        #expect(servitor.commitments.count == 2)
-        #expect(servitor.commitments.get(id: c1.id) != nil)
-        #expect(servitor.commitments.get(id: c2.id) != nil)
+        #expect(mortal.commitments.count == 2)
+        #expect(mortal.commitments.get(id: c1.id) != nil)
+        #expect(mortal.commitments.get(id: c2.id) != nil)
     }
 
     @Test("AllCommitmentsPassed returns correct value")
     func allCommitmentsPassedWorks() {
         let commitments = CommitmentList()
 
-        let servitor = Servitor(
+        let mortal = Mortal(
             name: "PassCheckWorker",
             assignment: "Task",
             projectURL: Self.testProjectURL(),
@@ -140,22 +140,22 @@ struct ServitorTests {
         )
 
         // Empty commitments = vacuously true
-        #expect(servitor.allCommitmentsPassed == true)
+        #expect(mortal.allCommitmentsPassed == true)
 
         // Add pending commitment
         let c1 = commitments.add(description: "Test", assertion: "cmd")
-        #expect(servitor.allCommitmentsPassed == false)
+        #expect(mortal.allCommitmentsPassed == false)
 
         // Mark passed
         commitments.markPassed(id: c1.id)
-        #expect(servitor.allCommitmentsPassed == true)
+        #expect(mortal.allCommitmentsPassed == true)
     }
 
     @Test("HasFailedCommitments returns correct value")
     func hasFailedCommitmentsWorks() {
         let commitments = CommitmentList()
 
-        let servitor = Servitor(
+        let mortal = Mortal(
             name: "FailCheckWorker",
             assignment: "Task",
             projectURL: Self.testProjectURL(),
@@ -163,21 +163,21 @@ struct ServitorTests {
             loadSavedSession: false
         )
 
-        #expect(servitor.hasFailedCommitments == false)
+        #expect(mortal.hasFailedCommitments == false)
 
         let c1 = commitments.add(description: "Test", assertion: "cmd")
-        #expect(servitor.hasFailedCommitments == false)
+        #expect(mortal.hasFailedCommitments == false)
 
         commitments.markFailed(id: c1.id, message: "Oops")
-        #expect(servitor.hasFailedCommitments == true)
+        #expect(mortal.hasFailedCommitments == true)
     }
 
     // MARK: - Grade 2 Mock Tests (using MockMessenger)
 
-    @Test("Servitor responds to messages", .tags(.reqARCH009))
-    func servitorRespondsToMessages() async throws {
+    @Test("Mortal responds to messages", .tags(.reqARCH009))
+    func mortalRespondsToMessages() async throws {
         let mock = MockMessenger(responses: ["Task acknowledged"])
-        let servitor = Servitor(
+        let mortal = Mortal(
             name: "ResponseWorker",
             assignment: "Handle messages",
             projectURL: Self.testProjectURL(),
@@ -185,18 +185,18 @@ struct ServitorTests {
             loadSavedSession: false
         )
 
-        let response = try await servitor.send("Do the thing")
+        let response = try await mortal.send("Do the thing")
 
         #expect(response == "Task acknowledged")
         #expect(mock.queryCalls.count == 1)
         #expect(mock.queryCalls[0] == "Do the thing")
     }
 
-    @Test("Servitor tracks working state")
-    func servitorTracksWorkingState() async throws {
+    @Test("Mortal tracks working state")
+    func mortalTracksWorkingState() async throws {
         let mock = MockMessenger(responses: ["OK"])
         mock.responseDelay = .milliseconds(100)
-        let servitor = Servitor(
+        let mortal = Mortal(
             name: "StateWorker",
             assignment: "Task",
             projectURL: Self.testProjectURL(),
@@ -204,23 +204,23 @@ struct ServitorTests {
             loadSavedSession: false
         )
 
-        #expect(servitor.state == .idle)
+        #expect(mortal.state == .idle)
 
         let task = Task {
-            try await servitor.send("Work")
+            try await mortal.send("Work")
         }
 
         try await Task.sleep(for: .milliseconds(50))
-        #expect(servitor.state == .working)
+        #expect(mortal.state == .working)
 
         let _ = try await task.value
-        #expect(servitor.state == .idle)
+        #expect(mortal.state == .idle)
     }
 
-    @Test("Servitor transitions to done via response", .tags(.reqAGT009))
-    func servitorTransitionsToDone() async throws {
+    @Test("Mortal transitions to done via response", .tags(.reqAGT009))
+    func mortalTransitionsToDone() async throws {
         let mock = MockMessenger(responses: ["Assignment complete. DONE"])
-        let servitor = Servitor(
+        let mortal = Mortal(
             name: "DoneViaResponse",
             assignment: "Finish up",
             projectURL: Self.testProjectURL(),
@@ -228,15 +228,15 @@ struct ServitorTests {
             loadSavedSession: false
         )
 
-        let _ = try await servitor.send("Finish it")
+        let _ = try await mortal.send("Finish it")
 
-        #expect(servitor.state == .done)
+        #expect(mortal.state == .done)
     }
 
-    @Test("Servitor transitions to waiting via response", .tags(.reqAGT009))
-    func servitorTransitionsToWaiting() async throws {
+    @Test("Mortal transitions to waiting via response", .tags(.reqAGT009))
+    func mortalTransitionsToWaiting() async throws {
         let mock = MockMessenger(responses: ["I need clarification. WAITING for your input."])
-        let servitor = Servitor(
+        let mortal = Mortal(
             name: "WaitViaResponse",
             assignment: "Need info",
             projectURL: Self.testProjectURL(),
@@ -244,16 +244,16 @@ struct ServitorTests {
             loadSavedSession: false
         )
 
-        let _ = try await servitor.send("Do the ambiguous thing")
+        let _ = try await mortal.send("Do the ambiguous thing")
 
-        #expect(servitor.state == .waiting)
+        #expect(mortal.state == .waiting)
     }
 
-    @Test("Servitor maintains conversation via session ID")
-    func servitorMaintainsConversation() async throws {
+    @Test("Mortal maintains conversation via session ID")
+    func mortalMaintainsConversation() async throws {
         let sessionId = UUID().uuidString
         let mock = MockMessenger(responses: ["First", "Second"], sessionId: sessionId)
-        let servitor = Servitor(
+        let mortal = Mortal(
             name: "ConvoWorker",
             assignment: "Chat",
             projectURL: Self.testProjectURL(),
@@ -261,20 +261,20 @@ struct ServitorTests {
             loadSavedSession: false
         )
 
-        #expect(servitor.sessionId == nil)
+        #expect(mortal.sessionId == nil)
 
-        let _ = try await servitor.send("Message 1")
-        #expect(servitor.sessionId == sessionId)
+        let _ = try await mortal.send("Message 1")
+        #expect(mortal.sessionId == sessionId)
 
-        let _ = try await servitor.send("Message 2")
+        let _ = try await mortal.send("Message 2")
         #expect(mock.queryOptions[1].resume == sessionId)
     }
 
-    @Test("Servitor propagates errors")
-    func servitorPropagatesErrors() async throws {
+    @Test("Mortal propagates errors")
+    func mortalPropagatesErrors() async throws {
         let mock = MockMessenger()
-        mock.errorToThrow = TavernError.internalError("Servitor test error")
-        let servitor = Servitor(
+        mock.errorToThrow = TavernError.internalError("Mortal test error")
+        let mortal = Mortal(
             name: "ErrorWorker",
             assignment: "Fail",
             projectURL: Self.testProjectURL(),
@@ -283,21 +283,21 @@ struct ServitorTests {
         )
 
         do {
-            let _ = try await servitor.send("Trigger error")
+            let _ = try await mortal.send("Trigger error")
             Issue.record("Expected error to be thrown")
         } catch let error as TavernError {
             if case .internalError(let message) = error {
-                #expect(message == "Servitor test error")
+                #expect(message == "Mortal test error")
             } else {
                 Issue.record("Expected internalError, got: \(error)")
             }
         }
     }
 
-    @Test("Servitor with no commitments goes to done")
-    func servitorWithNoCommitmentsGoesToDone() async throws {
+    @Test("Mortal with no commitments goes to done")
+    func mortalWithNoCommitmentsGoesToDone() async throws {
         let mock = MockMessenger(responses: ["All DONE here!"])
-        let servitor = Servitor(
+        let mortal = Mortal(
             name: "NoPledgeWorker",
             assignment: "Quick task",
             projectURL: Self.testProjectURL(),
@@ -306,11 +306,11 @@ struct ServitorTests {
             loadSavedSession: false
         )
 
-        #expect(servitor.commitments.count == 0)
+        #expect(mortal.commitments.count == 0)
 
-        let _ = try await servitor.send("Finish")
+        let _ = try await mortal.send("Finish")
 
-        #expect(servitor.state == .done)
+        #expect(mortal.state == .done)
     }
 
     @Test("Done triggers verification when commitments exist", .tags(.reqDET004))
@@ -319,7 +319,7 @@ struct ServitorTests {
         commitments.add(description: "Always passes", assertion: "true")
 
         let mock = MockMessenger(responses: ["Task DONE"])
-        let servitor = Servitor(
+        let mortal = Mortal(
             name: "VerifyWorker",
             assignment: "Verify task",
             projectURL: Self.testProjectURL(),
@@ -328,11 +328,11 @@ struct ServitorTests {
             loadSavedSession: false
         )
 
-        let _ = try await servitor.send("Complete the task")
+        let _ = try await mortal.send("Complete the task")
 
         // "DONE" in response triggers verification; "true" always passes
-        #expect(servitor.state == .done)
-        #expect(servitor.allCommitmentsPassed == true)
+        #expect(mortal.state == .done)
+        #expect(mortal.allCommitmentsPassed == true)
     }
 
     @Test("Verification pass marks done", .tags(.reqDET004))
@@ -342,7 +342,7 @@ struct ServitorTests {
         commitments.add(description: "Check 2", assertion: "echo pass")
 
         let mock = MockMessenger(responses: ["DONE"])
-        let servitor = Servitor(
+        let mortal = Mortal(
             name: "PassVerifyWorker",
             assignment: "Pass all checks",
             projectURL: Self.testProjectURL(),
@@ -351,9 +351,9 @@ struct ServitorTests {
             loadSavedSession: false
         )
 
-        let _ = try await servitor.send("Verify")
+        let _ = try await mortal.send("Verify")
 
-        #expect(servitor.state == .done)
+        #expect(mortal.state == .done)
     }
 
     @Test("Verification fail continues work", .tags(.reqDET004))
@@ -362,7 +362,7 @@ struct ServitorTests {
         commitments.add(description: "Always fails", assertion: "false")
 
         let mock = MockMessenger(responses: ["DONE"])
-        let servitor = Servitor(
+        let mortal = Mortal(
             name: "FailVerifyWorker",
             assignment: "Fail checks",
             projectURL: Self.testProjectURL(),
@@ -371,20 +371,20 @@ struct ServitorTests {
             loadSavedSession: false
         )
 
-        let _ = try await servitor.send("Try to finish")
+        let _ = try await mortal.send("Try to finish")
 
         // "false" always exits 1 → verification fails → back to idle
-        #expect(servitor.state == .idle)
+        #expect(mortal.state == .idle)
     }
 
-    @Test("Servitor not done until all commitments verified")
-    func servitorNotDoneUntilAllCommitmentsVerified() async throws {
+    @Test("Mortal not done until all commitments verified")
+    func mortalNotDoneUntilAllCommitmentsVerified() async throws {
         let commitments = CommitmentList()
         commitments.add(description: "Passes", assertion: "true")
         commitments.add(description: "Fails", assertion: "false")
 
         let mock = MockMessenger(responses: ["DONE"])
-        let servitor = Servitor(
+        let mortal = Mortal(
             name: "PartialVerifyWorker",
             assignment: "Partial verification",
             projectURL: Self.testProjectURL(),
@@ -393,42 +393,42 @@ struct ServitorTests {
             loadSavedSession: false
         )
 
-        let _ = try await servitor.send("Complete")
+        let _ = try await mortal.send("Complete")
 
         // One commitment fails → not done
-        #expect(servitor.state != .done)
-        #expect(servitor.state == .idle)
+        #expect(mortal.state != .done)
+        #expect(mortal.state == .idle)
     }
 
     // MARK: - Session Mode Tests
 
-    @Test("Servitor defaults to plan mode")
-    func servitorDefaultsToPlanMode() {
-        let servitor = Servitor(
+    @Test("Mortal defaults to plan mode")
+    func mortalDefaultsToPlanMode() {
+        let mortal = Mortal(
             name: "ModeWorker",
             projectURL: Self.testProjectURL(),
             loadSavedSession: false
         )
-        #expect(servitor.sessionMode == .plan)
+        #expect(mortal.sessionMode == .plan)
     }
 
-    @Test("Servitor session mode can be changed")
-    func servitorSessionModeCanBeChanged() {
-        let servitor = Servitor(
+    @Test("Mortal session mode can be changed")
+    func mortalSessionModeCanBeChanged() {
+        let mortal = Mortal(
             name: "ModeWorker",
             projectURL: Self.testProjectURL(),
             loadSavedSession: false
         )
-        #expect(servitor.sessionMode == .plan)
+        #expect(mortal.sessionMode == .plan)
 
-        servitor.sessionMode = .acceptEdits
-        #expect(servitor.sessionMode == .acceptEdits)
+        mortal.sessionMode = .acceptEdits
+        #expect(mortal.sessionMode == .acceptEdits)
     }
 
-    @Test("Servitor includes permission mode in query options")
-    func servitorIncludesPermissionModeInQueryOptions() async throws {
+    @Test("Mortal includes permission mode in query options")
+    func mortalIncludesPermissionModeInQueryOptions() async throws {
         let mock = MockMessenger(responses: ["OK", "OK"])
-        let servitor = Servitor(
+        let mortal = Mortal(
             name: "ModeQueryWorker",
             assignment: "Test modes",
             projectURL: Self.testProjectURL(),
@@ -437,13 +437,13 @@ struct ServitorTests {
         )
 
         // Default plan mode
-        let _ = try await servitor.send("Test plan")
+        let _ = try await mortal.send("Test plan")
         #expect(mock.queryOptions.count == 1)
         #expect(mock.queryOptions[0].permissionMode == .plan)
 
         // Switch to bypassPermissions and verify
-        servitor.sessionMode = .bypassPermissions
-        let _ = try await servitor.send("Test bypass")
+        mortal.sessionMode = .bypassPermissions
+        let _ = try await mortal.send("Test bypass")
         #expect(mock.queryOptions.count == 2)
         #expect(mock.queryOptions[1].permissionMode == .bypassPermissions)
     }

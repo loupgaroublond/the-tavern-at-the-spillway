@@ -15,6 +15,7 @@ Tavern will use the following shape combination:
 | **D: Supervisor Tree** | Agent hierarchy with lifecycle management, bubbling | Primary |
 | **A: Reactive Streams** | UI subscribes to state changes; non-blocking updates | Primary (UI) |
 | **A: Message Bus** | Agent-to-agent messaging, layered on supervisor channels | Supporting |
+<!-- DROPPED: subsequently removed from spec, left unspecified -->
 | **I: Plugin** | Closed set of pluggable agent types and spawners | Supporting |
 | **C: Layer** | Basic layering for testability; not full ceremony | Supporting |
 | **L: Sidecar** | Agent responsiveness while managing children | Supporting |
@@ -216,6 +217,7 @@ actor AgentSidecar {
 - UI updates via Combine, never block main thread
 
 
+<!-- DROPPED: subsequently removed from spec, left unspecified -->
 ### Plugin System (Closed Set)
 
 Plugins are registered at startup, not dynamically loaded.

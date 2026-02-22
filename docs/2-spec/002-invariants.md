@@ -1,7 +1,7 @@
 # 002 — Invariants Specification
 
 **Status:** complete
-**Last Updated:** 2026-02-10
+**Last Updated:** 2026-02-16
 
 ## Upstream References
 - PRD: §2 (Invariants)
@@ -16,7 +16,7 @@
 ---
 
 ## 1. Overview
-Hard-enforced system invariants that can never be violated. These are the non-negotiable rules that every component must respect, serving as the foundation for correctness guarantees across the entire system. There are exactly eight invariants drawn from PRD §2.
+Hard-enforced system invariants that can never be violated. These are the non-negotiable rules that every component must respect, serving as the foundation for correctness guarantees across the entire system. There are nine invariants: eight drawn from PRD §2 plus one derived from seed design review.
 
 ## 2. Requirements
 
@@ -123,6 +123,20 @@ Hard-enforced system invariants that can never be violated. These are the non-ne
 
 **Testable assertion:** In changeset mode, original files have identical content before and after agent execution. Only after explicit apply does the original change.
 
+### REQ-INV-009: Sandbox Boundary Impossibility
+**Source:** Seed design review (§011)
+**Priority:** must-have
+**Status:** specified
+
+**Properties:**
+- The sandbox MUST make boundary violations impossible, not just detectable
+- Agents cannot see paths outside their sandbox
+- Unauthorized network calls are dropped and reported
+
+**See also:** §011 for sandbox primitives
+
+**Testable assertion:** An agent inside a sandbox cannot enumerate or access paths outside the sandbox boundary. Unauthorized network calls are dropped (never reach the network) and logged.
+
 ## 3. Properties Summary
 
 ### Invariant Enforcement Hierarchy
@@ -133,7 +147,7 @@ Invariants are ordered by enforcement mechanism:
 |-------------|-----------|-----|
 | Compile-time | REQ-INV-002 (testability), REQ-INV-006 (immutability) | Architectural constraints — no API surface for violation |
 | CI/CD | REQ-INV-001 (test gate) | Pipeline blocks shipping on test failure |
-| Runtime | REQ-INV-003 (verification), REQ-INV-004 (attention), REQ-INV-005 (doc store), REQ-INV-007 (visible failures), REQ-INV-008 (file protection) | Violation monitoring detects and reports |
+| Runtime | REQ-INV-003 (verification), REQ-INV-004 (attention), REQ-INV-005 (doc store), REQ-INV-007 (visible failures), REQ-INV-008 (file protection), REQ-INV-009 (sandbox impossibility) | Violation monitoring detects and reports; sandbox prevents access |
 
 ### Violation Response Properties
 
@@ -142,7 +156,7 @@ Invariants are ordered by enforcement mechanism:
 | Critical | Pause or reap agent | Agent modifies files outside sandbox |
 | Warning | Allow with warning, log | Agent approaches token budget |
 
-All eight invariants are enforced by a rules layer between agent actions and system effects. The rules layer is not modifiable by agents (REQ-INV-006).
+All nine invariants are enforced by a rules layer between agent actions and system effects. The rules layer is not modifiable by agents (REQ-INV-006).
 
 ## 4. Open Questions
 
@@ -152,4 +166,4 @@ All eight invariants are enforced by a rules layer between agent actions and sys
 
 ## 5. Coverage Gaps
 
-None. All eight PRD invariants are fully specified. Enforcement mechanisms for REQ-INV-008 depend on sandbox implementation (see §11).
+None. All nine invariants are fully specified. Enforcement mechanisms for REQ-INV-008 depend on sandbox implementation (see §011). REQ-INV-009 sandbox impossibility depends on §011 sandbox primitives.

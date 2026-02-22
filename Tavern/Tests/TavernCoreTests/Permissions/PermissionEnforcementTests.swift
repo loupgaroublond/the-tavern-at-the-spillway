@@ -142,7 +142,7 @@ struct PermissionEnforcementTests {
         // Create LiveMessenger with permission manager
         let messenger = LiveMessenger(
             permissionManager: manager,
-            agentName: "TestAgent"
+            agentName: "TestServitor"
         )
 
         // We can't directly inspect the messenger's callback, but we can verify
@@ -197,8 +197,8 @@ struct PermissionEnforcementTests {
     @Test("ChatViewModel approval handler surfaces request and resumes on response")
     @MainActor
     func chatViewModelApprovalHandlerWorks() async {
-        let mock = MockAgent(responses: ["OK"])
-        let viewModel = ChatViewModel(agent: mock, loadHistory: false)
+        let mock = MockServitor(responses: ["OK"])
+        let viewModel = ChatViewModel(servitor: mock, loadHistory: false)
 
         let handler = viewModel.makeApprovalHandler()
 
@@ -207,7 +207,7 @@ struct PermissionEnforcementTests {
 
         // Call handler in background — it will suspend
         let task = Task {
-            let request = ToolApprovalRequest(toolName: "bash", agentName: "TestAgent")
+            let request = ToolApprovalRequest(toolName: "bash", agentName: "TestServitor")
             return await handler(request)
         }
 
@@ -233,13 +233,13 @@ struct PermissionEnforcementTests {
     @Test("ChatViewModel approval handler returns denial when dismissed")
     @MainActor
     func chatViewModelApprovalHandlerReturnsDenial() async {
-        let mock = MockAgent(responses: ["OK"])
-        let viewModel = ChatViewModel(agent: mock, loadHistory: false)
+        let mock = MockServitor(responses: ["OK"])
+        let viewModel = ChatViewModel(servitor: mock, loadHistory: false)
 
         let handler = viewModel.makeApprovalHandler()
 
         let task = Task {
-            let request = ToolApprovalRequest(toolName: "edit", agentName: "TestAgent")
+            let request = ToolApprovalRequest(toolName: "edit", agentName: "TestServitor")
             return await handler(request)
         }
 

@@ -1,7 +1,7 @@
 # 013 — User Experience Specification
 
 **Status:** complete
-**Last Updated:** 2026-02-10
+**Last Updated:** 2026-02-16
 
 ## Upstream References
 - PRD: §5.1 (The Core Loop), §5.4 (UI Principles), §8 (Progressive Unlocks), §8.1 (Concept), §8.2 (Open Questions)
@@ -38,24 +38,23 @@ Core user loop, UI principles, progressive unlocks, and the project-as-document 
 **Status:** specified
 
 **Properties:**
-- Every task has dual representation: a todo item (sidebar entry) AND a chat interface
-- Every spawned agent is accessible through both representations
-- The dashboard shows all open tasks; the user can drill into any agent
+- Each chat discussion with a servitor represents a task
+- Child servitors represent subtasks
+- This is conceptual — the representation elements (sidebar, tiles, etc.) are part of view architecture (§014)
 
-**Testable assertion:** Every spawned agent appears in both the agent list (sidebar) and has an associated chat view. Clicking an agent in the sidebar opens its chat.
+**Testable assertion:** Each servitor has an associated chat discussion. Child servitors are conceptually subtasks of their parent's task.
 
-### REQ-UX-003: Agent Sidebar
+### REQ-UX-003: Agent Discovery
 **Source:** PRD §5.1, Reader §4
 **Priority:** must-have
 **Status:** specified
 
 **Properties:**
-- The sidebar displays all agents for the current project
-- Each entry shows the agent's name, status, and chat description
-- Jake is always present at the top
-- Selecting an agent shows its chat
+- The system provides a way to find all active servitors
+- Jake gets prominence
+- The user can see what's going on — which servitors are working, waiting, or done
 
-**Testable assertion:** The sidebar lists all live agents. Jake always appears. Clicking an agent selects it and shows its chat. Agent status (working, waiting, done) is visible in the sidebar.
+**Testable assertion:** All active servitors are discoverable. Jake is prominently displayed. Servitor status (working, waiting, done) is visible.
 
 ### REQ-UX-004: No Unsolicited Content
 **Source:** PRD §5.4
@@ -77,10 +76,9 @@ Core user loop, UI principles, progressive unlocks, and the project-as-document 
 
 **Properties:**
 - Different content block types (thinking, tool use, code, chat text) have distinct visual treatments
-- A dedicated "chat only" view mode exists that shows just the conversation
-- Other streams (thinking, tools) are displayed alongside but visually distinct
+- A chat-only view is possible by hiding all other content blocks (thinking, tool use, etc.)
 
-**Testable assertion:** Different content block types render with distinct visual styles. A "chat only" view mode exists that hides non-chat blocks.
+**Testable assertion:** Different content block types render with distinct visual styles. A chat-only view mode exists that hides non-chat blocks.
 
 ### REQ-UX-006: Content Block Rendering
 **Source:** Reader §8 (Content Block Rendering)
@@ -101,7 +99,8 @@ Core user loop, UI principles, progressive unlocks, and the project-as-document 
 **Status:** specified
 
 **Properties:**
-- The app is document-based where the "document" is the project directory
+- The project IS the directory
+- A .project file may exist in the root (possibly a file bundle like Xcode's), but that document isn't the project itself
 - Any directory can be opened as a project, like Claude CLI
 - Standard macOS document trappings: File > Open, Open Recent, Dock icon menus, drag-to-open
 - State restores on app relaunch
@@ -121,16 +120,16 @@ Core user loop, UI principles, progressive unlocks, and the project-as-document 
 
 **Testable assertion:** Two projects can be open in two separate windows simultaneously. The welcome window lists recent projects. Window positions and states restore after quit and relaunch.
 
-### REQ-UX-009: Chat Header
+### REQ-UX-009: Chat Controls
 **Source:** Reader §8 (Chat Header)
 **Priority:** must-have
 **Status:** specified
 
 **Properties:**
-- Each chat view has a header showing the agent name
-- A "New Conversation" button (compose icon `square.and.pencil`, matching Apple's convention) is present
+- List of controls needed around a chat window without prescribing specific UI layout
+- Controls include: agent name display, conversation management (new conversation), status indicators, and tools appropriate to the context
 
-**Testable assertion:** The chat header displays the agent name. The compose button is present and uses SF Symbol `square.and.pencil`.
+**Testable assertion:** Chat views include agent name display, conversation management controls, and status indicators.
 
 ### REQ-UX-010: Progressive Unlock Concept
 **Source:** PRD §8.1
@@ -145,6 +144,7 @@ Core user loop, UI principles, progressive unlocks, and the project-as-document 
 
 **Testable assertion:** A new user sees a limited vocabulary. After N messages, additional vocabulary becomes available. Unlocks are not accompanied by notifications or announcements.
 
+<!-- DROPPED: not a requirement, progressive unlock details are implementation decisions -->
 ### REQ-UX-011: Progressive Unlock Open Questions
 **Source:** PRD §8.2
 **Priority:** deferred
@@ -154,6 +154,19 @@ These progressive unlock details are explicitly deferred: scope (per-project vs 
 
 **Testable assertion:** Deferred. Implementation details to be determined during development.
 
+### REQ-UX-012: Three-Choice Consent Pattern
+**Source:** Design discussion
+**Priority:** should-have
+**Status:** specified
+
+**Properties:**
+- For certain actions, the app offers a yes/no/always pattern
+- User can opt in to having actions happen automatically
+- This must be user-configurable
+- Applies to actions like new window creation, focus changes, etc.
+
+**Testable assertion:** Actions requiring consent present yes/no/always options. Selecting "always" persists the preference. The preference is user-configurable and reversible.
+
 ## 3. Properties Summary
 
 ### UI Invariants
@@ -161,7 +174,6 @@ These progressive unlock details are explicitly deferred: scope (per-project vs 
 | Property | Holds When | Violated When |
 |----------|-----------|---------------|
 | Fresh project = Jake only | No agents or panels visible on first open | UI shows agents/panels before user interacts |
-| Dual representation | Every agent is in both sidebar and chat | Agent visible in one but not the other |
 | No unsolicited content | All UI transitions require user action | Window/modal appears without user action |
 | State restoration | Quit + relaunch restores everything | Layout, agents, or history lost on restart |
 | Project isolation | Two open projects have completely independent state | Action in project A affects project B |
@@ -182,14 +194,20 @@ flowchart TD
 
 ## 4. Open Questions
 
-- **User consent UX for new chats:** PRD §14 lists this as TBD. When Jake spawns an agent, does a new chat tab appear automatically or does the user need to click to see it?
+- **User consent UX for new chats:** Resolved: Three-choice consent pattern (yes/no/always). See REQ-UX-012.
 
-- **UI stream separation details:** PRD §14 lists this as TBD. How exactly are thinking/tool/code streams laid out relative to the chat stream? Expandable sections? Side panel? Tabs?
+- **UI stream separation details:** Resolved: View architecture concern. See §014.
+
+- **Keyboard shortcuts:** Resolved: New spec module §023.
+
+- **Accessibility:** Resolved: New spec module §024.
+
+- **Search:** Resolved: New spec module §025.
 
 ## 5. Coverage Gaps
 
-- **Keyboard shortcuts:** No specification for keyboard navigation between agents, sending messages, or other common actions.
+- **Keyboard shortcuts:** Resolved: See §023 Keyboard Shortcuts.
 
-- **Accessibility:** No specification for VoiceOver, Dynamic Type, or other accessibility features.
+- **Accessibility:** Resolved: See §024 Accessibility.
 
-- **Search:** No specification for searching across agent conversations or history.
+- **Search:** Resolved: See §025 Search.

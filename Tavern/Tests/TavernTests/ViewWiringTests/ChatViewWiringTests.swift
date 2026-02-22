@@ -11,8 +11,8 @@ import ViewInspector
 final class ChatViewWiringTests: XCTestCase {
 
     private func makeViewModel(responses: [String] = []) -> ChatViewModel {
-        let mock = MockAgent(name: "TestAgent", responses: responses)
-        return ChatViewModel(agent: mock, loadHistory: false)
+        let mock = MockServitor(name: "TestServitor", responses: responses)
+        return ChatViewModel(servitor: mock, loadHistory: false)
     }
 
     private func makeAutocomplete() -> SlashCommandAutocomplete {
@@ -108,16 +108,16 @@ final class ChatViewWiringTests: XCTestCase {
         )
     }
 
-    // MARK: - Agent Name Display
+    // MARK: - Servitor Name Display
 
-    /// Header displays the agent name from the view model
-    func testHeaderDisplaysAgentName() throws {
+    /// Header displays the servitor name from the view model
+    func testHeaderDisplaysServitorName() throws {
         let viewModel = makeViewModel()
         let view = ChatView(viewModel: viewModel, autocomplete: makeAutocomplete(), fileMention: makeFileMention())
 
         let sut = try view.inspect()
-        // The header should contain the agent name text
-        let headerText = try sut.find(text: "TestAgent")
+        // The header should contain the servitor name text
+        let headerText = try sut.find(text: "TestServitor")
         XCTAssertNotNil(headerText)
     }
 }

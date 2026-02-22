@@ -1,7 +1,7 @@
 # 000 — Formal Specification Index
 
 **Status:** complete
-**Last Updated:** 2026-02-08
+**Last Updated:** 2026-02-16
 
 ## Purpose
 
@@ -68,7 +68,7 @@ Traceability matrix mapping every PRD section to its spec module(s). Every requi
 
 | Doc # | Module | Prefix | Status | Requirements Count |
 |-------|--------|--------|--------|-------------------|
-| 002 | 002-invariants.md | REQ-INV | complete | 8 |
+| 002 | 002-invariants.md | REQ-INV | complete | 9 |
 | 003 | 003-system-architecture.md | REQ-ARCH | complete | 10 |
 | 004 | 004-agents.md | REQ-AGT | complete | 10 |
 | 005 | 005-spawning.md | REQ-SPN | complete | 10 |
@@ -80,13 +80,42 @@ Traceability matrix mapping every PRD section to its spec module(s). Every requi
 | 011 | 011-sandbox.md | REQ-SBX | complete | 8 |
 | 012 | 012-workflows.md | REQ-WRK | complete | 8 |
 | 013 | 013-user-experience.md | REQ-UX | complete | 11 |
-| 014 | 014-view-architecture.md | REQ-VIW | complete | 9 |
-| 015 | 015-observability.md | REQ-OBS | complete | 11 |
-| 016 | 016-quality.md | REQ-QA | complete | 16 |
+| 014 | 014-view-architecture.md | REQ-VIW | complete | 11 |
+| 015 | 015-observability.md | REQ-OBS | complete | 9 |
+| 016 | 016-quality.md | REQ-QA | complete | 17 |
 | 017 | 017-v1-scope.md | REQ-V1 | complete | 17 |
 | 018 | 018-spec-fidelity.md | REQ-FID | complete | 7 |
+| 019 | 019-states-modes.md | REQ-STM | complete | 7 |
+| 020 | 020-servitor-trees.md | REQ-TRE | complete | 6 |
+| 021 | 021-capability-delegation.md | REQ-CAP | complete | 6 |
+| 022 | 022-chat-discussions.md | REQ-CDS | complete | 5 |
+| 023 | 023-keyboard-shortcuts.md | REQ-KEY | stub | 0 |
+| 024 | 024-accessibility.md | REQ-ACC | stub | 0 |
+| 025 | 025-search.md | REQ-SRC | stub | 0 |
 
-**Total requirements:** 162
+**Total requirements:** 188
+
+## Pinned Decisions
+
+The following items are deferred design decisions tracked as beads (label: `spec-pin`). They represent questions that emerged during spec review and will be addressed as the system matures.
+
+1. Safe mode / pause button (§007, §019)
+2. Notification prioritization (§007, §009)
+3. Message protocol spec section + ADR (§009, §010)
+4. Data store layering ADR (§010)
+5. Sandbox protocol ADR (§011)
+6. Workflow template format ADR (§012)
+7. File locking (§010)
+8. Rate limiting (§009)
+9. Privacy / capability-gated communication (§009)
+10. Responsive layout (§014)
+11. Tiling constraints (§014)
+12. Prompt composition evolution (§008)
+13. Capability delegation PRD backfill (§021)
+14. Sandbox integrity verification (§011)
+15. Model selection system — PRD + spec (§004, §005)
+16. Token budget fine-tuning (§005)
+17. Naming scheme cycling rules — detailed (§005)
 
 ## Verification Rules
 
@@ -94,3 +123,4 @@ Traceability matrix mapping every PRD section to its spec module(s). Every requi
 2. Every spec module must list its upstream PRD references
 3. Requirements use the format REQ-PREFIX-NNN
 4. Status progression: skeleton -> partial -> complete -> verified
+5. Dropped requirements use `~~strikethrough~~` on the heading and all body content (Source, Priority, Properties, Testable assertion). The Status line is **not** struck through and reads `dropped — *rationale in italics*`. No hidden HTML comments — the rationale is always visible inline.

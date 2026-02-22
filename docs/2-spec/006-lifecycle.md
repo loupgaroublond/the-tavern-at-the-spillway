@@ -1,7 +1,7 @@
 # 006 — Lifecycle Specification
 
 **Status:** complete
-**Last Updated:** 2026-02-10
+**Last Updated:** 2026-02-16
 
 ## Upstream References
 - PRD: §12 (Fish or Cut Bait), §13 (Rewind and Branch)
@@ -27,7 +27,7 @@ Agent lifecycle management including the "fish or cut bait" decision pattern, re
 
 **Properties:**
 - The system detects unproductive agents rather than allowing them to continue indefinitely
-- Four trigger conditions exist: token budget exceeded, changeset fundamentally wrong, agent spinning, entire gang on wrong path
+- Five trigger conditions exist: token budget exceeded, changeset fundamentally wrong, agent spinning, entire gang on wrong path, the servitor decides to abort (self-termination)
 - Each trigger condition is detectable programmatically
 - When a trigger fires, the agent transitions to Failed/Reaped state
 - The parent is notified with the specific trigger reason
@@ -84,6 +84,9 @@ Agent lifecycle management including the "fish or cut bait" decision pattern, re
 - Agent state can be checkpointed at any point
 - Rewinding to a checkpoint restores the agent's conversation state and changeset to that point
 - The original state is not destroyed by rewinding
+- Erlang-style gang termination via capability — agents may fire off a team and if any one fails, the whole gang is terminated and restarted quickly
+- Artifacts must be preserved in changeset drafts for debugging
+- See §020 Servitor Trees for detailed supervision strategies
 
 **Testable assertion:** Deferred. When implemented: a checkpoint can be created at any point. Rewinding to a checkpoint restores the agent and its changeset to that point.
 
@@ -125,6 +128,8 @@ Agent lifecycle management including the "fish or cut bait" decision pattern, re
 
 ### Agent Lifecycle State Machine
 
+Note: See §019 for canonical state machine. This graph is a simplified lifecycle view.
+
 ```mermaid
 stateDiagram-v2
     [*] --> Alive : spawn
@@ -149,16 +154,22 @@ stateDiagram-v2
 
 ## 4. Open Questions
 
-- **Rewind storage:** What is preserved at a checkpoint? Full conversation history? Changeset state? Agent configuration? All of the above?
+- **Rewind storage:** Resolved: Set at runtime per sandbox rules. Can mean conversation history only, whole changeset, or other distinctions.
 
-- **Branch limit:** How many branches can exist simultaneously? Is there a limit to prevent resource exhaustion?
+- **Branch limit:** Resolved: No limits.
 
-- **Automatic reaping:** When does automatic cleanup of dead agent artifacts occur? After a time period? When storage is constrained? Never (always manual)?
+- **Automatic reaping:** Resolved: Keep artifacts unless space concerns arise. Manual cleanup initially.
+
+- **Gang-level fish-or-cut-bait:** Resolved: Parent agent may decide to cut bait at the whole gang level. See §020.
+
+- **Resummoned servitor:** Resolved: System prompt tells it as much and provides as much context as possible.
+
+- **Hibernation:** Resolved: Hibernation is waiting idle.
 
 ## 5. Coverage Gaps
 
-- **Gang-level fish-or-cut-bait:** The PRD mentions "whole gang going down wrong path" but does not specify how this is detected at the tree level vs individual agent level.
+- **Gang-level fish-or-cut-bait:** Resolved: See §020 Servitor Trees for gang-level supervision strategies.
 
 - **Restart parameters:** When an agent is restarted after FOCB, what changes? Different prompt? Different model? Different budget? The PRD says "kill and restart" but does not specify what varies.
 
-- **Hibernation triggers:** What causes an agent to hibernate vs expire? The PRD mentions both but does not distinguish the conditions.
+- **Hibernation triggers:** Resolved: Hibernation is waiting idle. No separate trigger distinction needed.

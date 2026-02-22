@@ -1,7 +1,7 @@
 # 012 — Workflows Specification
 
 **Status:** complete
-**Last Updated:** 2026-02-10
+**Last Updated:** 2026-02-16
 
 ## Upstream References
 - PRD: §10 (Workflows), §9.1 (Starter Templates), §11 (Gang of Experts), §6.5 (Merge Queue)
@@ -33,6 +33,7 @@ Workflow engine, starter templates, gang of experts pattern, and merge queue. Mo
 
 **Testable assertion:** Deferred. When implemented: a workflow can be defined as a set of states and transitions. The engine prevents invalid transitions. Incomplete steps are surfaced.
 
+<!-- DROPPED: example of a workflow, not a spec requirement -->
 ### REQ-WRK-002: Rule of Five Template
 **Source:** PRD §9.1
 **Priority:** deferred
@@ -45,6 +46,7 @@ Workflow engine, starter templates, gang of experts pattern, and merge queue. Mo
 
 **Testable assertion:** Deferred. When implemented: the Rule of 5 template spawns 5 sequential agents. Each agent receives the previous agent's output. The final output reflects 5 passes of refinement.
 
+<!-- DROPPED: example of a workflow, not a spec requirement -->
 ### REQ-WRK-003: Verification Layers Template
 **Source:** PRD §9.1
 **Priority:** deferred
@@ -69,6 +71,7 @@ Workflow engine, starter templates, gang of experts pattern, and merge queue. Mo
 
 **Testable assertion:** Deferred. When implemented: users can edit template definitions. New templates can be created and saved. Templates persist in `.tavern/`.
 
+<!-- DROPPED: Gang of Experts is a natural part of workflows, not a standalone requirement -->
 ### REQ-WRK-005: Gang of Experts
 **Source:** PRD §11
 **Priority:** deferred
@@ -86,6 +89,8 @@ Workflow engine, starter templates, gang of experts pattern, and merge queue. Mo
 **Priority:** deferred
 **Status:** specified
 
+**Note:** This should be built on top of the workflow engine (REQ-WRK-001).
+
 **Properties:**
 - Changesets merge serially, not in parallel
 - Queue order is visible to all queued agents
@@ -101,10 +106,9 @@ Workflow engine, starter templates, gang of experts pattern, and merge queue. Mo
 
 **Properties:**
 - Completed output is verified against the specification
-- Cross-agent interference is detected (agent A destroying agent B's work)
 - All required tasks are verified as complete (holistic check)
 
-**Testable assertion:** Deferred. When implemented: the spec engine can compare agent output against a specification. Cross-agent interference is detected. Task completion is verified holistically.
+**Testable assertion:** Deferred. When implemented: the spec engine can compare agent output against a specification. Task completion is verified holistically.
 
 ### REQ-WRK-008: Workflow Composability
 **Source:** Reader §7 (Workflow Engine)
@@ -118,6 +122,29 @@ Workflow engine, starter templates, gang of experts pattern, and merge queue. Mo
 
 **Testable assertion:** Deferred. When implemented: workflows can nest and compose without circular dependencies.
 
+### REQ-WRK-009: Workflow Engine
+**Source:** Reader §7 (Workflow Engine)
+**Priority:** deferred
+**Status:** specified
+
+**Properties:**
+- A deterministic state machine runner for workflow steps
+- The engine executes workflow state machines, preventing invalid transitions
+- Workflows can contain other workflows as steps (Turing complete, no termination guarantee)
+
+**Testable assertion:** Deferred. When implemented: the workflow engine executes state machines. Invalid transitions are prevented. Workflows can contain other workflows as steps.
+
+### REQ-WRK-010: Workflow Recovery
+**Source:** Reader §7 (Workflow Engine)
+**Priority:** deferred
+**Status:** specified
+
+**Properties:**
+- Define recovery process at different workflow points: start over, hard fail, go to a recovery stage
+- Each workflow step has a defined recovery behavior on failure
+
+**Testable assertion:** Deferred. When implemented: each workflow step has a defined recovery behavior. On failure, the system executes the defined recovery (restart, hard fail, or recovery stage).
+
 ## 3. Properties Summary
 
 ### Workflow Properties (Deferred)
@@ -128,7 +155,6 @@ Workflow engine, starter templates, gang of experts pattern, and merge queue. Mo
 | Stage gating | Failed stage blocks progression | Output passes despite stage failure |
 | Serial merge | Changesets merge one at a time | Parallel merge produces conflicts |
 | Composability | Nested workflows maintain their guarantees | Nesting breaks inner workflow |
-| Interference detection | Cross-agent damage is caught | Agent A silently overwrites agent B's work |
 
 ### Workflow State Machine (Conceptual)
 
@@ -211,16 +237,14 @@ flowchart LR
 
 ## 5. Open Questions
 
-- **Workflow composability:** How do workflows combine? Can one workflow be a step in another? What prevents circular composition?
+- **Workflow composability:** Resolved: Workflows can contain workflows. Turing complete, no termination guarantee.
 
-- **Template format:** What format do workflow templates use? YAML? JSON? A custom DSL? How are they versioned?
+- **Template format:** Pinned: Potential ADR. See pinned items.
 
-- **Expert prompt management:** Where do expert prompts live? In `.tavern/`? Are they per-project or global?
+- **Expert prompt management:** Resolved: Dropped as standalone concept — natural part of workflows.
 
 ## 6. Coverage Gaps
 
-- **Workflow failure recovery:** No specification for what happens when a workflow step fails partway through. Retry from start? Resume from failure point? Manual intervention?
+- **Workflow failure recovery:** Now covered by REQ-WRK-010.
 
-- **Merge conflict resolution:** The merge queue reduces conflicts but does not eliminate them. No specification for how remaining conflicts are handled.
-
-- **Workflow metrics:** No specification for tracking workflow-level metrics (total time, step durations, failure rates) separate from agent-level metrics.
+- **Merge conflict resolution:** See merge queue (REQ-WRK-006).

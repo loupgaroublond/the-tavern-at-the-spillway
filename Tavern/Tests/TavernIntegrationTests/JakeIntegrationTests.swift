@@ -148,9 +148,9 @@ final class JakeIntegrationTests: XCTestCase {
 
     /// Jake with tool handler executes summon and continues
     func testJakeWithToolHandlerExecutesSummonAndContinues() async throws {
-        let registry = AgentRegistry()
+        let registry = ServitorRegistry()
         let nameGenerator = NameGenerator(theme: .lotr)
-        let spawner = ServitorSpawner(
+        let spawner = MortalSpawner(
             registry: registry,
             nameGenerator: nameGenerator,
             projectURL: projectURL
@@ -159,8 +159,8 @@ final class JakeIntegrationTests: XCTestCase {
         nonisolated(unsafe) var summonedName: String?
         let server = createTavernMCPServer(
             spawner: spawner,
-            onSummon: { servitor in
-                summonedName = servitor.name
+            onSummon: { mortal in
+                summonedName = mortal.name
             },
             onDismiss: { _ in }
         )
@@ -181,9 +181,9 @@ final class JakeIntegrationTests: XCTestCase {
 
     /// Jake tool handler loop continues for multiple spawns
     func testJakeToolHandlerLoopContinuesForMultipleSpawns() async throws {
-        let registry = AgentRegistry()
+        let registry = ServitorRegistry()
         let nameGenerator = NameGenerator(theme: .lotr)
-        let spawner = ServitorSpawner(
+        let spawner = MortalSpawner(
             registry: registry,
             nameGenerator: nameGenerator,
             projectURL: projectURL

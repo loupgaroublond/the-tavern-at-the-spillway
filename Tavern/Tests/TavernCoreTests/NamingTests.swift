@@ -135,12 +135,12 @@ struct NameGeneratorTests {
         let generator = NameGenerator(theme: miniTheme)
 
         let name1 = generator.nextNameOrFallback() // "Solo"
-        let name2 = generator.nextNameOrFallback() // "Agent-1"
-        let name3 = generator.nextNameOrFallback() // "Agent-2"
+        let name2 = generator.nextNameOrFallback() // "Servitor-1"
+        let name3 = generator.nextNameOrFallback() // "Servitor-2"
 
         #expect(name1 == "Solo")
-        #expect(name2 == "Agent-1")
-        #expect(name3 == "Agent-2")
+        #expect(name2 == "Servitor-1")
+        #expect(name3 == "Servitor-2")
     }
 
     @Test("Generator tracks used names")

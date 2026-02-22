@@ -122,28 +122,28 @@ struct ProjectContentView: View {
             VStack(spacing: 0) {
                 TavernHeader(projectName: project.name, projectURL: project.rootURL)
                 Divider()
-                AgentListView(
-                    viewModel: coordinator.agentListViewModel,
-                    onSpawnAgent: {
+                ServitorListView(
+                    viewModel: coordinator.servitorListViewModel,
+                    onSpawnServitor: {
                         do {
                             try coord.summonServitor()
                         } catch {
-                            print("Failed to spawn agent: \(error)")
+                            print("Failed to spawn servitor: \(error)")
                         }
                     },
-                    onCloseAgent: { id in
+                    onCloseServitor: { id in
                         do {
                             try coord.closeServitor(id: id)
                         } catch {
-                            print("Failed to close agent: \(error)")
+                            print("Failed to close servitor: \(error)")
                         }
                     },
                     onUpdateDescription: { id, description in
-                        SessionStore.updateAgent(id: id, chatDescription: description)
-                        coord.agentListViewModel.refreshItems()
+                        SessionStore.updateServitor(id: id, chatDescription: description)
+                        coord.servitorListViewModel.refreshItems()
                     },
-                    onSelectAgent: { id in
-                        coord.selectAgent(id: id)
+                    onSelectServitor: { id in
+                        coord.selectServitor(id: id)
                     }
                 )
             }
@@ -263,9 +263,9 @@ private struct TavernHeader: View {
     // (NavigationSplitView's OutlineListCoordinator crashes in preview)
     let projectURL = URL(fileURLWithPath: "/tmp/tavern-preview")
     let jake = Jake(projectURL: projectURL, loadSavedSession: false)
-    let registry = AgentRegistry()
+    let registry = ServitorRegistry()
     let nameGenerator = NameGenerator(theme: .lotr)
-    let spawner = ServitorSpawner(registry: registry, nameGenerator: nameGenerator, projectURL: projectURL)
+    let spawner = MortalSpawner(registry: registry, nameGenerator: nameGenerator, projectURL: projectURL)
     let coordinator = TavernCoordinator(jake: jake, spawner: spawner, projectURL: projectURL)
     let viewModel = ChatViewModel(jake: jake, loadHistory: false)
     let dispatcher = SlashCommandDispatcher()
@@ -273,12 +273,12 @@ private struct TavernHeader: View {
     let fileMention = FileMentionAutocomplete(projectRoot: projectURL)
 
     HSplitView {
-        AgentListView(
-            viewModel: coordinator.agentListViewModel,
-            onSpawnAgent: {},
-            onCloseAgent: { _ in },
+        ServitorListView(
+            viewModel: coordinator.servitorListViewModel,
+            onSpawnServitor: {},
+            onCloseServitor: { _ in },
             onUpdateDescription: { _, _ in },
-            onSelectAgent: { _ in }
+            onSelectServitor: { _ in }
         )
         .frame(width: 250)
 

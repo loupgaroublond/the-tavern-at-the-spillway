@@ -9,13 +9,13 @@ import os.log
 /// Phase 1: summon + dismiss only (messaging/forwarding/reuse later)
 ///
 /// - Parameters:
-///   - spawner: The ServitorSpawner for creating/dismissing servitors
+///   - spawner: The MortalSpawner for creating/dismissing mortals
 ///   - onSummon: Callback when a servitor is summoned (for UI updates)
 ///   - onDismiss: Callback when a servitor is dismissed (for UI updates)
 /// - Returns: An SDKMCPServer configured with Tavern tools
 public func createTavernMCPServer(
-    spawner: ServitorSpawner,
-    onSummon: @escaping @Sendable (Servitor) async -> Void,
+    spawner: MortalSpawner,
+    onSummon: @escaping @Sendable (Mortal) async -> Void,
     onDismiss: @escaping @Sendable (UUID) async -> Void
 ) -> SDKMCPServer {
     SDKMCPServer(
@@ -38,7 +38,7 @@ public func createTavernMCPServer(
                     TavernLogger.coordination.info("MCP summon_servitor: assignment=\(assignment ?? "<none>"), name=\(name ?? "<auto>")")
 
                     do {
-                        let servitor: Servitor
+                        let servitor: Mortal
                         if let name = name {
                             servitor = try spawner.summon(name: name, assignment: assignment)
                         } else if let assignment = assignment {

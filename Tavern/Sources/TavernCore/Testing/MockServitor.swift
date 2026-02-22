@@ -3,25 +3,25 @@ import Foundation
 // MARK: - Provenance: REQ-ARCH-009, REQ-QA-002
 
 /// A mock agent for testing ViewModels and coordinators without real Claude calls
-/// Conforms to `Agent` protocol — pops canned responses from a queue.
+/// Conforms to `Servitor` protocol — pops canned responses from a queue.
 ///
 /// Usage:
 /// ```swift
-/// let mock = MockAgent(responses: ["Hello!", "Goodbye!"])
+/// let mock = MockServitor(responses: ["Hello!", "Goodbye!"])
 /// let vm = ChatViewModel(agent: mock, loadHistory: false)
 /// vm.inputText = "Hi"
 /// await vm.sendMessage()
 /// // mock.sendCalls == ["Hi"]
 /// // vm.messages contains user + agent messages
 /// ```
-public final class MockAgent: Agent, @unchecked Sendable {
+public final class MockServitor: Servitor, @unchecked Sendable {
 
-    // MARK: - Agent Protocol
+    // MARK: - Servitor Protocol
 
     public let id: UUID
     public let name: String
 
-    public var state: AgentState {
+    public var state: ServitorState {
         queue.sync { _state }
     }
 
@@ -59,20 +59,20 @@ public final class MockAgent: Agent, @unchecked Sendable {
 
     // MARK: - Private State
 
-    private let queue = DispatchQueue(label: "com.tavern.MockAgent")
-    private var _state: AgentState = .idle
+    private let queue = DispatchQueue(label: "com.tavern.MockServitor")
+    private var _state: ServitorState = .idle
     private var _sessionMode: PermissionMode = .plan
 
     // MARK: - Initialization
 
     /// Create a mock agent with canned responses
     /// - Parameters:
-    ///   - name: Display name (default "MockAgent")
+    ///   - name: Display name (default "MockServitor")
     ///   - responses: Ordered responses to return from send()
     ///   - defaultResponse: Fallback when responses exhausted (default "")
     public init(
         id: UUID = UUID(),
-        name: String = "MockAgent",
+        name: String = "MockServitor",
         responses: [String] = [],
         defaultResponse: String = ""
     ) {
@@ -82,7 +82,7 @@ public final class MockAgent: Agent, @unchecked Sendable {
         self.defaultResponse = defaultResponse
     }
 
-    // MARK: - Agent Protocol
+    // MARK: - Servitor Protocol
 
     public func send(_ message: String) async throws -> String {
         queue.sync {

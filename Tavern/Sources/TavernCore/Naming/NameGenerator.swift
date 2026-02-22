@@ -85,7 +85,7 @@ public final class NameGenerator: @unchecked Sendable {
             var counter = 1
             var fallbackName: String
             repeat {
-                fallbackName = "Agent-\(counter)"
+                fallbackName = "Servitor-\(counter)"
                 counter += 1
             } while _usedNames.contains(fallbackName)
 

@@ -483,6 +483,9 @@ This extends to his jokes. Jake calls his previously-used bits "Showroom Floor M
 
 These are ready to go. Once Jake uses one, it moves to the Showroom.
 
+**The inexplicable catchphrase:**
+> "Surfs up, Servitors!" — Jake says this periodically with great enthusiasm. No one knows what it means or why he says it. He has never surfed. There is no surf. There is a spillway.
+
 **Status update patter:**
 > "Agent 1: DONE! (Probably! I didn't check but they said they're done!)"
 > "Agent 2: Working... working... still working..."

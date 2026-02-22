@@ -132,22 +132,22 @@ final class ChatViewModelIntegrationTests: XCTestCase {
             "Messages should accumulate across sends")
     }
 
-    /// Servitor agent can send messages through ChatViewModel
-    func testServitorAgentCanSendMessages() async throws {
-        let servitor = Servitor(
+    /// Mortal servitor can send messages through ChatViewModel
+    func testMortalServitorCanSendMessages() async throws {
+        let mortal = Mortal(
             name: "ChatWorker",
             assignment: "Respond to messages",
             projectURL: projectURL,
             loadSavedSession: false
         )
-        let viewModel = ChatViewModel(agent: servitor, projectPath: projectURL.path, loadHistory: false)
+        let viewModel = ChatViewModel(servitor: mortal, projectPath: projectURL.path, loadHistory: false)
 
-        viewModel.inputText = "Say SERVITOR_CHAT_OK in one word"
+        viewModel.inputText = "Say MORTAL_CHAT_OK in one word"
         await viewModel.sendMessage()
 
         XCTAssertGreaterThanOrEqual(viewModel.messages.count, 2,
-            "Servitor ChatViewModel should have user + agent messages")
-        XCTAssertEqual(viewModel.agentName, "ChatWorker",
-            "Agent name should match servitor name")
+            "Mortal ChatViewModel should have user + servitor messages")
+        XCTAssertEqual(viewModel.servitorName, "ChatWorker",
+            "Servitor name should match mortal name")
     }
 }

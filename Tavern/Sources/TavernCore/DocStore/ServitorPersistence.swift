@@ -2,17 +2,17 @@ import Foundation
 
 // MARK: - Provenance: REQ-INV-005, REQ-LCM-004
 
-/// Manages persisting agents to the doc store
-public final class AgentPersistence: @unchecked Sendable {
+/// Manages persisting servitors to the doc store
+public final class ServitorPersistence: @unchecked Sendable {
 
     // MARK: - Dependencies
 
     private let docStore: DocStore
-    private let queue = DispatchQueue(label: "com.tavern.AgentPersistence")
+    private let queue = DispatchQueue(label: "com.tavern.ServitorPersistence")
 
     // MARK: - Initialization
 
-    /// Create an agent persistence manager
+    /// Create a servitor persistence manager
     /// - Parameter docStore: The doc store to persist to
     public init(docStore: DocStore) {
         self.docStore = docStore
@@ -23,8 +23,8 @@ public final class AgentPersistence: @unchecked Sendable {
     /// Save a servitor to the doc store
     /// - Parameter servitor: The servitor to save
     /// - Throws: If saving fails
-    public func save(_ servitor: Servitor) throws {
-        let node = AgentNode(from: servitor)
+    public func save(_ servitor: Mortal) throws {
+        let node = ServitorNode(from: servitor)
         let document = node.toDocument()
         try docStore.save(document)
     }
@@ -32,7 +32,7 @@ public final class AgentPersistence: @unchecked Sendable {
     /// Save multiple servitors
     /// - Parameter servitors: The servitors to save
     /// - Throws: If any save fails
-    public func saveAll(_ servitors: [Servitor]) throws {
+    public func saveAll(_ servitors: [Mortal]) throws {
         for servitor in servitors {
             try save(servitor)
         }
@@ -40,27 +40,27 @@ public final class AgentPersistence: @unchecked Sendable {
 
     // MARK: - Load Operations
 
-    /// Load an agent node from the doc store
+    /// Load a servitor node from the doc store
     /// - Parameter name: The agent's name (used as document ID)
-    /// - Returns: The agent node
+    /// - Returns: The servitor node
     /// - Throws: If loading fails
-    public func load(name: String) throws -> AgentNode {
+    public func load(name: String) throws -> ServitorNode {
         let documentId = name.lowercased().replacingOccurrences(of: " ", with: "-")
         let document = try docStore.read(id: documentId)
-        return try AgentNode.from(document: document)
+        return try ServitorNode.from(document: document)
     }
 
-    /// Load all agent nodes from the doc store
-    /// - Returns: Array of agent nodes
+    /// Load all servitor nodes from the doc store
+    /// - Returns: Array of servitor nodes
     /// - Throws: If loading fails
-    public func loadAll() throws -> [AgentNode] {
+    public func loadAll() throws -> [ServitorNode] {
         let documents = try docStore.readAll()
         return documents.compactMap { doc in
-            try? AgentNode.from(document: doc)
+            try? ServitorNode.from(document: doc)
         }
     }
 
-    /// Restore a Servitor from the doc store
+    /// Restore a Mortal from the doc store
     /// - Parameters:
     ///   - name: The servitor's name
     ///   - projectURL: Project directory URL for the restored servitor
@@ -71,7 +71,7 @@ public final class AgentPersistence: @unchecked Sendable {
         name: String,
         projectURL: URL,
         verifier: CommitmentVerifier = CommitmentVerifier()
-    ) throws -> Servitor {
+    ) throws -> Mortal {
         let node = try load(name: name)
 
         // Create commitment list from stored commitments
@@ -82,7 +82,7 @@ public final class AgentPersistence: @unchecked Sendable {
         }
 
         // Create the servitor
-        let servitor = Servitor(
+        let servitor = Mortal(
             id: node.id,
             name: node.name,
             assignment: node.assignment,
@@ -105,7 +105,7 @@ public final class AgentPersistence: @unchecked Sendable {
 
     // MARK: - Delete Operations
 
-    /// Delete an agent's persisted data
+    /// Delete a servitor's persisted data
     /// - Parameter name: The agent's name
     /// - Throws: If deletion fails
     public func delete(name: String) throws {
@@ -113,7 +113,7 @@ public final class AgentPersistence: @unchecked Sendable {
         try docStore.delete(id: documentId)
     }
 
-    /// Check if an agent exists in the doc store
+    /// Check if a servitor exists in the doc store
     /// - Parameter name: The agent's name
     /// - Returns: true if persisted data exists
     public func exists(name: String) -> Bool {
@@ -121,8 +121,8 @@ public final class AgentPersistence: @unchecked Sendable {
         return docStore.exists(id: documentId)
     }
 
-    /// List all persisted agent names
-    /// - Returns: Array of agent names
+    /// List all persisted servitor names
+    /// - Returns: Array of servitor names
     /// - Throws: If listing fails
     public func listAll() throws -> [String] {
         let documents = try docStore.readAll()

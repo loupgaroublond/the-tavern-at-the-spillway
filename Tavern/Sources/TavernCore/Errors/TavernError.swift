@@ -9,8 +9,8 @@ public enum TavernError: Error, LocalizedError {
     /// Session couldn't be resumed - it may be corrupt, expired, or a test artifact
     case sessionCorrupt(sessionId: String, underlyingError: Error?)
 
-    /// Agent name already in use by another agent in this project
-    case agentNameConflict(name: String)
+    /// Servitor name already in use by another servitor in this project
+    case servitorNameConflict(name: String)
 
     /// Commitment verification timed out waiting for result
     case commitmentTimeout(commitmentId: String)
@@ -31,8 +31,8 @@ public enum TavernError: Error, LocalizedError {
         switch self {
         case .sessionCorrupt(let sessionId, _):
             return "Session '\(sessionId)' could not be resumed"
-        case .agentNameConflict(let name):
-            return "Agent name '\(name)' is already in use"
+        case .servitorNameConflict(let name):
+            return "Servitor name '\(name)' is already in use"
         case .commitmentTimeout(let commitmentId):
             return "Commitment '\(commitmentId)' verification timed out"
         case .mcpServerFailed(let reason):

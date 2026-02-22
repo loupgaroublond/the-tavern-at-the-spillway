@@ -4,49 +4,49 @@ import ViewInspector
 @testable import TavernCore
 @testable import Tavern
 
-/// Grade 1-2 wiring tests: verify AgentListView correctly binds to AgentListViewModel
+/// Grade 1-2 wiring tests: verify ServitorListView correctly binds to ServitorListViewModel
 /// These run as unit tests (no app launch, no GUI, no focus stealing).
 /// ViewInspector introspects the SwiftUI view hierarchy at test time.
 @MainActor
-final class AgentListViewWiringTests: XCTestCase {
+final class ServitorListViewWiringTests: XCTestCase {
 
-    private func makeViewModel() -> AgentListViewModel {
+    private func makeViewModel() -> ServitorListViewModel {
         let projectURL = URL(fileURLWithPath: "/tmp/tavern-wiring-test")
         let jake = Jake(projectURL: projectURL, loadSavedSession: false)
-        let registry = AgentRegistry()
+        let registry = ServitorRegistry()
         let nameGen = NameGenerator(theme: .lotr)
-        let spawner = ServitorSpawner(
+        let spawner = MortalSpawner(
             registry: registry,
             nameGenerator: nameGen,
             projectURL: projectURL
         )
-        return AgentListViewModel(jake: jake, spawner: spawner)
+        return ServitorListViewModel(jake: jake, spawner: spawner)
     }
 
     // MARK: - List Rendering
 
-    /// Agent list renders and contains the list view
-    func testAgentListExists() throws {
+    /// Servitor list renders and contains the list view
+    func testServitorListExists() throws {
         let viewModel = makeViewModel()
-        let view = AgentListView(viewModel: viewModel)
+        let view = ServitorListView(viewModel: viewModel)
 
         let sut = try view.inspect()
-        let list = try sut.find(viewWithAccessibilityIdentifier: "agentList")
+        let list = try sut.find(viewWithAccessibilityIdentifier: "servitorList")
         XCTAssertNotNil(list)
     }
 
     // MARK: - Spawn Button
 
-    /// Spawn agent button exists in toolbar
+    /// Spawn servitor button exists in toolbar
     func testSpawnButtonExists() throws {
         let viewModel = makeViewModel()
-        let view = AgentListView(
+        let view = ServitorListView(
             viewModel: viewModel,
-            onSpawnAgent: { }
+            onSpawnServitor: { }
         )
 
         let sut = try view.inspect()
-        let spawnButton = try sut.find(viewWithAccessibilityIdentifier: "spawnAgentButton")
+        let spawnButton = try sut.find(viewWithAccessibilityIdentifier: "spawnServitorButton")
         XCTAssertNotNil(spawnButton)
     }
 
@@ -67,14 +67,14 @@ final class AgentListViewWiringTests: XCTestCase {
     func testJakeSelectedByDefault() throws {
         let viewModel = makeViewModel()
 
-        XCTAssertNotNil(viewModel.selectedAgentId, "Should have a selection by default")
-        XCTAssertEqual(viewModel.selectedAgentId, viewModel.items.first?.id,
+        XCTAssertNotNil(viewModel.selectedServitorId, "Should have a selection by default")
+        XCTAssertEqual(viewModel.selectedServitorId, viewModel.items.first?.id,
                        "Jake should be selected by default")
     }
 
     // MARK: - Selection Binding
 
-    /// Selection binding updates when selectAgent is called
+    /// Selection binding updates when selectServitor is called
     func testSelectionBindingUpdates() throws {
         let viewModel = makeViewModel()
 
@@ -82,7 +82,7 @@ final class AgentListViewWiringTests: XCTestCase {
         let jakeId = viewModel.items[0].id
 
         // Selecting Jake again should keep it selected
-        viewModel.selectAgent(id: jakeId)
-        XCTAssertEqual(viewModel.selectedAgentId, jakeId)
+        viewModel.selectServitor(id: jakeId)
+        XCTAssertEqual(viewModel.selectedServitorId, jakeId)
     }
 }

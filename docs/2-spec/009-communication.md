@@ -1,7 +1,7 @@
 # 009 — Communication Specification
 
 **Status:** complete
-**Last Updated:** 2026-02-10
+**Last Updated:** 2026-02-16
 
 ## Upstream References
 - PRD: §5.3 (Bubbling), §5.5 (Question Triage)
@@ -42,6 +42,8 @@ Bubbling mechanism, question triage, and inter-agent communication. Defines how 
 - Sibling agents (children of the same parent) can exchange messages directly
 - Lateral communication does not require routing through the parent
 - The parent retains visibility into lateral communication (can observe, but is not a relay)
+- Lateral communication is a capability granted by the parent servitor (see §021)
+- Scope is configurable: siblings only, or cousins as well
 
 **Testable assertion:** Two agents with the same parent can exchange messages directly. Messages are delivered without passing through the parent agent.
 
@@ -146,16 +148,16 @@ Solid lines = upward bubbling. Dashed = lateral and direct.
 
 ## 4. Open Questions
 
-- **?5 -- Bubbling Up Process:** Exactly how does bubbling work? Does the child ask the parent who decides to escalate? Can messages skip levels? Is there prioritization between bubbling messages?
+- **?5 -- Bubbling Up Process:** Resolved: Ad-hoc in the moment, as the situation demands, modulated by permissions and capabilities the servitor has.
 
-- **Message protocol specifics:** PRD §14 lists this as TBD. What are the concrete message types and their expected responses?
+- **Message protocol specifics:** Resolved: Needs its own spec section and ADR. Pinned for future design.
 
-- **Lateral communication routing:** How do siblings discover each other? Through the parent? Through the doc store? Through a registry?
+- **Lateral communication routing:** Resolved: Servitors have tools to query their position in the hierarchy and find other servitors.
 
 ## 5. Coverage Gaps
 
-- **Message delivery guarantees:** No specification for what happens when a message cannot be delivered (agent died, busy, out of context). Is there retry logic? Dead-letter handling?
+- **Message delivery guarantees:** Deterministic messages (code events) have their guarantees. Agent-to-agent messages use messaging protocol with confirmation responses. See pinned message protocol spec.
 
-- **Communication rate limiting:** No specification for preventing message floods between agents. A chatty agent could overwhelm its parent with bubbled questions.
+- **Communication rate limiting:** Pinned. Agents have token budgets as a natural limit.
 
-- **Privacy/scoping:** No specification for whether agents can read messages not addressed to them. The shared workspace pattern suggests all agents can see everything, but this may not be desirable for all message types.
+- **Privacy/scoping:** Pinned. Capabilities will help here. Project-specific configuration.

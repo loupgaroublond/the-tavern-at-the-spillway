@@ -6,7 +6,7 @@ import XCTest
 /// Run with: redo test-grade3
 /// Or: swift test --filter TavernIntegrationTests/CoordinatorIntegrationTests
 ///
-/// These tests verify coordinator behavior with real agent communication.
+/// These tests verify coordinator behavior with real servitor communication.
 /// Grade 2 mock tests mirror these assertions.
 @MainActor
 final class CoordinatorIntegrationTests: XCTestCase {
@@ -26,9 +26,9 @@ final class CoordinatorIntegrationTests: XCTestCase {
 
     private func createCoordinator() -> TavernCoordinator {
         let jake = Jake(projectURL: projectURL, loadSavedSession: false)
-        let registry = AgentRegistry()
+        let registry = ServitorRegistry()
         let nameGenerator = NameGenerator(theme: .lotr)
-        let spawner = ServitorSpawner(
+        let spawner = MortalSpawner(
             registry: registry,
             nameGenerator: nameGenerator,
             projectURL: projectURL
@@ -38,7 +38,7 @@ final class CoordinatorIntegrationTests: XCTestCase {
 
     // MARK: - Tests
 
-    /// Chat history is preserved when switching between agents
+    /// Chat history is preserved when switching between servitors
     func testChatHistoryPreservedWhenSwitching() async throws {
         let coordinator = createCoordinator()
 
@@ -48,33 +48,33 @@ final class CoordinatorIntegrationTests: XCTestCase {
         let jakeMessageCount = coordinator.activeChatViewModel.messages.count
         XCTAssertGreaterThan(jakeMessageCount, 0, "Jake should have messages")
 
-        // Spawn a servitor and switch to it
-        let servitor = try coordinator.summonServitor(selectAfterSummon: true)
-        XCTAssertEqual(coordinator.activeChatViewModel.agentId, servitor.id)
+        // Spawn a mortal and switch to it
+        let mortal = try coordinator.summonServitor(selectAfterSummon: true)
+        XCTAssertEqual(coordinator.activeChatViewModel.servitorId, mortal.id)
         XCTAssertTrue(coordinator.activeChatViewModel.messages.isEmpty,
-            "New servitor should start with empty chat")
+            "New mortal should start with empty chat")
 
         // Switch back to Jake
-        coordinator.selectAgent(id: coordinator.jake.id)
+        coordinator.selectServitor(id: coordinator.jake.id)
         XCTAssertEqual(coordinator.activeChatViewModel.messages.count, jakeMessageCount,
             "Jake's messages should be preserved after switching back")
     }
 
-    /// Servitor's ChatViewModel can receive messages
-    func testServitorChatViewModelCanReceiveMessages() async throws {
+    /// Mortal's ChatViewModel can receive messages
+    func testMortalChatViewModelCanReceiveMessages() async throws {
         let coordinator = createCoordinator()
 
-        let servitor = try coordinator.summonServitor(selectAfterSummon: true)
-        XCTAssertEqual(coordinator.activeChatViewModel.agentId, servitor.id)
+        let mortal = try coordinator.summonServitor(selectAfterSummon: true)
+        XCTAssertEqual(coordinator.activeChatViewModel.servitorId, mortal.id)
 
-        coordinator.activeChatViewModel.inputText = "Say SERVITOR_MSG_OK"
+        coordinator.activeChatViewModel.inputText = "Say MORTAL_MSG_OK"
         await coordinator.activeChatViewModel.sendMessage()
 
         XCTAssertGreaterThanOrEqual(coordinator.activeChatViewModel.messages.count, 2,
-            "Servitor chat should have user + agent messages")
+            "Mortal chat should have user + servitor messages")
     }
 
-    /// Switching between agents preserves both chat histories
+    /// Switching between servitors preserves both chat histories
     func testSwitchingPreservesBothHistories() async throws {
         let coordinator = createCoordinator()
 
@@ -83,28 +83,28 @@ final class CoordinatorIntegrationTests: XCTestCase {
         await coordinator.activeChatViewModel.sendMessage()
         let jakeCount = coordinator.activeChatViewModel.messages.count
 
-        // Spawn servitor, switch, message it
-        let servitor = try coordinator.summonServitor(selectAfterSummon: true)
-        coordinator.activeChatViewModel.inputText = "Say SERVITOR_MSG"
+        // Spawn mortal, switch, message it
+        let mortal = try coordinator.summonServitor(selectAfterSummon: true)
+        coordinator.activeChatViewModel.inputText = "Say MORTAL_MSG"
         await coordinator.activeChatViewModel.sendMessage()
-        let servitorCount = coordinator.activeChatViewModel.messages.count
+        let mortalCount = coordinator.activeChatViewModel.messages.count
 
         // Switch to Jake — verify Jake's history intact
-        coordinator.selectAgent(id: coordinator.jake.id)
+        coordinator.selectServitor(id: coordinator.jake.id)
         XCTAssertEqual(coordinator.activeChatViewModel.messages.count, jakeCount,
             "Jake's message count should be preserved")
 
-        // Switch to servitor — verify servitor's history intact
-        coordinator.selectAgent(id: servitor.id)
-        XCTAssertEqual(coordinator.activeChatViewModel.messages.count, servitorCount,
-            "Servitor's message count should be preserved")
+        // Switch to mortal — verify mortal's history intact
+        coordinator.selectServitor(id: mortal.id)
+        XCTAssertEqual(coordinator.activeChatViewModel.messages.count, mortalCount,
+            "Mortal's message count should be preserved")
     }
 
-    /// Jake's summon MCP action creates a servitor
-    func testJakeSummonActionCreatesServitor() async throws {
+    /// Jake's summon MCP action creates a mortal
+    func testJakeSummonActionCreatesMortal() async throws {
         let coordinator = createCoordinator()
 
-        let initialCount = coordinator.spawner.servitorCount
+        let initialCount = coordinator.spawner.mortalCount
 
         // Ask Jake to summon via his MCP tool
         coordinator.activeChatViewModel.inputText = "Use the summon_servitor tool to summon a worker with assignment: integration test"
@@ -116,9 +116,9 @@ final class CoordinatorIntegrationTests: XCTestCase {
             "Jake should have responded")
 
         // If summon happened, count increased
-        if coordinator.spawner.servitorCount > initialCount {
-            XCTAssertEqual(coordinator.spawner.servitorCount, initialCount + 1,
-                "Should have exactly one more servitor")
+        if coordinator.spawner.mortalCount > initialCount {
+            XCTAssertEqual(coordinator.spawner.mortalCount, initialCount + 1,
+                "Should have exactly one more mortal")
         }
     }
 
@@ -126,7 +126,7 @@ final class CoordinatorIntegrationTests: XCTestCase {
     func testJakeSummonActionWithName() async throws {
         let coordinator = createCoordinator()
 
-        coordinator.activeChatViewModel.inputText = "Use summon_servitor with name: TestAgent and assignment: named test"
+        coordinator.activeChatViewModel.inputText = "Use summon_servitor with name: TestMortal and assignment: named test"
         await coordinator.activeChatViewModel.sendMessage()
 
         // Verify Jake responded without crashing

@@ -196,10 +196,10 @@ public enum TavernErrorMessages {
 
                 Click "Start Fresh" below to clear the old session and try again.
                 """
-        case .agentNameConflict(let name):
+        case .servitorNameConflict(let name):
             return """
-                The name "\(name)" is already taken by another agent in this project.
-                Pick a different name, or dismiss the existing agent first.
+                The name "\(name)" is already taken by another servitor in this project.
+                Pick a different name, or dismiss the existing servitor first.
                 """
         case .commitmentTimeout(let commitmentId):
             return """

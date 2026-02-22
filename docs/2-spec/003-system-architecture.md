@@ -1,7 +1,7 @@
 # 003 — System Architecture Specification
 
 **Status:** complete
-**Last Updated:** 2026-02-10
+**Last Updated:** 2026-02-16
 
 ## Upstream References
 - PRD: §6.1 (Tech Stack)
@@ -26,15 +26,15 @@ Tech stack, layer structure, concurrency rules, component ownership hierarchy, a
 **Status:** specified
 
 **Properties:**
-- Agent runtime: ClodKit v1.0.0 (Swift wrapper, spawns Claude Agent SDK as subprocess)
+- Agent runtime: ClodKit (compatible version) (Swift wrapper, spawns Claude Agent SDK as subprocess)
 - Primary language: Swift 6
 - Framework: SwiftUI
 - Platform: macOS 26+ (Tahoe) — target only the most recent release, no backwards compatibility
 - Build system: XcodeGen + redo
-- Dependencies: Node.js + @anthropic-ai/claude-agent-sdk (for Agent SDK backend)
 - Test framework: ViewInspector (test-only, does not ship in production)
+- Target only the most recent macOS release — no backwards compatibility cruft. Policy: stay on latest macOS improvements until release.
 
-**Testable assertion:** The project compiles with Swift 6 on macOS 26+. ClodKit v1.0.0 resolves via SPM. ViewInspector is test-only. No backwards compatibility code exists for older macOS versions.
+**Testable assertion:** The project compiles with Swift 6 on macOS 26+. ClodKit resolves via SPM. ViewInspector is test-only. No backwards compatibility code exists for older macOS versions.
 
 ### REQ-ARCH-002: Six-Layer Structure
 **Source:** PRD §6.1, ADR-001
@@ -118,19 +118,21 @@ ProjectManager.shared (singleton)
                             +-- ChatViewModel cache (0..*)
 ```
 
+Note: The object diagram above is demonstrative only. The text description is normative.
+
 **Testable assertion:** Two projects have independent coordinators, registries, and agent sets. No shared mutable state exists between projects. `ProjectManager` is the sole singleton.
 
-### REQ-ARCH-006: Closed Plugin Set
-**Source:** ADR-001, Shape I
-**Priority:** must-have
-**Status:** specified
+### ~~REQ-ARCH-006: Closed Plugin Set~~
+~~**Source:** ADR-001, Shape I~~
+~~**Priority:** must-have~~
+**Status:** dropped — *subsequently removed from spec, left unspecified*
 
-**Properties:**
-- Agent types and spawners are registered at startup, not dynamically loaded
-- All agent types are known at compile time
-- Adding a new agent type requires code changes and recompilation
+~~**Properties:**~~
+~~- Agent types and spawners are registered at startup, not dynamically loaded~~
+~~- All agent types are known at compile time~~
+~~- Adding a new agent type requires code changes and recompilation~~
 
-**Testable assertion:** The set of agent types is determined at compile time. No dynamic loading APIs exist. Adding a new agent type requires code changes and recompilation.
+~~**Testable assertion:** The set of agent types is determined at compile time. No dynamic loading APIs exist. Adding a new agent type requires code changes and recompilation.~~
 
 ### REQ-ARCH-007: Concurrency Model
 **Source:** Reader §5 (Async Primitive Strategy), CLAUDE.md
@@ -141,17 +143,8 @@ ProjectManager.shared (singleton)
 - `@MainActor` on all ViewModels and UI-bound types
 - Never block the cooperative thread pool (`Thread.sleep`, `DispatchSemaphore.wait`, sync file I/O) — sidecars exist for this reason
 - Global semaphore for concurrent Anthropic calls (max ~10)
-- UI updates via Combine or @Observable, never block main thread
-- All mutable state protected by serial `DispatchQueue`:
-
-| Type | Queue Label | Protected State |
-|------|-------------|-----------------|
-| Jake | `com.tavern.Jake` | `_sessionId`, `_isCogitating`, `_mcpServer` |
-| Servitor | `com.tavern.Servitor` | `_state`, `_sessionId` |
-| AgentRegistry | `com.tavern.AgentRegistry` | `_agents`, `_nameToId` |
-| NameGenerator | `com.tavern.NameGenerator` | `_usedNames`, indices |
-| CommitmentList | `com.tavern.CommitmentList` | `_commitments` |
-| DocStore | `com.tavern.DocStore` | file operations |
+- UI updates via @Observable, never block main thread
+- All mutable state protected by serial `DispatchQueue` (specific queue labels are implementation details, not specified here)
 
 **See also:** §4.2.8 (sidecar pattern per agent)
 
@@ -163,12 +156,12 @@ ProjectManager.shared (singleton)
 **Status:** specified
 
 **Properties:**
-- Long-term direction: AsyncStream/AsyncSequence (language-level concurrency)
-- Combine bridges at the ViewModel boundary only
+- Primary direction: AsyncStream/AsyncSequence (language-level concurrency)
 - `@Observable` at SwiftUI boundary, AsyncStream for everything below
-- Bridge once, at the ViewModel layer
+- Combine is a transitional bridge at the ViewModel boundary only — not a planned technology, only tolerated where legacy code requires it
+- Bridge once, at the ViewModel layer — new code uses async/await and @Observable exclusively
 
-**Testable assertion:** Below the ViewModel layer, async/await and AsyncSequence are used. Combine is only present at the ViewModel/UI boundary.
+**Testable assertion:** Below the ViewModel layer, async/await and AsyncSequence are used. Combine, if present, exists only as a transitional bridge at the ViewModel/UI boundary. New code does not introduce Combine dependencies.
 
 ### REQ-ARCH-009: Dependency Injection for Testability
 **Source:** ADR-003, CLAUDE.md
@@ -238,14 +231,12 @@ flowchart TD
 
 ## 4. Open Questions
 
-- **Multi-project/Jake-per-project:** PRD §14 lists this as "emerges through building." Current implementation has one Jake per project. Is this the final design or might Jake span projects?
+- **Multi-project/Jake-per-project:** Resolved: One Jake per project (per directory). Jake's purview is the directory it's in and down.
 
-- **GUI-less core:** PRD §6.1 mentions "GUI-less framework core, TUI equivalent." Is TavernCore sufficient as the GUI-less core, or does it need additional abstraction?
+- **GUI-less core:** Resolved: The testing suite serves as the second UI into core. No separate TUI needed.
+
+- **Distribution:** Resolved: Source-code-only distribution. No builds or packages distributed.
 
 ## 5. Coverage Gaps
 
 - **Build system specification:** The redo build scripts are documented in CLAUDE.md but not formally specified. Redo script behavior (dependency tracking, caching) is not specified.
-
-- **Deployment and distribution:** No specification for how the app is packaged and distributed (App Store, DMG, Homebrew, etc.).
-
-- **Update mechanism:** No specification for how users receive updates to the app.

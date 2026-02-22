@@ -20,15 +20,15 @@ final class ChatStressTests: XCTestCase {
 
     // MARK: - Test: 500 Messages via Streaming
 
-    /// Send 500 messages through ChatViewModel using MockAgent streaming.
+    /// Send 500 messages through ChatViewModel using MockServitor streaming.
     /// Verify all messages accumulate and state stays consistent.
     @MainActor
     func testMessageAccumulation500() async throws {
         let messageCount = 500
         let timeBudget: TimeInterval = 30.0
 
-        let mock = MockAgent(
-            name: "AccumulationAgent",
+        let mock = MockServitor(
+            name: "AccumulationServitor",
             responses: (0..<messageCount).map { "Response \($0) with some realistic content." },
             defaultResponse: "Default fallback response."
         )
@@ -36,7 +36,7 @@ final class ChatStressTests: XCTestCase {
 
         let projectURL = testProjectURL()
         let jake = Jake(projectURL: projectURL, loadSavedSession: false)
-        let vm = ChatViewModel(agent: mock, loadHistory: false)
+        let vm = ChatViewModel(servitor: mock, loadHistory: false)
 
         let startTime = Date()
 
@@ -55,10 +55,10 @@ final class ChatStressTests: XCTestCase {
 
         let duration = Date().timeIntervalSince(startTime)
 
-        // Each send creates a user message + an agent response = 2 messages per send
+        // Each send creates a user message + a servitor response = 2 messages per send
         let expectedMessages = messageCount * 2
         XCTAssertEqual(vm.messages.count, expectedMessages,
-            "Expected \(expectedMessages) messages (user + agent each), got \(vm.messages.count)")
+            "Expected \(expectedMessages) messages (user + servitor each), got \(vm.messages.count)")
 
         // Verify no messages are stuck in streaming state
         let streamingMessages = vm.messages.filter { $0.isStreaming }
@@ -71,7 +71,7 @@ final class ChatStressTests: XCTestCase {
                 "Even-indexed messages should be user, message \(i) is \(vm.messages[i].role)")
             if i + 1 < vm.messages.count {
                 XCTAssertEqual(vm.messages[i + 1].role, .agent,
-                    "Odd-indexed messages should be agent, message \(i+1) is \(vm.messages[i+1].role)")
+                    "Odd-indexed messages should be servitor, message \(i+1) is \(vm.messages[i+1].role)")
             }
         }
 
@@ -95,26 +95,26 @@ final class ChatStressTests: XCTestCase {
         let messageCount = 100
 
         // Create a mock that produces known token usage via streaming
-        let mock = MockAgent(
-            name: "TokenCountAgent",
+        let mock = MockServitor(
+            name: "TokenCountServitor",
             responses: (0..<messageCount).map { "Token response \($0)" },
             defaultResponse: "default"
         )
         mock.streamingChunkSize = 10
 
-        let vm = ChatViewModel(agent: mock, loadHistory: false)
+        let vm = ChatViewModel(servitor: mock, loadHistory: false)
 
         for i in 0..<messageCount {
             vm.inputText = "Token test \(i)"
             await vm.sendMessage()
         }
 
-        // MockAgent doesn't supply usage data in completed events,
+        // MockServitor doesn't supply usage data in completed events,
         // so token counts should remain at 0
         XCTAssertEqual(vm.totalInputTokens, 0,
-            "MockAgent doesn't supply usage, input tokens should be 0")
+            "MockServitor doesn't supply usage, input tokens should be 0")
         XCTAssertEqual(vm.totalOutputTokens, 0,
-            "MockAgent doesn't supply usage, output tokens should be 0")
+            "MockServitor doesn't supply usage, output tokens should be 0")
 
         // Verify formattedTokens works at zero state
         XCTAssertFalse(vm.hasUsageData, "No usage data should be reported")
@@ -163,14 +163,14 @@ final class ChatStressTests: XCTestCase {
     /// Accumulate many messages, then clear. Verify all state resets cleanly.
     @MainActor
     func testClearAfterHeavyAccumulation() async throws {
-        let mock = MockAgent(
-            name: "ClearTestAgent",
+        let mock = MockServitor(
+            name: "ClearTestServitor",
             responses: (0..<200).map { "Response \($0)" },
             defaultResponse: "default"
         )
         mock.streamingChunkSize = 10
 
-        let vm = ChatViewModel(agent: mock, loadHistory: false)
+        let vm = ChatViewModel(servitor: mock, loadHistory: false)
 
         // Accumulate 200 messages
         for i in 0..<200 {
@@ -196,7 +196,7 @@ final class ChatStressTests: XCTestCase {
         vm.inputText = "After clear"
         await vm.sendMessage()
 
-        XCTAssertEqual(vm.messages.count, 2, "Should have 1 user + 1 agent message after clear")
+        XCTAssertEqual(vm.messages.count, 2, "Should have 1 user + 1 servitor message after clear")
 
         print("testClearAfterHeavyAccumulation: clear works after 400 messages")
     }
@@ -207,14 +207,14 @@ final class ChatStressTests: XCTestCase {
     /// Verifies no state corruption from rapid input.
     @MainActor
     func testRapidInputChanges() async throws {
-        let mock = MockAgent(
-            name: "RapidInputAgent",
+        let mock = MockServitor(
+            name: "RapidInputServitor",
             responses: ["R1", "R2", "R3", "R4", "R5"],
             defaultResponse: "default"
         )
         mock.streamingChunkSize = 1
 
-        let vm = ChatViewModel(agent: mock, loadHistory: false)
+        let vm = ChatViewModel(servitor: mock, loadHistory: false)
 
         // Send 5 messages as fast as possible (still sequential due to @MainActor)
         for i in 0..<5 {
@@ -222,7 +222,7 @@ final class ChatStressTests: XCTestCase {
             await vm.sendMessage()
         }
 
-        XCTAssertEqual(vm.messages.count, 10, "5 user + 5 agent = 10 messages")
+        XCTAssertEqual(vm.messages.count, 10, "5 user + 5 servitor = 10 messages")
         XCTAssertFalse(vm.isCogitating)
         XCTAssertFalse(vm.isStreaming)
         XCTAssertTrue(vm.inputText.isEmpty, "Input should be cleared after each send")

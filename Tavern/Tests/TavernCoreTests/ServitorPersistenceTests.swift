@@ -2,36 +2,36 @@ import Foundation
 import Testing
 @testable import TavernCore
 
-@Suite("AgentNode Tests")
-struct AgentNodeTests {
+@Suite("ServitorNode Tests")
+struct ServitorNodeTests {
 
     private static func testProjectURL() -> URL {
         URL(fileURLWithPath: NSTemporaryDirectory())
             .appendingPathComponent("tavern-test-\(UUID().uuidString)")
     }
 
-    @Test("AgentNode has all required properties")
-    func agentNodeHasProperties() {
-        let node = AgentNode(
+    @Test("ServitorNode has all required properties")
+    func servitorNodeHasProperties() {
+        let node = ServitorNode(
             id: UUID(),
-            name: "Test Agent",
+            name: "Test Servitor",
             assignment: "Do something",
             state: "idle"
         )
 
         #expect(!node.id.uuidString.isEmpty)
-        #expect(node.name == "Test Agent")
+        #expect(node.name == "Test Servitor")
         #expect(node.assignment == "Do something")
         #expect(node.state == "idle")
         #expect(node.commitments.isEmpty)
     }
 
-    @Test("AgentNode creates from Servitor")
-    func agentNodeCreatesFromServitor() {
+    @Test("ServitorNode creates from Mortal")
+    func servitorNodeCreatesFromMortal() {
         let commitments = CommitmentList()
         commitments.add(description: "Tests pass", assertion: "swift test")
 
-        let servitor = Servitor(
+        let mortal = Mortal(
             name: "Worker",
             assignment: "Build the thing",
             projectURL: Self.testProjectURL(),
@@ -39,9 +39,9 @@ struct AgentNodeTests {
             loadSavedSession: false
         )
 
-        let node = AgentNode(from: servitor)
+        let node = ServitorNode(from: mortal)
 
-        #expect(node.id == servitor.id)
+        #expect(node.id == mortal.id)
         #expect(node.name == "Worker")
         #expect(node.assignment == "Build the thing")
         #expect(node.state == "idle")
@@ -49,11 +49,11 @@ struct AgentNodeTests {
         #expect(node.commitments.first?.description == "Tests pass")
     }
 
-    @Test("AgentNode converts to document")
-    func agentNodeConvertsToDocument() {
-        let node = AgentNode(
+    @Test("ServitorNode converts to document")
+    func servitorNodeConvertsToDocument() {
+        let node = ServitorNode(
             id: UUID(),
-            name: "Doc Agent",
+            name: "Doc Servitor",
             assignment: "Write documentation",
             state: "working",
             commitments: [
@@ -63,8 +63,8 @@ struct AgentNodeTests {
 
         let doc = node.toDocument()
 
-        #expect(doc.id == "doc-agent")
-        #expect(doc.title == "Doc Agent")
+        #expect(doc.id == "doc-servitor")
+        #expect(doc.title == "Doc Servitor")
         #expect(doc.frontmatter["state"] == "working")
         #expect(doc.content.contains("## Assignment"))
         #expect(doc.content.contains("Write documentation"))
@@ -72,14 +72,14 @@ struct AgentNodeTests {
         #expect(doc.content.contains("Docs exist"))
     }
 
-    @Test("AgentNode parses from document")
-    func agentNodeParsesFromDocument() throws {
+    @Test("ServitorNode parses from document")
+    func servitorNodeParsesFromDocument() throws {
         let iso = ISO8601DateFormatter()
         let now = Date()
 
         let doc = Document(
-            id: "parsed-agent",
-            title: "Parsed Agent",
+            id: "parsed-servitor",
+            title: "Parsed Servitor",
             frontmatter: [
                 "id": UUID().uuidString,
                 "state": "waiting",
@@ -93,17 +93,17 @@ struct AgentNodeTests {
 
             ## Commitments
 
-            - ✅ **Data parsed**
+            - \u{2705} **Data parsed**
               - Assertion: `test -f output.json`
-            - ❌ **Report generated**
+            - \u{274C} **Report generated**
               - Assertion: `test -f report.md`
               - Failed: File not found
             """
         )
 
-        let node = try AgentNode.from(document: doc)
+        let node = try ServitorNode.from(document: doc)
 
-        #expect(node.name == "Parsed Agent")
+        #expect(node.name == "Parsed Servitor")
         #expect(node.state == "waiting")
         #expect(node.assignment?.contains("Parse some data") == true)
         #expect(node.commitments.count == 2)
@@ -112,27 +112,27 @@ struct AgentNodeTests {
         #expect(node.commitments[1].failureMessage == "File not found")
     }
 
-    @Test("AgentNode throws on missing ID")
-    func agentNodeThrowsOnMissingId() {
+    @Test("ServitorNode throws on missing ID")
+    func servitorNodeThrowsOnMissingId() {
         let doc = Document(
             id: "no-id",
-            title: "No ID Agent",
+            title: "No ID Servitor",
             frontmatter: ["state": "idle"],
             content: "## Assignment\n\nSomething"
         )
 
         do {
-            _ = try AgentNode.from(document: doc)
+            _ = try ServitorNode.from(document: doc)
             Issue.record("Expected error for missing ID")
-        } catch AgentNodeError.missingField(let field) {
+        } catch ServitorNodeError.missingField(let field) {
             #expect(field == "id")
         } catch {
             Issue.record("Unexpected error: \(error)")
         }
     }
 
-    @Test("AgentNode throws on missing title")
-    func agentNodeThrowsOnMissingTitle() {
+    @Test("ServitorNode throws on missing title")
+    func servitorNodeThrowsOnMissingTitle() {
         let doc = Document(
             id: "no-title",
             title: nil,
@@ -144,9 +144,9 @@ struct AgentNodeTests {
         )
 
         do {
-            _ = try AgentNode.from(document: doc)
+            _ = try ServitorNode.from(document: doc)
             Issue.record("Expected error for missing title")
-        } catch AgentNodeError.missingField(let field) {
+        } catch ServitorNodeError.missingField(let field) {
             #expect(field == "title")
         } catch {
             Issue.record("Unexpected error: \(error)")
@@ -209,8 +209,8 @@ struct CommitmentNodeTests {
     }
 }
 
-@Suite("AgentPersistence Tests")
-struct AgentPersistenceTests {
+@Suite("ServitorPersistence Tests")
+struct ServitorPersistenceTests {
 
     private static func testProjectURL() -> URL {
         URL(fileURLWithPath: NSTemporaryDirectory())
@@ -227,60 +227,60 @@ struct AgentPersistenceTests {
         try? FileManager.default.removeItem(at: store.rootDirectory)
     }
 
-    @Test("Agent creates doc store node on save", .tags(.reqDOC002, .reqLCM004))
-    func agentCreatesDocStoreNode() throws {
+    @Test("Servitor creates doc store node on save", .tags(.reqDOC002, .reqLCM004))
+    func servitorCreatesDocStoreNode() throws {
         let store = try makeTempDocStore()
         defer { cleanupDocStore(store) }
 
-        let persistence = AgentPersistence(docStore: store)
-        let agent = Servitor(
+        let persistence = ServitorPersistence(docStore: store)
+        let mortal = Mortal(
             name: "Saveable",
             assignment: "Test saving",
             projectURL: Self.testProjectURL(),
             loadSavedSession: false
         )
 
-        try persistence.save(agent)
+        try persistence.save(mortal)
 
         #expect(persistence.exists(name: "Saveable"))
     }
 
-    @Test("Agent state synced to file")
-    func agentStateSyncedToFile() throws {
+    @Test("Servitor state synced to file")
+    func servitorStateSyncedToFile() throws {
         let store = try makeTempDocStore()
         defer { cleanupDocStore(store) }
 
-        let persistence = AgentPersistence(docStore: store)
+        let persistence = ServitorPersistence(docStore: store)
 
-        let agent = Servitor(
+        let mortal = Mortal(
             name: "Stateful",
             assignment: "Track state",
             projectURL: Self.testProjectURL(),
             loadSavedSession: false
         )
-        agent.markWaiting()
+        mortal.markWaiting()
 
-        try persistence.save(agent)
+        try persistence.save(mortal)
 
         let loaded = try persistence.load(name: "Stateful")
         #expect(loaded.state == "waiting")
     }
 
-    @Test("Agent restored from file", .tags(.reqDOC002, .reqLCM004))
-    func agentRestoredFromFile() throws {
+    @Test("Servitor restored from file", .tags(.reqDOC002, .reqLCM004))
+    func servitorRestoredFromFile() throws {
         let store = try makeTempDocStore()
         defer { cleanupDocStore(store) }
         let projectURL = Self.testProjectURL()
 
-        let persistence = AgentPersistence(docStore: store)
+        let persistence = ServitorPersistence(docStore: store)
 
-        // Create and save agent
+        // Create and save mortal
         let originalId = UUID()
         let commitments = CommitmentList()
         let c1 = commitments.add(description: "First", assertion: "cmd1")
         commitments.markPassed(id: c1.id)
 
-        let original = Servitor(
+        let original = Mortal(
             id: originalId,
             name: "Restorable",
             assignment: "Test restoration",
@@ -303,18 +303,18 @@ struct AgentPersistenceTests {
         #expect(restored.commitments.commitments.first?.status == .passed)
     }
 
-    @Test("Agent persistence saves commitments")
-    func agentPersistenceSavesCommitments() throws {
+    @Test("Servitor persistence saves commitments")
+    func servitorPersistenceSavesCommitments() throws {
         let store = try makeTempDocStore()
         defer { cleanupDocStore(store) }
 
-        let persistence = AgentPersistence(docStore: store)
+        let persistence = ServitorPersistence(docStore: store)
 
         let commitments = CommitmentList()
         commitments.add(description: "Build passes", assertion: "swift build")
         commitments.add(description: "Tests pass", assertion: "swift test")
 
-        let agent = Servitor(
+        let mortal = Mortal(
             name: "Committed",
             assignment: "Task with commitments",
             projectURL: Self.testProjectURL(),
@@ -322,7 +322,7 @@ struct AgentPersistenceTests {
             loadSavedSession: false
         )
 
-        try persistence.save(agent)
+        try persistence.save(mortal)
 
         let loaded = try persistence.load(name: "Committed")
         #expect(loaded.commitments.count == 2)
@@ -330,42 +330,42 @@ struct AgentPersistenceTests {
         #expect(loaded.commitments.contains { $0.description == "Tests pass" })
     }
 
-    @Test("Agent persistence deletes agent")
-    func agentPersistenceDeletesAgent() throws {
+    @Test("Servitor persistence deletes servitor")
+    func servitorPersistenceDeletesServitor() throws {
         let store = try makeTempDocStore()
         defer { cleanupDocStore(store) }
 
-        let persistence = AgentPersistence(docStore: store)
+        let persistence = ServitorPersistence(docStore: store)
 
-        let agent = Servitor(
+        let mortal = Mortal(
             name: "Deletable",
             assignment: "To be deleted",
             projectURL: Self.testProjectURL(),
             loadSavedSession: false
         )
 
-        try persistence.save(agent)
+        try persistence.save(mortal)
         #expect(persistence.exists(name: "Deletable"))
 
         try persistence.delete(name: "Deletable")
         #expect(!persistence.exists(name: "Deletable"))
     }
 
-    @Test("Agent persistence lists all agents")
-    func agentPersistenceListsAll() throws {
+    @Test("Servitor persistence lists all servitors")
+    func servitorPersistenceListsAll() throws {
         let store = try makeTempDocStore()
         defer { cleanupDocStore(store) }
 
-        let persistence = AgentPersistence(docStore: store)
+        let persistence = ServitorPersistence(docStore: store)
         let projectURL = Self.testProjectURL()
 
-        let agent1 = Servitor(name: "Alpha", assignment: "A", projectURL: projectURL, loadSavedSession: false)
-        let agent2 = Servitor(name: "Beta", assignment: "B", projectURL: projectURL, loadSavedSession: false)
-        let agent3 = Servitor(name: "Gamma", assignment: "C", projectURL: projectURL, loadSavedSession: false)
+        let mortal1 = Mortal(name: "Alpha", assignment: "A", projectURL: projectURL, loadSavedSession: false)
+        let mortal2 = Mortal(name: "Beta", assignment: "B", projectURL: projectURL, loadSavedSession: false)
+        let mortal3 = Mortal(name: "Gamma", assignment: "C", projectURL: projectURL, loadSavedSession: false)
 
-        try persistence.save(agent1)
-        try persistence.save(agent2)
-        try persistence.save(agent3)
+        try persistence.save(mortal1)
+        try persistence.save(mortal2)
+        try persistence.save(mortal3)
 
         let names = try persistence.listAll()
 
@@ -375,19 +375,19 @@ struct AgentPersistenceTests {
         #expect(names.contains("Gamma"))
     }
 
-    @Test("Agent persistence loads all agent nodes")
-    func agentPersistenceLoadsAll() throws {
+    @Test("Servitor persistence loads all servitor nodes")
+    func servitorPersistenceLoadsAll() throws {
         let store = try makeTempDocStore()
         defer { cleanupDocStore(store) }
 
-        let persistence = AgentPersistence(docStore: store)
+        let persistence = ServitorPersistence(docStore: store)
         let projectURL = Self.testProjectURL()
 
-        let agent1 = Servitor(name: "First", assignment: "Task 1", projectURL: projectURL, loadSavedSession: false)
-        let agent2 = Servitor(name: "Second", assignment: "Task 2", projectURL: projectURL, loadSavedSession: false)
+        let mortal1 = Mortal(name: "First", assignment: "Task 1", projectURL: projectURL, loadSavedSession: false)
+        let mortal2 = Mortal(name: "Second", assignment: "Task 2", projectURL: projectURL, loadSavedSession: false)
 
-        try persistence.save(agent1)
-        try persistence.save(agent2)
+        try persistence.save(mortal1)
+        try persistence.save(mortal2)
 
         let nodes = try persistence.loadAll()
 
@@ -396,25 +396,25 @@ struct AgentPersistenceTests {
         #expect(nodes.contains { $0.name == "Second" })
     }
 
-    @Test("Agent persistence updates existing agent")
-    func agentPersistenceUpdatesExisting() throws {
+    @Test("Servitor persistence updates existing servitor")
+    func servitorPersistenceUpdatesExisting() throws {
         let store = try makeTempDocStore()
         defer { cleanupDocStore(store) }
 
-        let persistence = AgentPersistence(docStore: store)
+        let persistence = ServitorPersistence(docStore: store)
 
-        let agent = Servitor(
+        let mortal = Mortal(
             name: "Updatable",
             assignment: "Initial task",
             projectURL: Self.testProjectURL(),
             loadSavedSession: false
         )
 
-        try persistence.save(agent)
+        try persistence.save(mortal)
 
         // Modify and save again
-        agent.markWaiting()
-        try persistence.save(agent)
+        mortal.markWaiting()
+        try persistence.save(mortal)
 
         let loaded = try persistence.load(name: "Updatable")
         #expect(loaded.state == "waiting")

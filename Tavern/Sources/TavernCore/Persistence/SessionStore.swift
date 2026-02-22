@@ -10,13 +10,13 @@ public enum SessionStore {
     // UserDefaults is thread-safe for read/write operations
     nonisolated(unsafe) private static let defaults = UserDefaults.standard
     private static let jakeSessionPrefix = "com.tavern.jake.session."
-    private static let agentSessionPrefix = "com.tavern.agent.session."
-    private static let agentListKey = "com.tavern.agents"
+    private static let servitorSessionPrefix = "com.tavern.servitor.session."
+    private static let servitorListKey = "com.tavern.servitors"
 
     // MARK: - Persisted Agent Type
 
     /// Data structure for persisting agent info
-    public struct PersistedAgent: Codable, Equatable {
+    public struct PersistedServitor: Codable, Equatable {
         public let id: UUID
         public let name: String
         public var sessionId: String?
@@ -92,10 +92,10 @@ public enum SessionStore {
 
     /// Save a mortal agent's session ID
     /// - Parameters:
-    ///   - agentId: The agent's unique ID
+    ///   - servitorId: The agent's unique ID
     ///   - sessionId: The session ID to save, or nil to clear
-    public static func saveAgentSession(agentId: UUID, sessionId: String?) {
-        let key = agentSessionKey(for: agentId)
+    public static func saveServitorSession(servitorId: UUID, sessionId: String?) {
+        let key = servitorSessionKey(for: servitorId)
         if let id = sessionId {
             defaults.set(id, forKey: key)
         } else {
@@ -104,27 +104,27 @@ public enum SessionStore {
     }
 
     /// Load a mortal agent's saved session ID
-    /// - Parameter agentId: The agent's unique ID
+    /// - Parameter servitorId: The agent's unique ID
     /// - Returns: The session ID if one was saved, nil otherwise
-    public static func loadAgentSession(agentId: UUID) -> String? {
-        let key = agentSessionKey(for: agentId)
+    public static func loadServitorSession(servitorId: UUID) -> String? {
+        let key = servitorSessionKey(for: servitorId)
         return defaults.string(forKey: key)
     }
 
     /// Clear a mortal agent's session
-    /// - Parameter agentId: The agent's unique ID
-    public static func clearAgentSession(agentId: UUID) {
-        let key = agentSessionKey(for: agentId)
+    /// - Parameter servitorId: The agent's unique ID
+    public static func clearServitorSession(servitorId: UUID) {
+        let key = servitorSessionKey(for: servitorId)
         defaults.removeObject(forKey: key)
     }
 
     /// Load a mortal agent's session history from Claude's native storage
     /// - Parameters:
-    ///   - agentId: The agent's unique ID
+    ///   - servitorId: The agent's unique ID
     ///   - projectPath: The project path (needed to locate Claude's session files)
     /// - Returns: Array of stored messages, empty if no history found
-    public static func loadAgentSessionHistory(agentId: UUID, projectPath: String) async -> [ClaudeStoredMessage] {
-        guard let sessionId = loadAgentSession(agentId: agentId) else {
+    public static func loadServitorSessionHistory(servitorId: UUID, projectPath: String) async -> [ClaudeStoredMessage] {
+        guard let sessionId = loadServitorSession(servitorId: servitorId) else {
             return []
         }
 
@@ -147,24 +147,24 @@ public enum SessionStore {
         }
 
         // Clear all agent sessions
-        for key in allKeys where key.hasPrefix(agentSessionPrefix) {
+        for key in allKeys where key.hasPrefix(servitorSessionPrefix) {
             defaults.removeObject(forKey: key)
         }
     }
 
     // MARK: - Private
 
-    private static func agentSessionKey(for agentId: UUID) -> String {
-        "\(agentSessionPrefix)\(agentId.uuidString)"
+    private static func servitorSessionKey(for servitorId: UUID) -> String {
+        "\(servitorSessionPrefix)\(servitorId.uuidString)"
     }
 
     // MARK: - Agent List Persistence
 
     /// Save the full list of persisted agents
-    public static func saveAgentList(_ agents: [PersistedAgent]) {
+    public static func saveServitorList(_ agents: [PersistedServitor]) {
         do {
             let data = try JSONEncoder().encode(agents)
-            defaults.set(data, forKey: agentListKey)
+            defaults.set(data, forKey: servitorListKey)
         } catch {
             // Silent failure - next app launch won't have agents, but no crash
         }
@@ -172,32 +172,32 @@ public enum SessionStore {
 
     /// Load the list of persisted agents
     /// - Returns: Array of persisted agents, empty if none saved
-    public static func loadAgentList() -> [PersistedAgent] {
-        guard let data = defaults.data(forKey: agentListKey) else {
+    public static func loadServitorList() -> [PersistedServitor] {
+        guard let data = defaults.data(forKey: servitorListKey) else {
             return []
         }
         do {
-            return try JSONDecoder().decode([PersistedAgent].self, from: data)
+            return try JSONDecoder().decode([PersistedServitor].self, from: data)
         } catch {
             return []
         }
     }
 
     /// Add an agent to the persisted list
-    public static func addAgent(_ agent: PersistedAgent) {
-        var agents = loadAgentList()
+    public static func addServitor(_ agent: PersistedServitor) {
+        var agents = loadServitorList()
         // Replace if already exists (same ID), otherwise append
         if let index = agents.firstIndex(where: { $0.id == agent.id }) {
             agents[index] = agent
         } else {
             agents.append(agent)
         }
-        saveAgentList(agents)
+        saveServitorList(agents)
     }
 
     /// Update an existing agent in the persisted list
-    public static func updateAgent(id: UUID, sessionId: String? = nil, chatDescription: String? = nil) {
-        var agents = loadAgentList()
+    public static func updateServitor(id: UUID, sessionId: String? = nil, chatDescription: String? = nil) {
+        var agents = loadServitorList()
         guard let index = agents.firstIndex(where: { $0.id == id }) else { return }
 
         if let sessionId = sessionId {
@@ -206,25 +206,25 @@ public enum SessionStore {
         if let chatDescription = chatDescription {
             agents[index].chatDescription = chatDescription
         }
-        saveAgentList(agents)
+        saveServitorList(agents)
     }
 
     /// Remove an agent from the persisted list
-    public static func removeAgent(id: UUID) {
-        var agents = loadAgentList()
+    public static func removeServitor(id: UUID) {
+        var agents = loadServitorList()
         agents.removeAll { $0.id == id }
-        saveAgentList(agents)
+        saveServitorList(agents)
         // Also clear the session
-        clearAgentSession(agentId: id)
+        clearServitorSession(servitorId: id)
     }
 
     /// Get a persisted agent by ID
-    public static func getAgent(id: UUID) -> PersistedAgent? {
-        loadAgentList().first { $0.id == id }
+    public static func getServitor(id: UUID) -> PersistedServitor? {
+        loadServitorList().first { $0.id == id }
     }
 
     /// Clear all persisted agents (for testing)
-    public static func clearAgentList() {
-        saveAgentList([])
+    public static func clearServitorList() {
+        saveServitorList([])
     }
 }

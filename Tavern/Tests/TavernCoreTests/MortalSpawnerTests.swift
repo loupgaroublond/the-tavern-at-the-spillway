@@ -2,8 +2,8 @@ import Foundation
 import Testing
 @testable import TavernCore
 
-@Suite("ServitorSpawner Tests")
-struct ServitorSpawnerTests {
+@Suite("MortalSpawner Tests")
+struct MortalSpawnerTests {
 
     // MARK: - Test Setup
 
@@ -12,10 +12,10 @@ struct ServitorSpawnerTests {
             .appendingPathComponent("tavern-test-\(UUID().uuidString)")
     }
 
-    func createSpawner() -> (ServitorSpawner, AgentRegistry, NameGenerator) {
-        let registry = AgentRegistry()
+    func createSpawner() -> (MortalSpawner, ServitorRegistry, NameGenerator) {
+        let registry = ServitorRegistry()
         let nameGenerator = NameGenerator(theme: .lotr)
-        let spawner = ServitorSpawner(
+        let spawner = MortalSpawner(
             registry: registry,
             nameGenerator: nameGenerator,
             projectURL: Self.testProjectURL()
@@ -25,68 +25,68 @@ struct ServitorSpawnerTests {
 
     // MARK: - Summon Tests
 
-    @Test("Summon creates servitor with themed name", .tags(.reqSPN001, .reqSPN010))
-    func summonCreatesServitorWithThemedName() throws {
+    @Test("Summon creates mortal with themed name", .tags(.reqSPN001, .reqSPN010))
+    func summonCreatesMortalWithThemedName() throws {
         let (spawner, registry, _) = createSpawner()
 
-        let servitor = try spawner.summon(assignment: "Test assignment")
+        let mortal = try spawner.summon(assignment: "Test assignment")
 
         #expect(registry.count == 1)
-        #expect(!servitor.name.isEmpty)
-        #expect(NamingTheme.lotr.allNames.contains(servitor.name))
-        #expect(servitor.assignment == "Test assignment")
+        #expect(!mortal.name.isEmpty)
+        #expect(NamingTheme.lotr.allNames.contains(mortal.name))
+        #expect(mortal.assignment == "Test assignment")
     }
 
-    @Test("Summon registers servitor in registry", .tags(.reqAGT007, .reqSPN001))
-    func summonRegistersServitorInRegistry() throws {
+    @Test("Summon registers mortal in registry", .tags(.reqAGT007, .reqSPN001))
+    func summonRegistersMortalInRegistry() throws {
         let (spawner, registry, _) = createSpawner()
 
-        let servitor = try spawner.summon(assignment: "Task")
+        let mortal = try spawner.summon(assignment: "Task")
 
-        #expect(registry.agent(id: servitor.id) != nil)
-        #expect(registry.agent(named: servitor.name) != nil)
+        #expect(registry.servitor(id: mortal.id) != nil)
+        #expect(registry.servitor(named: mortal.name) != nil)
     }
 
-    @Test("Summoned servitor has assignment", .tags(.reqSPN002))
-    func summonedServitorHasAssignment() throws {
+    @Test("Summoned mortal has assignment", .tags(.reqSPN002))
+    func summonedMortalHasAssignment() throws {
         let (spawner, _, _) = createSpawner()
 
-        let servitor = try spawner.summon(assignment: "Parse JSON files")
+        let mortal = try spawner.summon(assignment: "Parse JSON files")
 
-        #expect(servitor.assignment == "Parse JSON files")
+        #expect(mortal.assignment == "Parse JSON files")
     }
 
-    @Test("Summoned servitor gets themed name")
-    func summonedServitorGetsThemedName() throws {
+    @Test("Summoned mortal gets themed name")
+    func summonedMortalGetsThemedName() throws {
         let (spawner, _, _) = createSpawner()
 
-        let servitor = try spawner.summon(assignment: "Task")
+        let mortal = try spawner.summon(assignment: "Task")
 
         // Should be from LOTR theme
-        #expect(NamingTheme.lotr.allNames.contains(servitor.name))
+        #expect(NamingTheme.lotr.allNames.contains(mortal.name))
     }
 
     @Test("Multiple summons get unique names")
     func multipleSummonsGetUniqueNames() throws {
         let (spawner, _, _) = createSpawner()
 
-        let servitor1 = try spawner.summon(assignment: "Task 1")
-        let servitor2 = try spawner.summon(assignment: "Task 2")
-        let servitor3 = try spawner.summon(assignment: "Task 3")
+        let mortal1 = try spawner.summon(assignment: "Task 1")
+        let mortal2 = try spawner.summon(assignment: "Task 2")
+        let mortal3 = try spawner.summon(assignment: "Task 3")
 
-        #expect(servitor1.name != servitor2.name)
-        #expect(servitor2.name != servitor3.name)
-        #expect(servitor1.name != servitor3.name)
+        #expect(mortal1.name != mortal2.name)
+        #expect(mortal2.name != mortal3.name)
+        #expect(mortal1.name != mortal3.name)
     }
 
     @Test("Summon with specific name works")
     func summonWithSpecificNameWorks() throws {
         let (spawner, registry, _) = createSpawner()
 
-        let servitor = try spawner.summon(name: "CustomName", assignment: "Task")
+        let mortal = try spawner.summon(name: "CustomName", assignment: "Task")
 
-        #expect(servitor.name == "CustomName")
-        #expect(registry.agent(named: "CustomName") != nil)
+        #expect(mortal.name == "CustomName")
+        #expect(registry.servitor(named: "CustomName") != nil)
     }
 
     @Test("Summon with duplicate name fails")
@@ -98,7 +98,7 @@ struct ServitorSpawnerTests {
         do {
             _ = try spawner.summon(name: "TakenName", assignment: "Task 2")
             Issue.record("Expected error for duplicate name")
-        } catch let error as AgentRegistryError {
+        } catch let error as ServitorRegistryError {
             if case .nameAlreadyExists(let name) = error {
                 #expect(name == "TakenName")
             } else {
@@ -109,14 +109,14 @@ struct ServitorSpawnerTests {
 
     // MARK: - Dismiss Tests
 
-    @Test("Dismiss removes servitor from registry", .tags(.reqSPN003))
-    func dismissRemovesServitorFromRegistry() throws {
+    @Test("Dismiss removes mortal from registry", .tags(.reqSPN003))
+    func dismissRemovesMortalFromRegistry() throws {
         let (spawner, registry, _) = createSpawner()
 
-        let servitor = try spawner.summon(assignment: "Task")
+        let mortal = try spawner.summon(assignment: "Task")
         #expect(registry.count == 1)
 
-        try spawner.dismiss(servitor)
+        try spawner.dismiss(mortal)
         #expect(registry.count == 0)
     }
 
@@ -124,10 +124,10 @@ struct ServitorSpawnerTests {
     func dismissReleasesNameForReuse() throws {
         let (spawner, _, nameGenerator) = createSpawner()
 
-        let servitor = try spawner.summon(name: "ReusableName", assignment: "Task")
+        let mortal = try spawner.summon(name: "ReusableName", assignment: "Task")
         #expect(!nameGenerator.isNameAvailable("ReusableName"))
 
-        try spawner.dismiss(servitor)
+        try spawner.dismiss(mortal)
         #expect(nameGenerator.isNameAvailable("ReusableName"))
     }
 
@@ -135,23 +135,23 @@ struct ServitorSpawnerTests {
     func dismissByIdWorks() throws {
         let (spawner, registry, _) = createSpawner()
 
-        let servitor = try spawner.summon(assignment: "Task")
-        let id = servitor.id
+        let mortal = try spawner.summon(assignment: "Task")
+        let id = mortal.id
 
         try spawner.dismiss(id: id)
         #expect(registry.count == 0)
     }
 
-    @Test("Dismiss non-existent servitor throws")
-    func dismissNonExistentServitorThrows() {
+    @Test("Dismiss non-existent mortal throws")
+    func dismissNonExistentMortalThrows() {
         let (spawner, _, _) = createSpawner()
         let fakeId = UUID()
 
         do {
             try spawner.dismiss(id: fakeId)
-            Issue.record("Expected error for non-existent servitor")
-        } catch let error as AgentRegistryError {
-            if case .agentNotFound(let id) = error {
+            Issue.record("Expected error for non-existent mortal")
+        } catch let error as ServitorRegistryError {
+            if case .servitorNotFound(let id) = error {
                 #expect(id == fakeId)
             } else {
                 Issue.record("Wrong error type")
@@ -163,27 +163,27 @@ struct ServitorSpawnerTests {
 
     // MARK: - Query Tests
 
-    @Test("Active servitors returns all summoned servitors")
-    func activeServitorsReturnsAllSummoned() throws {
+    @Test("Active mortals returns all summoned mortals")
+    func activeMortalsReturnsAllSummoned() throws {
         let (spawner, _, _) = createSpawner()
 
         _ = try spawner.summon(assignment: "Task 1")
         _ = try spawner.summon(assignment: "Task 2")
 
-        #expect(spawner.activeServitors.count == 2)
+        #expect(spawner.activeMortals.count == 2)
     }
 
-    @Test("Servitor count matches summoned count")
-    func servitorCountMatchesSummoned() throws {
+    @Test("Mortal count matches summoned count")
+    func mortalCountMatchesSummoned() throws {
         let (spawner, _, _) = createSpawner()
 
-        #expect(spawner.servitorCount == 0)
+        #expect(spawner.mortalCount == 0)
 
         _ = try spawner.summon(assignment: "Task 1")
-        #expect(spawner.servitorCount == 1)
+        #expect(spawner.mortalCount == 1)
 
         _ = try spawner.summon(assignment: "Task 2")
-        #expect(spawner.servitorCount == 2)
+        #expect(spawner.mortalCount == 2)
     }
 
     // MARK: - MessengerFactory Tests (Bead 96m + p70)
@@ -191,25 +191,25 @@ struct ServitorSpawnerTests {
     @Test("Spawner uses default LiveMessenger factory", .tags(.reqSPN010))
     func spawnerUsesDefaultFactory() throws {
         // Default init should not crash — uses LiveMessenger
-        let registry = AgentRegistry()
+        let registry = ServitorRegistry()
         let nameGenerator = NameGenerator(theme: .lotr)
-        let spawner = ServitorSpawner(
+        let spawner = MortalSpawner(
             registry: registry,
             nameGenerator: nameGenerator,
             projectURL: Self.testProjectURL()
         )
 
         // Can summon successfully
-        let servitor = try spawner.summon(assignment: "Test")
-        #expect(!servitor.name.isEmpty)
+        let mortal = try spawner.summon(assignment: "Test")
+        #expect(!mortal.name.isEmpty)
     }
 
     @Test("Spawner uses injected messenger factory")
     func spawnerUsesInjectedMessengerFactory() throws {
         let counter = CallCounter()
-        let registry = AgentRegistry()
+        let registry = ServitorRegistry()
         let nameGenerator = NameGenerator(theme: .lotr)
-        let spawner = ServitorSpawner(
+        let spawner = MortalSpawner(
             registry: registry,
             nameGenerator: nameGenerator,
             projectURL: Self.testProjectURL(),
@@ -226,28 +226,28 @@ struct ServitorSpawnerTests {
         #expect(counter.value == 2)
     }
 
-    @Test("Spawned servitor with mock factory can respond")
-    func spawnedServitorWithMockFactoryCanRespond() async throws {
-        let registry = AgentRegistry()
+    @Test("Spawned mortal with mock factory can respond")
+    func spawnedMortalWithMockFactoryCanRespond() async throws {
+        let registry = ServitorRegistry()
         let nameGenerator = NameGenerator(theme: .lotr)
-        let spawner = ServitorSpawner(
+        let spawner = MortalSpawner(
             registry: registry,
             nameGenerator: nameGenerator,
             projectURL: Self.testProjectURL(),
             messengerFactory: { _ in MockMessenger(responses: ["Mock response"]) }
         )
 
-        let servitor = try spawner.summon(assignment: "Task")
-        let response = try await servitor.send("Hello")
+        let mortal = try spawner.summon(assignment: "Task")
+        let response = try await mortal.send("Hello")
 
         #expect(response == "Mock response")
     }
 
-    @Test("Each spawned servitor gets its own messenger instance")
-    func eachSpawnedServitorGetsOwnMessenger() async throws {
-        let registry = AgentRegistry()
+    @Test("Each spawned mortal gets its own messenger instance")
+    func eachSpawnedMortalGetsOwnMessenger() async throws {
+        let registry = ServitorRegistry()
         let nameGenerator = NameGenerator(theme: .lotr)
-        let spawner = ServitorSpawner(
+        let spawner = MortalSpawner(
             registry: registry,
             nameGenerator: nameGenerator,
             projectURL: Self.testProjectURL(),
@@ -268,9 +268,9 @@ struct ServitorSpawnerTests {
     @Test("Summon with name uses messenger factory")
     func summonWithNameUsesMessengerFactory() async throws {
         let counter = CallCounter()
-        let registry = AgentRegistry()
+        let registry = ServitorRegistry()
         let nameGenerator = NameGenerator(theme: .lotr)
-        let spawner = ServitorSpawner(
+        let spawner = MortalSpawner(
             registry: registry,
             nameGenerator: nameGenerator,
             projectURL: Self.testProjectURL(),
@@ -280,19 +280,19 @@ struct ServitorSpawnerTests {
             }
         )
 
-        let servitor = try spawner.summon(name: "CustomAgent", assignment: "Task")
-        let response = try await servitor.send("Hello")
+        let mortal = try spawner.summon(name: "CustomServitor", assignment: "Task")
+        let response = try await mortal.send("Hello")
 
         #expect(counter.value == 1)
         #expect(response == "Named response")
     }
 
-    @Test("User-spawned servitor (no assignment) uses messenger factory")
-    func userSpawnedServitorUsesMessengerFactory() async throws {
+    @Test("User-spawned mortal (no assignment) uses messenger factory")
+    func userSpawnedMortalUsesMessengerFactory() async throws {
         let counter = CallCounter()
-        let registry = AgentRegistry()
+        let registry = ServitorRegistry()
         let nameGenerator = NameGenerator(theme: .lotr)
-        let spawner = ServitorSpawner(
+        let spawner = MortalSpawner(
             registry: registry,
             nameGenerator: nameGenerator,
             projectURL: Self.testProjectURL(),
@@ -302,12 +302,12 @@ struct ServitorSpawnerTests {
             }
         )
 
-        let servitor = try spawner.summon()
-        let response = try await servitor.send("Hello")
+        let mortal = try spawner.summon()
+        let response = try await mortal.send("Hello")
 
         #expect(counter.value == 1)
         #expect(response == "User response")
-        #expect(servitor.assignment == nil)
+        #expect(mortal.assignment == nil)
     }
 }
 

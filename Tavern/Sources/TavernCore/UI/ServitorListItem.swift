@@ -1,10 +1,10 @@
 import Foundation
 
-/// A displayable item representing an agent in the list
-/// This is a snapshot of agent state for UI display
-public struct AgentListItem: Identifiable, Equatable, Sendable {
+/// A displayable item representing a servitor in the list
+/// This is a snapshot of servitor state for UI display
+public struct ServitorListItem: Identifiable, Equatable, Sendable {
 
-    /// Unique identifier (matches the agent's ID)
+    /// Unique identifier (matches the servitor's ID)
     public let id: UUID
 
     /// Display name
@@ -13,12 +13,12 @@ public struct AgentListItem: Identifiable, Equatable, Sendable {
     /// User-editable description shown in sidebar (nil for Jake)
     public let chatDescription: String?
 
-    /// Current state of the agent (as raw value for Sendable)
+    /// Current state of the servitor (as raw value for Sendable)
     private let stateRawValue: String
 
-    /// Current state of the agent
-    public var state: AgentState {
-        AgentState(rawValue: stateRawValue) ?? .idle
+    /// Current state of the servitor
+    public var state: ServitorState {
+        ServitorState(rawValue: stateRawValue) ?? .idle
     }
 
     /// Whether this is Jake (The Proprietor)
@@ -31,7 +31,7 @@ public struct AgentListItem: Identifiable, Equatable, Sendable {
         id: UUID = UUID(),
         name: String,
         chatDescription: String? = nil,
-        state: AgentState = .idle,
+        state: ServitorState = .idle,
         isJake: Bool = false
     ) {
         self.id = id
@@ -43,20 +43,20 @@ public struct AgentListItem: Identifiable, Equatable, Sendable {
 
     // MARK: - Factory Methods
 
-    /// Create an item from a Servitor
-    public static func from(servitor: Servitor) -> AgentListItem {
-        AgentListItem(
-            id: servitor.id,
-            name: servitor.name,
-            chatDescription: servitor.chatDescription,
-            state: servitor.state,
+    /// Create an item from a Mortal
+    public static func from(mortal: Mortal) -> ServitorListItem {
+        ServitorListItem(
+            id: mortal.id,
+            name: mortal.name,
+            chatDescription: mortal.chatDescription,
+            state: mortal.state,
             isJake: false
         )
     }
 
     /// Create an item for Jake
-    public static func from(jake: Jake) -> AgentListItem {
-        AgentListItem(
+    public static func from(jake: Jake) -> ServitorListItem {
+        ServitorListItem(
             id: jake.id,
             name: jake.name,
             chatDescription: nil,
@@ -68,7 +68,7 @@ public struct AgentListItem: Identifiable, Equatable, Sendable {
 
 // MARK: - Display Helpers
 
-extension AgentListItem {
+extension ServitorListItem {
 
     /// Human-readable state label
     public var stateLabel: String {
@@ -82,7 +82,7 @@ extension AgentListItem {
         }
     }
 
-    /// Whether the agent needs attention (waiting or error state)
+    /// Whether the servitor needs attention (waiting or error state)
     public var needsAttention: Bool {
         state == .waiting || state == .error
     }

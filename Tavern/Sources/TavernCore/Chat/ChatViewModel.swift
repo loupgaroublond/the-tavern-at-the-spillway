@@ -12,7 +12,7 @@ public final class ChatViewModel: ObservableObject {
 
     /// The agent's current activity state — single source of truth for UI indicators.
     /// Eliminates impossible state combinations (e.g. cogitating + tool running).
-    public enum AgentActivity: Equatable {
+    public enum ServitorActivity: Equatable {
         case idle
         case cogitating(verb: String)
         case streaming
@@ -25,7 +25,7 @@ public final class ChatViewModel: ObservableObject {
     @Published public private(set) var messages: [ChatMessage] = []
 
     /// The agent's current activity (drives all status indicators)
-    @Published public private(set) var agentActivity: AgentActivity = .idle
+    @Published public private(set) var servitorActivity: ServitorActivity = .idle
 
     /// Current input text (bound to text field)
     @Published public var inputText: String = ""
@@ -62,14 +62,14 @@ public final class ChatViewModel: ObservableObject {
     @Published public var sessionMode: PermissionMode {
         didSet {
             guard sessionMode != oldValue else { return }
-            agent.sessionMode = sessionMode
-            TavernLogger.chat.info("[\(self.agentName)] sessionMode changed: \(oldValue.rawValue) -> \(self.sessionMode.rawValue)")
+            servitor.sessionMode = sessionMode
+            TavernLogger.chat.info("[\(self.servitorName)] sessionMode changed: \(oldValue.rawValue) -> \(self.sessionMode.rawValue)")
         }
     }
 
     // MARK: - Dependencies
 
-    private let agent: any Agent
+    private let servitor: any Servitor
     private let isJake: Bool
     private let projectPath: String?
 
@@ -87,25 +87,25 @@ public final class ChatViewModel: ObservableObject {
     public var commandDispatcher: SlashCommandDispatcher?
 
     /// The agent's ID (for identification)
-    public var agentId: UUID { agent.id }
+    public var servitorId: UUID { servitor.id }
 
     /// The agent's name
-    public var agentName: String { agent.name }
+    public var servitorName: String { servitor.name }
 
     // MARK: - Derived Activity Properties
 
     /// Whether the agent is currently processing (not idle)
-    public var isCogitating: Bool { agentActivity != .idle }
+    public var isCogitating: Bool { servitorActivity != .idle }
 
     /// The current cogitation verb (for UI display)
     public var cogitationVerb: String {
-        if case .cogitating(let verb) = agentActivity { return verb }
+        if case .cogitating(let verb) = servitorActivity { return verb }
         return "Cogitating"
     }
 
     /// Whether the agent is currently streaming a response
     public var isStreaming: Bool {
-        switch agentActivity {
+        switch servitorActivity {
         case .streaming, .toolRunning: return true
         default: return false
         }
@@ -113,13 +113,13 @@ public final class ChatViewModel: ObservableObject {
 
     /// Name of the currently executing tool (nil when no tool is active)
     public var currentToolName: String? {
-        if case .toolRunning(let name, _) = agentActivity { return name }
+        if case .toolRunning(let name, _) = servitorActivity { return name }
         return nil
     }
 
     /// When the current tool started executing (nil when no tool is active)
     public var toolStartTime: Date? {
-        if case .toolRunning(_, let startTime) = agentActivity { return startTime }
+        if case .toolRunning(_, let startTime) = servitorActivity { return startTime }
         return nil
     }
 
@@ -164,7 +164,7 @@ public final class ChatViewModel: ObservableObject {
     /// - Parameter jake: The Jake agent
     /// - Parameter loadHistory: Whether to load session history from disk (default true)
     public init(jake: Jake, loadHistory: Bool = true) {
-        self.agent = jake
+        self.servitor = jake
         self.isJake = true
         self.projectPath = jake.projectPath
         self.sessionMode = jake.sessionMode
@@ -178,14 +178,14 @@ public final class ChatViewModel: ObservableObject {
 
     /// Create a chat view model for any agent
     /// - Parameters:
-    ///   - agent: The agent to chat with
+    ///   - servitor: The agent to chat with
     ///   - projectPath: The project path (needed for session history restoration)
     ///   - loadHistory: Whether to load session history from disk (default true)
-    public init(agent: some Agent, projectPath: String? = nil, loadHistory: Bool = true) {
-        self.agent = agent
-        self.isJake = agent is Jake
-        self.projectPath = (agent as? Jake)?.projectPath ?? projectPath
-        self.sessionMode = agent.sessionMode
+    public init(servitor: some Servitor, projectPath: String? = nil, loadHistory: Bool = true) {
+        self.servitor = servitor
+        self.isJake = servitor is Jake
+        self.projectPath = (servitor as? Jake)?.projectPath ?? projectPath
+        self.sessionMode = servitor.sessionMode
 
         if loadHistory {
             Task {
@@ -200,7 +200,7 @@ public final class ChatViewModel: ObservableObject {
     /// Works for both Jake and servitors.
     /// Parsing and conversion run on a background thread to keep the UI responsive.
     public func loadSessionHistory() async {
-        TavernLogger.chat.info("loadSessionHistory called, isJake=\(self.isJake), agentId=\(self.agentId)")
+        TavernLogger.chat.info("loadSessionHistory called, isJake=\(self.isJake), servitorId=\(self.servitorId)")
 
         guard let projectPath = projectPath else {
             TavernLogger.chat.info("loadSessionHistory: no project path, skipping")
@@ -213,9 +213,9 @@ public final class ChatViewModel: ObservableObject {
         if isJake {
             storedMessages = await SessionStore.loadJakeSessionHistory(projectPath: projectPath)
         } else {
-            storedMessages = await SessionStore.loadAgentSessionHistory(agentId: agentId, projectPath: projectPath)
+            storedMessages = await SessionStore.loadServitorSessionHistory(servitorId: servitorId, projectPath: projectPath)
         }
-        TavernLogger.chat.info("Got \(storedMessages.count) stored messages for agent \(self.agentName)")
+        TavernLogger.chat.info("Got \(storedMessages.count) stored messages for agent \(self.servitorName)")
 
         guard !storedMessages.isEmpty else {
             isLoadingHistory = false
@@ -228,7 +228,7 @@ public final class ChatViewModel: ObservableObject {
             Self.convertStoredMessages(storedMessages)
         }.value
 
-        TavernLogger.chat.info("Converted \(loadedMessages.count) chat messages for agent \(self.agentName)")
+        TavernLogger.chat.info("Converted \(loadedMessages.count) chat messages for agent \(self.servitorName)")
         self.messages = loadedMessages
         isLoadingHistory = false
     }
@@ -279,12 +279,12 @@ public final class ChatViewModel: ObservableObject {
         let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
 
-        TavernLogger.chat.info("[\(self.agentName)] sendMessage initiated, text length: \(text.count)")
+        TavernLogger.chat.info("[\(self.servitorName)] sendMessage initiated, text length: \(text.count)")
 
         // Check for slash command before sending to agent
         let parseResult = SlashCommandParser.parse(text)
         if case .command(let name, let arguments) = parseResult, let dispatcher = commandDispatcher {
-            TavernLogger.chat.info("[\(self.agentName)] detected slash command: /\(name)")
+            TavernLogger.chat.info("[\(self.servitorName)] detected slash command: /\(name)")
             inputText = ""
             error = nil
 
@@ -313,12 +313,12 @@ public final class ChatViewModel: ObservableObject {
         // Add user message
         let userMessage = ChatMessage(role: .user, content: text)
         messages.append(userMessage)
-        TavernLogger.chat.debug("[\(self.agentName)] user message added to history, total: \(self.messages.count)")
+        TavernLogger.chat.debug("[\(self.servitorName)] user message added to history, total: \(self.messages.count)")
 
         // Set cogitating state with random verb
         let verb = Self.cogitationVerbs.randomElement() ?? "Cogitating"
-        agentActivity = .cogitating(verb: verb)
-        TavernLogger.chat.info("[\(self.agentName)] cogitating state set, verb: \(verb)")
+        servitorActivity = .cogitating(verb: verb)
+        TavernLogger.chat.info("[\(self.servitorName)] cogitating state set, verb: \(verb)")
 
         // Yield to let UI update before starting stream
         await Task.yield()
@@ -335,11 +335,11 @@ public final class ChatViewModel: ObservableObject {
         let streamingIndex = messages.count - 1
 
         // Start streaming
-        let (stream, cancel) = agent.sendStreaming(text)
+        let (stream, cancel) = servitor.sendStreaming(text)
         streamCancelHandle = cancel
-        agentActivity = .streaming
+        servitorActivity = .streaming
 
-        TavernLogger.chat.debug("[\(self.agentName)] streaming started")
+        TavernLogger.chat.debug("[\(self.servitorName)] streaming started")
 
         do {
             for try await event in stream {
@@ -349,12 +349,12 @@ public final class ChatViewModel: ObservableObject {
                     messages[streamingIndex].content += delta
 
                 case .toolUseStarted(let toolName):
-                    agentActivity = .toolRunning(name: toolName, startTime: Date())
-                    TavernLogger.chat.debug("[\(self.agentName)] tool started: \(toolName)")
+                    servitorActivity = .toolRunning(name: toolName, startTime: Date())
+                    TavernLogger.chat.debug("[\(self.servitorName)] tool started: \(toolName)")
 
                 case .toolUseFinished(let toolName):
-                    TavernLogger.chat.debug("[\(self.agentName)] tool finished: \(toolName)")
-                    agentActivity = .streaming
+                    TavernLogger.chat.debug("[\(self.servitorName)] tool finished: \(toolName)")
+                    servitorActivity = .streaming
 
                 case .completed(_, let usage):
                     // Mark streaming complete
@@ -362,12 +362,12 @@ public final class ChatViewModel: ObservableObject {
                     if let usage {
                         totalInputTokens += usage.inputTokens
                         totalOutputTokens += usage.outputTokens
-                        TavernLogger.chat.info("[\(self.agentName)] usage: +\(usage.inputTokens)in/+\(usage.outputTokens)out (total: \(self.totalInputTokens)in/\(self.totalOutputTokens)out)")
+                        TavernLogger.chat.info("[\(self.servitorName)] usage: +\(usage.inputTokens)in/+\(usage.outputTokens)out (total: \(self.totalInputTokens)in/\(self.totalOutputTokens)out)")
                     }
-                    TavernLogger.chat.info("[\(self.agentName)] streaming completed, total messages: \(self.messages.count)")
+                    TavernLogger.chat.info("[\(self.servitorName)] streaming completed, total messages: \(self.messages.count)")
 
                 case .error(let errorDescription):
-                    TavernLogger.chat.debugError("[\(self.agentName)] stream error event: \(errorDescription)")
+                    TavernLogger.chat.debugError("[\(self.servitorName)] stream error event: \(errorDescription)")
                 }
             }
 
@@ -389,19 +389,19 @@ public final class ChatViewModel: ObservableObject {
             case .sessionCorrupt(let sessionId, _):
                 self.corruptSessionId = sessionId
                 self.showSessionRecoveryOptions = true
-                TavernLogger.chat.debugError("[\(self.agentName)] session '\(sessionId)' is corrupt")
-            case .agentNameConflict(let name):
-                TavernLogger.chat.debugError("[\(self.agentName)] name conflict: '\(name)'")
+                TavernLogger.chat.debugError("[\(self.servitorName)] session '\(sessionId)' is corrupt")
+            case .servitorNameConflict(let name):
+                TavernLogger.chat.debugError("[\(self.servitorName)] name conflict: '\(name)'")
             case .commitmentTimeout(let id):
-                TavernLogger.chat.debugError("[\(self.agentName)] commitment timeout: \(id)")
+                TavernLogger.chat.debugError("[\(self.servitorName)] commitment timeout: \(id)")
             case .mcpServerFailed(let reason):
-                TavernLogger.chat.debugError("[\(self.agentName)] MCP server failed: \(reason)")
+                TavernLogger.chat.debugError("[\(self.servitorName)] MCP server failed: \(reason)")
             case .permissionDenied(let tool):
-                TavernLogger.chat.debugError("[\(self.agentName)] permission denied: \(tool)")
+                TavernLogger.chat.debugError("[\(self.servitorName)] permission denied: \(tool)")
             case .commandNotFound(let name):
-                TavernLogger.chat.debugError("[\(self.agentName)] command not found: /\(name)")
+                TavernLogger.chat.debugError("[\(self.servitorName)] command not found: /\(name)")
             case .internalError(let message):
-                TavernLogger.chat.debugError("[\(self.agentName)] internal error: \(message)")
+                TavernLogger.chat.debugError("[\(self.servitorName)] internal error: \(message)")
             }
             let errorContent = TavernErrorMessages.message(for: error)
             let errorMessage = ChatMessage(role: .agent, content: errorContent)
@@ -415,13 +415,13 @@ public final class ChatViewModel: ObservableObject {
                 messages[streamingIndex].isStreaming = false
             }
 
-            TavernLogger.chat.debugError("[\(self.agentName)] sendMessage streaming failed: \(error.localizedDescription)")
+            TavernLogger.chat.debugError("[\(self.servitorName)] sendMessage streaming failed: \(error.localizedDescription)")
             let errorContent = TavernErrorMessages.message(for: error)
             let errorMessage = ChatMessage(role: .agent, content: errorContent)
             messages.append(errorMessage)
         }
 
-        agentActivity = .idle
+        servitorActivity = .idle
         streamCancelHandle = nil
     }
 
@@ -429,11 +429,11 @@ public final class ChatViewModel: ObservableObject {
     /// The partial message is kept in the chat as-is.
     public func cancelStreaming() {
         guard isStreaming else { return }
-        TavernLogger.chat.info("[\(self.agentName)] streaming cancelled by user")
+        TavernLogger.chat.info("[\(self.servitorName)] streaming cancelled by user")
 
         streamCancelHandle?()
         streamCancelHandle = nil
-        agentActivity = .idle
+        servitorActivity = .idle
 
         // Mark the last message as no longer streaming
         if let lastIndex = messages.indices.last, messages[lastIndex].isStreaming {
@@ -443,9 +443,9 @@ public final class ChatViewModel: ObservableObject {
 
     /// Clear the conversation and reset the agent's session
     public func clearConversation() {
-        TavernLogger.chat.info("[\(self.agentName)] conversation cleared, was \(self.messages.count) messages")
+        TavernLogger.chat.info("[\(self.servitorName)] conversation cleared, was \(self.messages.count) messages")
         messages.removeAll()
-        agent.resetConversation()
+        servitor.resetConversation()
         error = nil
         showSessionRecoveryOptions = false
         corruptSessionId = nil
@@ -457,10 +457,10 @@ public final class ChatViewModel: ObservableObject {
     /// Resumes the suspended canUseTool callback with the user's decision.
     /// - Parameter response: The user's approval or denial
     public func respondToApproval(_ response: ToolApprovalResponse) {
-        TavernLogger.permissions.info("[\(self.agentName)] tool approval response: approved=\(response.approved), alwaysAllow=\(response.alwaysAllow)")
+        TavernLogger.permissions.info("[\(self.servitorName)] tool approval response: approved=\(response.approved), alwaysAllow=\(response.alwaysAllow)")
 
         guard let continuation = approvalContinuation else {
-            TavernLogger.permissions.error("[\(self.agentName)] respondToApproval called with no pending continuation")
+            TavernLogger.permissions.error("[\(self.servitorName)] respondToApproval called with no pending continuation")
             return
         }
 
@@ -484,7 +484,7 @@ public final class ChatViewModel: ObservableObject {
                 Task { @MainActor in
                     self.approvalContinuation = continuation
                     self.pendingApproval = request
-                    TavernLogger.permissions.info("[\(self.agentName)] showing approval for tool '\(request.toolName)'")
+                    TavernLogger.permissions.info("[\(self.servitorName)] showing approval for tool '\(request.toolName)'")
                 }
             }
         }
@@ -495,10 +495,10 @@ public final class ChatViewModel: ObservableObject {
     /// On approval, switches the agent out of plan mode.
     /// - Parameter response: The user's approval or rejection
     public func respondToPlanApproval(_ response: PlanApprovalResponse) {
-        TavernLogger.permissions.info("[\(self.agentName)] plan approval response: approved=\(response.approved)")
+        TavernLogger.permissions.info("[\(self.servitorName)] plan approval response: approved=\(response.approved)")
 
         guard let continuation = planApprovalContinuation else {
-            TavernLogger.permissions.error("[\(self.agentName)] respondToPlanApproval called with no pending continuation")
+            TavernLogger.permissions.error("[\(self.servitorName)] respondToPlanApproval called with no pending continuation")
             return
         }
 
@@ -526,7 +526,7 @@ public final class ChatViewModel: ObservableObject {
                 Task { @MainActor in
                     self.planApprovalContinuation = continuation
                     self.pendingPlanApproval = request
-                    TavernLogger.permissions.info("[\(self.agentName)] showing plan approval")
+                    TavernLogger.permissions.info("[\(self.servitorName)] showing plan approval")
                 }
             }
         }
@@ -535,8 +535,8 @@ public final class ChatViewModel: ObservableObject {
     /// Start fresh after a corrupt session
     /// Clears the old session and removes the recovery UI
     public func startFreshSession() {
-        TavernLogger.chat.info("[\(self.agentName)] starting fresh session (was corrupt: \(self.corruptSessionId ?? "none"))")
-        agent.resetConversation()
+        TavernLogger.chat.info("[\(self.servitorName)] starting fresh session (was corrupt: \(self.corruptSessionId ?? "none"))")
+        servitor.resetConversation()
         error = nil
         showSessionRecoveryOptions = false
         corruptSessionId = nil

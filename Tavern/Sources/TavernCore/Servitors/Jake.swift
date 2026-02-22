@@ -7,22 +7,22 @@ import os.log
 /// Jake - The Proprietor of the Tavern
 /// The top-level coordinating agent with the voice of a used car salesman
 /// and the execution of a surgical team.
-public final class Jake: Agent, @unchecked Sendable {
+public final class Jake: Servitor, @unchecked Sendable {
 
-    // MARK: - Agent Protocol
+    // MARK: - Servitor Protocol
 
     public let id: UUID
     public let name: String = "Jake"
 
-    /// Jake's state (mapped to AgentState for protocol conformance)
-    public var state: AgentState {
+    /// Jake's state (mapped to ServitorState for protocol conformance)
+    public var state: ServitorState {
         queue.sync { _isCogitating ? .working : .idle }
     }
 
     // MARK: - Properties
 
     private let projectURL: URL
-    private let messenger: AgentMessenger
+    private let messenger: ServitorMessenger
     private let queue = DispatchQueue(label: "com.tavern.Jake")
 
     private var _sessionId: String?
@@ -123,7 +123,7 @@ public final class Jake: Agent, @unchecked Sendable {
         projectURL: URL,
         permissionManager: PermissionManager? = nil,
         approvalHandler: ToolApprovalHandler? = nil,
-        messenger: AgentMessenger? = nil,
+        messenger: ServitorMessenger? = nil,
         loadSavedSession: Bool = true
     ) {
         self.id = id

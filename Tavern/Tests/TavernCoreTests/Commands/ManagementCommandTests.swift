@@ -27,27 +27,27 @@ struct ManagementCommandTests {
         try? FileManager.default.removeItem(at: url)
     }
 
-    // MARK: - AgentsCommand
+    // MARK: - ServitorsCommand
 
-    @Test("Agents command shows no agents message when empty")
-    func agentsEmpty() async {
-        let cmd = AgentsCommand(agentListProvider: { [] })
+    @Test("Servitors command shows no servitors message when empty")
+    func servitorsEmpty() async {
+        let cmd = ServitorsCommand(servitorListProvider: { [] })
         let result = await cmd.execute(arguments: "")
         if case .message(let text) = result {
-            #expect(text.contains("No agents"))
+            #expect(text.contains("No servitors"))
         } else {
             Issue.record("Expected message result")
         }
     }
 
-    @Test("Agents command lists agents with status")
+    @Test("Servitors command lists servitors with status")
     @MainActor
-    func agentsListsAll() async {
+    func servitorsListsAll() async {
         let items = [
-            AgentListItem(name: "Jake", state: .working, isJake: true),
-            AgentListItem(name: "Marcos Antonio", chatDescription: "Fixing bugs", state: .idle, isJake: false)
+            ServitorListItem(name: "Jake", state: .working, isJake: true),
+            ServitorListItem(name: "Marcos Antonio", chatDescription: "Fixing bugs", state: .idle, isJake: false)
         ]
-        let cmd = AgentsCommand(agentListProvider: { items })
+        let cmd = ServitorsCommand(servitorListProvider: { items })
         let result = await cmd.execute(arguments: "")
         if case .message(let text) = result {
             #expect(text.contains("Jake"))
@@ -61,10 +61,10 @@ struct ManagementCommandTests {
         }
     }
 
-    @Test("Agents command name and description")
-    func agentsMetadata() {
-        let cmd = AgentsCommand(agentListProvider: { [] })
-        #expect(cmd.name == "agents")
+    @Test("Servitors command name and description")
+    func servitorsMetadata() {
+        let cmd = ServitorsCommand(servitorListProvider: { [] })
+        #expect(cmd.name == "servitors")
         #expect(!cmd.description.isEmpty)
     }
 
@@ -193,12 +193,12 @@ struct ManagementCommandTests {
     func managementCommandsRegister() {
         let dispatcher = SlashCommandDispatcher()
         dispatcher.registerAll([
-            AgentsCommand(agentListProvider: { [] }),
+            ServitorsCommand(servitorListProvider: { [] }),
             HooksCommand(projectPath: "/tmp"),
             MCPCommand(projectPath: "/tmp")
         ])
 
-        #expect(dispatcher.command(named: "agents") != nil)
+        #expect(dispatcher.command(named: "servitors") != nil)
         #expect(dispatcher.command(named: "hooks") != nil)
         #expect(dispatcher.command(named: "mcp") != nil)
     }

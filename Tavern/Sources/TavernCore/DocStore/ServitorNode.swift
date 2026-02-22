@@ -1,16 +1,16 @@
 import Foundation
 
-/// Serialized representation of an agent for doc store persistence
+/// Serialized representation of a servitor for doc store persistence
 /// This is the data that gets written to/read from files
-public struct AgentNode: Codable, Equatable, Sendable {
+public struct ServitorNode: Codable, Equatable, Sendable {
 
-    /// Unique identifier for the agent
+    /// Unique identifier for the servitor
     public let id: UUID
 
     /// Display name
     public let name: String
 
-    /// The servitor's assignment description, nil for user-spawned servitors
+    /// The mortal's assignment description, nil for user-spawned mortals
     public let assignment: String?
 
     /// Current state
@@ -19,7 +19,7 @@ public struct AgentNode: Codable, Equatable, Sendable {
     /// Serialized commitments
     public let commitments: [CommitmentNode]
 
-    /// When this agent was created
+    /// When this servitor was created
     public let createdAt: Date
 
     /// When this was last updated
@@ -45,14 +45,14 @@ public struct AgentNode: Codable, Equatable, Sendable {
         self.updatedAt = updatedAt
     }
 
-    /// Create from a Servitor
-    public init(from servitor: Servitor) {
-        self.id = servitor.id
-        self.name = servitor.name
-        self.assignment = servitor.assignment
-        self.state = servitor.state.rawValue
-        self.commitments = servitor.commitments.commitments.map { CommitmentNode(from: $0) }
-        self.createdAt = Date() // Servitor doesn't track creation time
+    /// Create from a Mortal
+    public init(from mortal: Mortal) {
+        self.id = mortal.id
+        self.name = mortal.name
+        self.assignment = mortal.assignment
+        self.state = mortal.state.rawValue
+        self.commitments = mortal.commitments.commitments.map { CommitmentNode(from: $0) }
+        self.createdAt = Date() // Mortal doesn't track creation time
         self.updatedAt = Date()
     }
 
@@ -103,20 +103,20 @@ public struct AgentNode: Codable, Equatable, Sendable {
     }
 
     /// Parse from a Document
-    public static func from(document: Document) throws -> AgentNode {
+    public static func from(document: Document) throws -> ServitorNode {
         let iso = ISO8601DateFormatter()
 
         guard let idString = document.frontmatter["id"],
               let id = UUID(uuidString: idString) else {
-            throw AgentNodeError.missingField("id")
+            throw ServitorNodeError.missingField("id")
         }
 
         guard let name = document.title else {
-            throw AgentNodeError.missingField("title")
+            throw ServitorNodeError.missingField("title")
         }
 
         guard let state = document.frontmatter["state"] else {
-            throw AgentNodeError.missingField("state")
+            throw ServitorNodeError.missingField("state")
         }
 
         // Parse dates
@@ -132,7 +132,7 @@ public struct AgentNode: Codable, Equatable, Sendable {
         // Parse commitments from content
         let commitments = parseCommitments(from: document.content)
 
-        return AgentNode(
+        return ServitorNode(
             id: id,
             name: name,
             assignment: assignment,
@@ -289,8 +289,8 @@ public struct CommitmentNode: Codable, Equatable, Sendable {
     }
 }
 
-/// Errors during agent node operations
-public enum AgentNodeError: Error, Equatable {
+/// Errors during servitor node operations
+public enum ServitorNodeError: Error, Equatable {
     case missingField(String)
     case invalidData(String)
 }
