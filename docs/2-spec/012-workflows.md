@@ -33,31 +33,29 @@ Workflow engine, starter templates, gang of experts pattern, and merge queue. Mo
 
 **Testable assertion:** Deferred. When implemented: a workflow can be defined as a set of states and transitions. The engine prevents invalid transitions. Incomplete steps are surfaced.
 
-<!-- DROPPED: example of a workflow, not a spec requirement -->
-### REQ-WRK-002: Rule of Five Template
-**Source:** PRD §9.1
-**Priority:** deferred
-**Status:** specified
+### ~~REQ-WRK-002: Rule of Five Template~~
+~~**Source:** PRD §9.1~~
+~~**Priority:** deferred~~
+**Status:** dropped — *example of a workflow, not a spec requirement*
 
-**Properties:**
-- Five sequential agent passes over a single output from an initial prompt
-- Each pass receives the previous pass's output and refines it
-- The template is user-modifiable
+~~**Properties:**~~
+~~- Five sequential agent passes over a single output from an initial prompt~~
+~~- Each pass receives the previous pass's output and refines it~~
+~~- The template is user-modifiable~~
 
-**Testable assertion:** Deferred. When implemented: the Rule of 5 template spawns 5 sequential agents. Each agent receives the previous agent's output. The final output reflects 5 passes of refinement.
+~~**Testable assertion:** Deferred. When implemented: the Rule of 5 template spawns 5 sequential agents. Each agent receives the previous agent's output. The final output reflects 5 passes of refinement.~~
 
-<!-- DROPPED: example of a workflow, not a spec requirement -->
-### REQ-WRK-003: Verification Layers Template
-**Source:** PRD §9.1
-**Priority:** deferred
-**Status:** specified
+### ~~REQ-WRK-003: Verification Layers Template~~
+~~**Source:** PRD §9.1~~
+~~**Priority:** deferred~~
+**Status:** dropped — *example of a workflow, not a spec requirement*
 
-**Properties:**
-- Ordered verification stages: linting → code structure → architecture review → performance assessment
-- Each stage is pass/fail
-- A failure at any stage blocks progression to the next
+~~**Properties:**~~
+~~- Ordered verification stages: linting → code structure → architecture review → performance assessment~~
+~~- Each stage is pass/fail~~
+~~- A failure at any stage blocks progression to the next~~
 
-**Testable assertion:** Deferred. When implemented: the template defines ordered verification stages. Each stage must pass before the next begins. A failure at any stage blocks progression.
+~~**Testable assertion:** Deferred. When implemented: the template defines ordered verification stages. Each stage must pass before the next begins. A failure at any stage blocks progression.~~
 
 ### REQ-WRK-004: User-Modifiable Templates
 **Source:** PRD §9.1
@@ -71,18 +69,17 @@ Workflow engine, starter templates, gang of experts pattern, and merge queue. Mo
 
 **Testable assertion:** Deferred. When implemented: users can edit template definitions. New templates can be created and saved. Templates persist in `.tavern/`.
 
-<!-- DROPPED: Gang of Experts is a natural part of workflows, not a standalone requirement -->
-### REQ-WRK-005: Gang of Experts
-**Source:** PRD §11
-**Priority:** deferred
-**Status:** specified
+### ~~REQ-WRK-005: Gang of Experts~~
+~~**Source:** PRD §11~~
+~~**Priority:** deferred~~
+**Status:** dropped — *Gang of Experts is a natural part of workflows, not a standalone requirement*
 
-**Properties:**
-- Expert roles (Reviewer, Tester, Architect) are specialized prompts applied to agents, not persistent entities
-- "Pull in the reviewer" = spawn an agent with reviewer instructions
-- Expert prompts are user-customizable
+~~**Properties:**~~
+~~- Expert roles (Reviewer, Tester, Architect) are specialized prompts applied to agents, not persistent entities~~
+~~- "Pull in the reviewer" = spawn an agent with reviewer instructions~~
+~~- Expert prompts are user-customizable~~
 
-**Testable assertion:** Deferred. When implemented: spawning an agent with an expert role applies the corresponding specialized prompt. Users can customize the prompt for each expert type.
+~~**Testable assertion:** Deferred. When implemented: spawning an agent with an expert role applies the corresponding specialized prompt. Users can customize the prompt for each expert type.~~
 
 ### REQ-WRK-006: Merge Queue
 **Source:** PRD §6.5

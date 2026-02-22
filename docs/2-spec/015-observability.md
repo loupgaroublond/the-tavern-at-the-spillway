@@ -100,18 +100,17 @@ Metrics collection, violation monitoring, logging standards, and the meta proces
 
 **Testable assertion:** No agent tool or API allows modification of that agent's own violation rules. Attempts to modify rules are themselves violations.
 
-<!-- DROPPED: not a requirement in the spec -->
-### REQ-OBS-007: Logging Categories
-**Source:** PRD §19.1, Reader §10
-**Priority:** must-have
-**Status:** specified
+### ~~REQ-OBS-007: Logging Categories~~
+~~**Source:** PRD §19.1, Reader §10~~
+~~**Priority:** must-have~~
+**Status:** dropped — *not a requirement in the spec*
 
-**Properties:**
-- Structured logging via `os.log` with subsystem `com.tavern.spillway`
-- Five categories: `agents` (lifecycle, state transitions), `chat` (message flow), `coordination` (spawn, dismiss, selection), `claude` (SDK calls), `window` (window management)
-- Categories are filterable independently in Console.app
+~~**Properties:**~~
+~~- Structured logging via `os.log` with subsystem `com.tavern.spillway`~~
+~~- Five categories: `agents` (lifecycle, state transitions), `chat` (message flow), `coordination` (spawn, dismiss, selection), `claude` (SDK calls), `window` (window management)~~
+~~- Categories are filterable independently in Console.app~~
 
-**Testable assertion:** Each category produces logs filterable by `category:<name>` in Console.app. All agent state transitions are logged at `.info` level. All errors are logged at `.error` level with full context.
+~~**Testable assertion:** Each category produces logs filterable by `category:<name>` in Console.app. All agent state transitions are logged at `.info` level. All errors are logged at `.error` level with full context.~~
 
 ### REQ-OBS-008: Logging Modes
 **Source:** PRD §19.1
@@ -136,17 +135,16 @@ Metrics collection, violation monitoring, logging standards, and the meta proces
 
 **Testable assertion:** Debug builds expose development-assistance capabilities to servitors. At minimum, verbose logging is available. Agent tools can leverage debug-only features for development workflows.
 
-<!-- DROPPED: user workflows, not observability -->
-### REQ-OBS-010: Meta Process
-**Source:** PRD §9.2
-**Priority:** deferred
-**Status:** specified
+### ~~REQ-OBS-010: Meta Process~~
+~~**Source:** PRD §9.2~~
+~~**Priority:** deferred~~
+**Status:** dropped — *user workflows, not observability*
 
-**Properties:**
-- A decision layer observes which workflows produce better results
-- Recommendations for workflow changes are based on historical metric data
+~~**Properties:**~~
+~~- A decision layer observes which workflows produce better results~~
+~~- Recommendations for workflow changes are based on historical metric data~~
 
-**Testable assertion:** Deferred. When implemented: the meta process recommends workflow changes based on historical metric data.
+~~**Testable assertion:** Deferred. When implemented: the meta process recommends workflow changes based on historical metric data.~~
 
 ### REQ-OBS-011: Discovery Sharing
 **Source:** PRD §9.3

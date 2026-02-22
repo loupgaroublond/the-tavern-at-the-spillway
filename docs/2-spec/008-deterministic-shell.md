@@ -94,30 +94,30 @@ The deterministic shell wraps non-deterministic LLM agents with deterministic in
 
 **Testable assertion:** Commitments can be created, read, and listed for any agent. Commitments survive app restart. Each commitment has a verifiable assertion.
 
-<!-- DROPPED: Jake works like every other agent for tool calls --> ### REQ-DET-006: Jake's Tool Handler Protocol
-**Source:** Reader §9 (Jake's JSON Response Format)
-**Priority:** must-have
-**Status:** specified
+### ~~REQ-DET-006: Jake's Tool Handler Protocol~~
+~~**Source:** Reader §9 (Jake's JSON Response Format)~~
+~~**Priority:** must-have~~
+**Status:** dropped — *Jake works like every other agent for tool calls*
 
-**Properties:**
-- Jake's actions are expressed as structured data, not free text
-- The handler is protocol-based (`JakeToolHandler`) — swapping the handler does not require changes to Jake's core logic
-- The current handler (`JSONActionHandler`) parses a specific JSON format, but this format is an implementation detail of the handler, not a property of Jake
+~~**Properties:**~~
+~~- Jake's actions are expressed as structured data, not free text~~
+~~- The handler is protocol-based (`JakeToolHandler`) — swapping the handler does not require changes to Jake's core logic~~
+~~- The current handler (`JSONActionHandler`) parses a specific JSON format, but this format is an implementation detail of the handler, not a property of Jake~~
 
-**Testable assertion:** `JakeToolHandler` protocol can be implemented by different handlers. Swapping the handler does not require changes to Jake's core logic. The current handler correctly parses Jake's JSON format.
+~~**Testable assertion:** `JakeToolHandler` protocol can be implemented by different handlers. Swapping the handler does not require changes to Jake's core logic. The current handler correctly parses Jake's JSON format.~~
 
-<!-- DROPPED: describes native Claude behavior, not a Tavern requirement --> ### REQ-DET-007: Continuation Loop
-**Source:** Reader §9 (Continuation Loop)
-**Priority:** must-have
-**Status:** specified
+### ~~REQ-DET-007: Continuation Loop~~
+~~**Source:** Reader §9 (Continuation Loop)~~
+~~**Priority:** must-have~~
+**Status:** dropped — *describes native Claude behavior, not a Tavern requirement*
 
-**Properties:**
-- Jake can issue multiple actions in a single conversational turn
-- Feedback from previous actions is available to inform subsequent actions
-- The loop terminates when the handler returns nil (no further actions needed)
-- The loop always terminates — there is no sequence of actions that produces infinite feedback
+~~**Properties:**~~
+~~- Jake can issue multiple actions in a single conversational turn~~
+~~- Feedback from previous actions is available to inform subsequent actions~~
+~~- The loop terminates when the handler returns nil (no further actions needed)~~
+~~- The loop always terminates — there is no sequence of actions that produces infinite feedback~~
 
-**Testable assertion:** After a tool action, feedback is sent back to Jake. Jake can issue additional actions based on feedback. The loop terminates when feedback is nil.
+~~**Testable assertion:** After a tool action, feedback is sent back to Jake. Jake can issue additional actions based on feedback. The loop terminates when feedback is nil.~~
 
 ### REQ-DET-008: MCP Tool Interface
 **Source:** CLAUDE.md (MCP Tools)

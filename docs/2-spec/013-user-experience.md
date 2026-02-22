@@ -144,15 +144,14 @@ Core user loop, UI principles, progressive unlocks, and the project-as-document 
 
 **Testable assertion:** A new user sees a limited vocabulary. After N messages, additional vocabulary becomes available. Unlocks are not accompanied by notifications or announcements.
 
-<!-- DROPPED: not a requirement, progressive unlock details are implementation decisions -->
-### REQ-UX-011: Progressive Unlock Open Questions
-**Source:** PRD §8.2
-**Priority:** deferred
-**Status:** specified
+### ~~REQ-UX-011: Progressive Unlock Open Questions~~
+~~**Source:** PRD §8.2~~
+~~**Priority:** deferred~~
+**Status:** dropped — *not a requirement; progressive unlock details are implementation decisions*
 
-These progressive unlock details are explicitly deferred: scope (per-project vs global), thresholds (linear vs milestone), persistence (where count is stored), reset behavior (prestige?).
+~~These progressive unlock details are explicitly deferred: scope (per-project vs global), thresholds (linear vs milestone), persistence (where count is stored), reset behavior (prestige?).~~
 
-**Testable assertion:** Deferred. Implementation details to be determined during development.
+~~**Testable assertion:** Deferred. Implementation details to be determined during development.~~
 
 ### REQ-UX-012: Three-Choice Consent Pattern
 **Source:** Design discussion

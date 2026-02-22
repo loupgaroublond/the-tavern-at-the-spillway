@@ -205,18 +205,17 @@ Testability requirements, development standards, the five testing principles, th
 
 **Testable assertion:** UI interactions (click, type, tab switch) complete within one frame (~16ms). Long operations show feedback within 100ms. Adding 10x more history does not measurably degrade current-content display performance.
 
-<!-- DROPPED: not spec material — maybe ADR if framed differently -->
-### REQ-QA-015: RAM Budget
-**Source:** PRD §21
-**Priority:** must-have
-**Status:** specified
+### ~~REQ-QA-015: RAM Budget~~
+~~**Source:** PRD §21~~
+~~**Priority:** must-have~~
+**Status:** dropped — *not spec material; maybe ADR if framed differently*
 
-**Properties:**
-- No fixed RAM target — if the app causes system-wide slowdown or memory pressure warnings, that is a bug
-- Data structures avoid holding unbounded data in memory when not needed
-- Memory usage grows sub-linearly with agent count and history size
+~~**Properties:**~~
+~~- No fixed RAM target — if the app causes system-wide slowdown or memory pressure warnings, that is a bug~~
+~~- Data structures avoid holding unbounded data in memory when not needed~~
+~~- Memory usage grows sub-linearly with agent count and history size~~
 
-**Testable assertion:** The app does not trigger macOS memory pressure warnings under normal use. Memory usage grows sub-linearly with agent count and history size.
+~~**Testable assertion:** The app does not trigger macOS memory pressure warnings under normal use. Memory usage grows sub-linearly with agent count and history size.~~
 
 ### REQ-QA-016: Cancellation Design
 **Source:** PRD §21
