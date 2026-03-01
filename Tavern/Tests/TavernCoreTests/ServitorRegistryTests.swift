@@ -39,7 +39,7 @@ final class TestServitor: Servitor, @unchecked Sendable {
 
 // MARK: - Tests
 
-@Suite("ServitorRegistry Tests")
+@Suite("ServitorRegistry Tests", .timeLimit(.minutes(1)))
 struct ServitorRegistryTests {
 
     @Test("Registry adds servitor", .tags(.reqSPN005))

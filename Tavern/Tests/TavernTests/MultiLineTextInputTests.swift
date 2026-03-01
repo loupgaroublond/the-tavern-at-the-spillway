@@ -1,6 +1,6 @@
 import XCTest
 import AppKit
-@testable import Tavern
+@testable import ChatTile
 
 /// Grade 1-2 unit tests for MultiLineTextInput and its components.
 ///
@@ -11,6 +11,11 @@ import AppKit
 /// - Height calculation: single-line, multi-line, max height clamping
 @MainActor
 final class MultiLineTextInputTests: XCTestCase {
+
+    override func setUp() {
+        super.setUp()
+        executionTimeAllowance = 10
+    }
 
     // MARK: - Helper
 

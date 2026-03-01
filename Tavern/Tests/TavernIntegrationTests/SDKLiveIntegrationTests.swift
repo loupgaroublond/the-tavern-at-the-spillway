@@ -12,7 +12,11 @@ import ClodKit
 /// They use real API calls but should be very cheap (minimal tokens).
 final class SDKLiveIntegrationTests: XCTestCase {
 
-    /// Timeout for live tests - 30 seconds should be plenty
+    override func setUp() async throws {
+        try await super.setUp()
+        executionTimeAllowance = 60
+    }
+
     let testTimeout: TimeInterval = 30.0
 
     // MARK: - Basic Connectivity Tests
@@ -23,6 +27,7 @@ final class SDKLiveIntegrationTests: XCTestCase {
 
         var options = QueryOptions()
         options.maxTurns = 1
+        options.permissionMode = .plan
         options.systemPrompt = "You are a test assistant. Respond with exactly: TEST_OK"
         // Use a temp directory as working directory
         options.workingDirectory = URL(fileURLWithPath: NSTemporaryDirectory())
@@ -137,6 +142,7 @@ final class SDKLiveIntegrationTests: XCTestCase {
 
         var options = QueryOptions()
         options.maxTurns = 1
+        options.permissionMode = .plan
         options.systemPrompt = "You are a test assistant. Respond with exactly: MCP_OK"
         options.workingDirectory = URL(fileURLWithPath: NSTemporaryDirectory())
         options.sdkMcpServers["test-empty"] = emptyServer
@@ -207,6 +213,7 @@ final class SDKLiveIntegrationTests: XCTestCase {
 
         var options = QueryOptions()
         options.maxTurns = 1
+        options.permissionMode = .plan
         options.systemPrompt = "You are a test assistant. Just say TOOLS_OK. Do not call any tools."
         options.workingDirectory = URL(fileURLWithPath: NSTemporaryDirectory())
         options.sdkMcpServers["test-tools"] = testServer
@@ -352,6 +359,7 @@ final class SDKLiveIntegrationTests: XCTestCase {
 
         var options = QueryOptions()
         options.maxTurns = 1
+        options.permissionMode = .plan
         options.systemPrompt = "Say LOGGER_OK"
         options.workingDirectory = projectURL
         options.sdkMcpServers["tavern"] = testServer
@@ -469,6 +477,7 @@ final class SDKLiveIntegrationTests: XCTestCase {
 
         var options = QueryOptions()
         options.maxTurns = 1
+        options.permissionMode = .plan
         options.systemPrompt = "Say CALLBACK_OK"
         options.workingDirectory = projectURL
         options.sdkMcpServers["tavern"] = testServer
@@ -564,6 +573,7 @@ final class SDKLiveIntegrationTests: XCTestCase {
 
         var options = QueryOptions()
         options.maxTurns = 1
+        options.permissionMode = .plan
         options.systemPrompt = "Say CAPTURE_OK"
         options.workingDirectory = projectURL
         options.sdkMcpServers["tavern"] = testServer
@@ -634,6 +644,7 @@ final class SDKLiveIntegrationTests: XCTestCase {
 
         var options = QueryOptions()
         options.maxTurns = 1
+        options.permissionMode = .plan
         options.systemPrompt = "You are a test assistant. Just respond with OK. Do not use any tools."  // Avoid 'summon'
         options.workingDirectory = projectURL
         options.sdkMcpServers["tavern"] = tavernServer
@@ -690,6 +701,7 @@ final class SDKLiveIntegrationTests: XCTestCase {
 
         var options = QueryOptions()
         options.maxTurns = 1
+        options.permissionMode = .plan
         options.systemPrompt = "Don't summon anyone."  // Contains "summon" - matches tool name
         options.workingDirectory = URL(fileURLWithPath: NSTemporaryDirectory())
         options.sdkMcpServers["tavern"] = testServer
@@ -753,6 +765,7 @@ final class SDKLiveIntegrationTests: XCTestCase {
 
         var options = QueryOptions()
         options.maxTurns = 1
+        options.permissionMode = .plan
         options.systemPrompt = "You are Jake. Just say TAVERN_OK. Do not use any tools."
         options.workingDirectory = projectURL
         options.sdkMcpServers["tavern"] = tavernServer
@@ -839,6 +852,7 @@ final class SDKLiveIntegrationTests: XCTestCase {
 
         var options = QueryOptions()
         options.maxTurns = 1
+        options.permissionMode = .plan
         options.systemPrompt = "Say PROPS_OK"
         options.workingDirectory = URL(fileURLWithPath: NSTemporaryDirectory())
         options.sdkMcpServers["test-props"] = testServer
@@ -902,6 +916,7 @@ final class SDKLiveIntegrationTests: XCTestCase {
 
         var options = QueryOptions()
         options.maxTurns = 1
+        options.permissionMode = .plan
         options.systemPrompt = "Say TWO_OK"
         options.workingDirectory = URL(fileURLWithPath: NSTemporaryDirectory())
         options.sdkMcpServers["test-two"] = testServer
@@ -958,6 +973,7 @@ final class SDKLiveIntegrationTests: XCTestCase {
 
         var options = QueryOptions()
         options.maxTurns = 1
+        options.permissionMode = .plan
         options.systemPrompt = "Say SUMMON_OK"
         options.workingDirectory = URL(fileURLWithPath: NSTemporaryDirectory())
         options.sdkMcpServers["test-summon"] = testServer
@@ -1025,6 +1041,7 @@ final class SDKLiveIntegrationTests: XCTestCase {
 
         var options = QueryOptions()
         options.maxTurns = 1
+        options.permissionMode = .plan
         options.systemPrompt = "Say NAME_OK"
         options.workingDirectory = URL(fileURLWithPath: NSTemporaryDirectory())
         options.sdkMcpServers["tavern"] = testServer
@@ -1092,6 +1109,7 @@ final class SDKLiveIntegrationTests: XCTestCase {
 
         var options = QueryOptions()
         options.maxTurns = 1
+        options.permissionMode = .plan
         options.systemPrompt = "Say BOTH_OK"
         options.workingDirectory = URL(fileURLWithPath: NSTemporaryDirectory())
         options.sdkMcpServers["tavern-minimal"] = testServer
@@ -1132,6 +1150,7 @@ final class SDKLiveIntegrationTests: XCTestCase {
 
         var options = QueryOptions()
         options.maxTurns = 1
+        options.permissionMode = .plan
         options.systemPrompt = "Say OK"
         options.workingDirectory = URL(fileURLWithPath: NSTemporaryDirectory())
 

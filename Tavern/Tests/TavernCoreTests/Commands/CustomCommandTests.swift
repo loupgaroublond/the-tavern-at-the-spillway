@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import TavernCore
 
-@Suite("CustomCommand Tests")
+@Suite("CustomCommand Tests", .timeLimit(.minutes(1)))
 struct CustomCommandTests {
 
     // MARK: - Argument Substitution

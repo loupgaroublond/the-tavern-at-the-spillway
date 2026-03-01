@@ -12,6 +12,11 @@ import XCTest
 /// Run with: swift test --filter TavernStressTests.StreamingStressTests
 final class StreamingStressTests: XCTestCase {
 
+    override func setUp() async throws {
+        try await super.setUp()
+        executionTimeAllowance = 30
+    }
+
     // MARK: - Test: 10 Concurrent Streams
 
     /// Run 10 concurrent streaming sessions. Each MockServitor returns a known response.

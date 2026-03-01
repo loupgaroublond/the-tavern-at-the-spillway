@@ -46,7 +46,7 @@ public final class Mortal: Servitor, @unchecked Sendable {
 
     private var _state: ServitorState = .idle
     private var _sessionId: String?
-    private var _sessionMode: PermissionMode = .plan
+    private var _sessionMode: TavernKit.PermissionMode = .plan
 
     /// The current session ID (for conversation continuity)
     public var sessionId: String? {
@@ -54,7 +54,7 @@ public final class Mortal: Servitor, @unchecked Sendable {
     }
 
     /// The current session mode (plan, normal, acceptEdits, etc.)
-    public var sessionMode: PermissionMode {
+    public var sessionMode: TavernKit.PermissionMode {
         get { queue.sync { _sessionMode } }
         set { queue.sync { _sessionMode = newValue } }
     }
@@ -315,7 +315,7 @@ public final class Mortal: Servitor, @unchecked Sendable {
 
     /// Map Tavern's PermissionMode to ClodKit's PermissionMode for QueryOptions
     private func clodKitPermissionMode() -> ClodKit.PermissionMode {
-        let mode: PermissionMode = queue.sync { _sessionMode }
+        let mode: TavernKit.PermissionMode = queue.sync { _sessionMode }
         switch mode {
         case .normal: return .default
         case .acceptEdits: return .acceptEdits

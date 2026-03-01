@@ -19,7 +19,7 @@ struct TestSlashCommand: SlashCommand {
     }
 }
 
-@Suite("SlashCommandDispatcher Tests")
+@Suite("SlashCommandDispatcher Tests", .timeLimit(.minutes(1)))
 struct SlashCommandDispatcherTests {
 
     @Test("Register and look up a command")

@@ -16,6 +16,7 @@ final class SessionHistoryStressTests: XCTestCase {
 
     override func setUp() {
         super.setUp()
+        executionTimeAllowance = 30
         tempDir = URL(fileURLWithPath: NSTemporaryDirectory())
             .appendingPathComponent("tavern-session-stress-\(UUID().uuidString)")
         try? FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)

@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import TavernCore
 
-@Suite("ServitorListItem Tests")
+@Suite("ServitorListItem Tests", .timeLimit(.minutes(1)))
 struct ServitorListItemTests {
 
     // Test helper
@@ -87,7 +87,7 @@ struct ServitorListItemTests {
     }
 }
 
-@Suite("ServitorListViewModel Tests")
+@Suite("ServitorListViewModel Tests", .timeLimit(.minutes(1)))
 struct ServitorListViewModelTests {
 
     private static func testProjectURL() -> URL {

@@ -2,26 +2,7 @@ import Foundation
 
 // MARK: - Provenance: REQ-AGT-005, REQ-AGT-010, REQ-ARCH-004
 
-/// State of a servitor in the Tavern
-public enum ServitorState: String, Equatable, Sendable {
-    /// Servitor is idle, waiting for work
-    case idle
-
-    /// Servitor is actively working on a task
-    case working
-
-    /// Servitor is waiting for input or decision
-    case waiting
-
-    /// Servitor is verifying its commitments before completing
-    case verifying
-
-    /// Servitor has completed their assignment
-    case done
-
-    /// Servitor encountered an error
-    case error
-}
+// ServitorState has moved to TavernKit.
 
 /// Protocol defining the common interface for all servitors in the Tavern
 public protocol Servitor: AnyObject, Identifiable, Sendable {
@@ -36,7 +17,7 @@ public protocol Servitor: AnyObject, Identifiable, Sendable {
     var state: ServitorState { get }
 
     /// The servitor's current session mode (plan, normal, acceptEdits, etc.)
-    var sessionMode: PermissionMode { get set }
+    var sessionMode: TavernKit.PermissionMode { get set }
 
     /// Send a message to this servitor and get a response (batch mode)
     /// - Parameter message: The message to send
@@ -51,4 +32,3 @@ public protocol Servitor: AnyObject, Identifiable, Sendable {
     /// Reset the servitor's conversation state
     func resetConversation()
 }
-

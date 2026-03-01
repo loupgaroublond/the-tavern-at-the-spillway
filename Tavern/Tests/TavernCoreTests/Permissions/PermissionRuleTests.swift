@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import TavernCore
 
-@Suite("PermissionRule Tests")
+@Suite("PermissionRule Tests", .timeLimit(.minutes(1)))
 struct PermissionRuleTests {
 
     @Test("Rule matches exact tool name")

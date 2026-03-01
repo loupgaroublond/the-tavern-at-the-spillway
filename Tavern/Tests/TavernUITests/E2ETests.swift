@@ -10,6 +10,7 @@ final class E2ETests: XCTestCase {
 
     override func setUpWithError() throws {
         continueAfterFailure = false
+        executionTimeAllowance = 120
 
         app = XCUIApplication()
         app.launchArguments = ["--ui-testing", "--project-path", "/tmp/tavern-e2e-test"]

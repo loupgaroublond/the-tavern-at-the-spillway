@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import TavernCore
 
-@Suite("FileTypeIcon Tests")
+@Suite("FileTypeIcon Tests", .timeLimit(.minutes(1)))
 struct FileTypeIconTests {
 
     @Test("Known extensions map correctly")

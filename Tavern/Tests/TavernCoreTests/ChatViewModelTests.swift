@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import TavernCore
 
-@Suite("ChatViewModel Tests")
+@Suite("ChatViewModel Tests", .timeLimit(.minutes(1)))
 struct ChatViewModelTests {
 
     // Test helper

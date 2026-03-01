@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import TavernCore
 
-@Suite("PermissionStore Tests")
+@Suite("PermissionStore Tests", .timeLimit(.minutes(1)))
 struct PermissionStoreTests {
 
     /// Create an isolated UserDefaults for each test to prevent cross-contamination

@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import TavernCore
 
-@Suite("TavernErrorMessages Tests")
+@Suite("TavernErrorMessages Tests", .timeLimit(.minutes(1)))
 struct TavernErrorMessagesTests {
 
     // MARK: - Exhaustive coverage: every TavernError case produces a non-empty message

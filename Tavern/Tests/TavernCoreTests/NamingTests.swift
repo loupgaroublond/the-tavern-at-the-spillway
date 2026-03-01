@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import TavernCore
 
-@Suite("NamingTheme Tests")
+@Suite("NamingTheme Tests", .timeLimit(.minutes(1)))
 struct NamingThemeTests {
 
     @Test("Theme has all required properties", .tags(.reqSPN004))
@@ -39,7 +39,7 @@ struct NamingThemeTests {
     }
 }
 
-@Suite("NameGenerator Tests")
+@Suite("NameGenerator Tests", .timeLimit(.minutes(1)))
 struct NameGeneratorTests {
 
     @Test("Generator generates names in tier order", .tags(.reqSPN005, .reqSPN006))

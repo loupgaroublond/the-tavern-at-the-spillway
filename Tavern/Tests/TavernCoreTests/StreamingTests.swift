@@ -1,8 +1,9 @@
 import Foundation
 import Testing
+import ClodKit
 @testable import TavernCore
 
-@Suite("Streaming Tests")
+@Suite("Streaming Tests", .timeLimit(.minutes(1)))
 struct StreamingTests {
 
     // Test helper

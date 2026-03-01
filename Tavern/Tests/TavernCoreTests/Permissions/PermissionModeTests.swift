@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import TavernCore
 
-@Suite("PermissionMode Tests")
+@Suite("PermissionMode Tests", .timeLimit(.minutes(1)))
 struct PermissionModeTests {
 
     @Test("All modes have display names")

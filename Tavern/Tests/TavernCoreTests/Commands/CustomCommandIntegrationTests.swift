@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import TavernCore
 
-@Suite("Custom Command Integration Tests")
+@Suite("Custom Command Integration Tests", .timeLimit(.minutes(1)))
 struct CustomCommandIntegrationTests {
 
     // MARK: - Dispatcher removeAll

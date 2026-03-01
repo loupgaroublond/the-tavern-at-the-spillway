@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import TavernCore
 
-@Suite("Core Slash Command Tests")
+@Suite("Core Slash Command Tests", .timeLimit(.minutes(1)))
 struct CoreCommandTests {
 
     // MARK: - /help

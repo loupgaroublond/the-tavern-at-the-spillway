@@ -16,6 +16,7 @@ final class FileTreeStressTests: XCTestCase {
 
     override func setUp() {
         super.setUp()
+        executionTimeAllowance = 30
         tempRoot = URL(fileURLWithPath: NSTemporaryDirectory())
             .appendingPathComponent("tavern-filetree-stress-\(UUID().uuidString)")
         try? FileManager.default.createDirectory(at: tempRoot, withIntermediateDirectories: true)

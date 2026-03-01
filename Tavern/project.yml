@@ -26,12 +26,107 @@ packages:
     from: 1.0.0
 
 targets:
+  TavernKit:
+    type: framework
+    platform: macOS
+    sources:
+      - path: Sources/TavernKit
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.tavern.tavernkit
+      SWIFT_VERSION: "6.0"
+      GENERATE_INFOPLIST_FILE: YES
+      INFOPLIST_KEY_NSHumanReadableCopyright: ""
+
+  ApprovalTile:
+    type: framework
+    platform: macOS
+    sources:
+      - path: Sources/Tiles/ApprovalTile
+    dependencies:
+      - target: TavernKit
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.tavern.approvaltile
+      SWIFT_VERSION: "6.0"
+      GENERATE_INFOPLIST_FILE: YES
+      INFOPLIST_KEY_NSHumanReadableCopyright: ""
+
+  PermissionSettingsTile:
+    type: framework
+    platform: macOS
+    sources:
+      - path: Sources/Tiles/PermissionSettingsTile
+    dependencies:
+      - target: TavernKit
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.tavern.permissionsettingstile
+      SWIFT_VERSION: "6.0"
+      GENERATE_INFOPLIST_FILE: YES
+      INFOPLIST_KEY_NSHumanReadableCopyright: ""
+
+  ServitorListTile:
+    type: framework
+    platform: macOS
+    sources:
+      - path: Sources/Tiles/ServitorListTile
+    dependencies:
+      - target: TavernKit
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.tavern.servitorlisttile
+      SWIFT_VERSION: "6.0"
+      GENERATE_INFOPLIST_FILE: YES
+      INFOPLIST_KEY_NSHumanReadableCopyright: ""
+
+  ResourcePanelTile:
+    type: framework
+    platform: macOS
+    sources:
+      - path: Sources/Tiles/ResourcePanelTile
+    dependencies:
+      - target: TavernKit
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.tavern.resourcepaneltile
+      SWIFT_VERSION: "6.0"
+      GENERATE_INFOPLIST_FILE: YES
+      INFOPLIST_KEY_NSHumanReadableCopyright: ""
+
+  ChatTile:
+    type: framework
+    platform: macOS
+    sources:
+      - path: Sources/Tiles/ChatTile
+    dependencies:
+      - target: TavernKit
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.tavern.chattile
+      SWIFT_VERSION: "6.0"
+      GENERATE_INFOPLIST_FILE: YES
+      INFOPLIST_KEY_NSHumanReadableCopyright: ""
+
+  TavernBoardTile:
+    type: framework
+    platform: macOS
+    sources:
+      - path: Sources/Tiles/TavernBoardTile
+    dependencies:
+      - target: TavernKit
+      - target: ApprovalTile
+      - target: PermissionSettingsTile
+      - target: ServitorListTile
+      - target: ResourcePanelTile
+      - target: ChatTile
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.tavern.tavernboardtile
+      SWIFT_VERSION: "6.0"
+      GENERATE_INFOPLIST_FILE: YES
+      INFOPLIST_KEY_NSHumanReadableCopyright: ""
+
   TavernCore:
     type: framework
     platform: macOS
     sources:
       - path: Sources/TavernCore
     dependencies:
+      - target: TavernKit
       - package: ClodKit
         product: ClodKit
     settings:
@@ -47,6 +142,8 @@ targets:
       - path: Sources/Tavern
     dependencies:
       - target: TavernCore
+      - target: TavernKit
+      - target: TavernBoardTile
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: com.tavern.app
       SWIFT_VERSION: "6.0"

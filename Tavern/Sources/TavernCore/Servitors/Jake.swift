@@ -28,7 +28,7 @@ public final class Jake: Servitor, @unchecked Sendable {
     private var _sessionId: String?
     private var _isCogitating: Bool = false
     private var _mcpServer: SDKMCPServer?
-    private var _sessionMode: PermissionMode = .plan
+    private var _sessionMode: TavernKit.PermissionMode = .plan
 
     /// MCP server for Jake's tools (summon, dismiss, etc.)
     /// Injected after init to break circular dependency with spawner
@@ -53,7 +53,7 @@ public final class Jake: Servitor, @unchecked Sendable {
     }
 
     /// The current session mode (plan, normal, acceptEdits, etc.)
-    public var sessionMode: PermissionMode {
+    public var sessionMode: TavernKit.PermissionMode {
         get { queue.sync { _sessionMode } }
         set { queue.sync { _sessionMode = newValue } }
     }
@@ -288,7 +288,7 @@ public final class Jake: Servitor, @unchecked Sendable {
 
     /// Map Tavern's PermissionMode to ClodKit's PermissionMode for QueryOptions
     private func clodKitPermissionMode() -> ClodKit.PermissionMode {
-        let mode: PermissionMode = queue.sync { _sessionMode }
+        let mode: TavernKit.PermissionMode = queue.sync { _sessionMode }
         switch mode {
         case .normal: return .default
         case .acceptEdits: return .acceptEdits

@@ -4,8 +4,8 @@
 /// and doc store functionality. It's designed to be testable
 /// without any UI dependencies.
 
-// Re-export ClodKit types
-@_exported import ClodKit
+// Re-export TavernKit types so consumers get them automatically
+@_exported import TavernKit
 
 public enum TavernCore {
     public static let version = "0.1.0"

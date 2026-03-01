@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import TavernCore
 
-@Suite("SlashCommandAutocomplete Tests")
+@Suite("SlashCommandAutocomplete Tests", .timeLimit(.minutes(1)))
 struct SlashCommandAutocompleteTests {
 
     @MainActor

@@ -1,8 +1,9 @@
 import Foundation
 import Testing
+import ClodKit
 @testable import TavernCore
 
-@Suite("Jake Tests")
+@Suite("Jake Tests", .timeLimit(.minutes(1)))
 struct JakeTests {
 
     // Test helper - temp directory for testing

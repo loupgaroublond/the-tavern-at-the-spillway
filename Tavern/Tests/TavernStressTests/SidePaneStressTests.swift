@@ -12,6 +12,11 @@ import XCTest
 /// Run with: swift test --filter TavernStressTests.SidePaneStressTests
 final class SidePaneStressTests: XCTestCase {
 
+    override func setUp() async throws {
+        try await super.setUp()
+        executionTimeAllowance = 30
+    }
+
     // MARK: - TodoListViewModel Tests
 
     /// Add 1000 TODO items. Verify counts and state are consistent.

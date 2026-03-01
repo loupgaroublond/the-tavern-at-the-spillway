@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import TavernCore
 
-@Suite("SidePaneTab Tests")
+@Suite("SidePaneTab Tests", .timeLimit(.minutes(1)))
 struct SidePaneTabTests {
 
     @Test("All cases have distinct symbol names")
@@ -28,7 +28,7 @@ struct SidePaneTabTests {
     }
 }
 
-@Suite("TavernTask Tests")
+@Suite("TavernTask Tests", .timeLimit(.minutes(1)))
 struct TavernTaskTests {
 
     @Test("Default init creates running task with empty output")
@@ -86,7 +86,7 @@ struct TavernTaskTests {
     }
 }
 
-@Suite("TodoItem Tests")
+@Suite("TodoItem Tests", .timeLimit(.minutes(1)))
 struct TodoItemTests {
 
     @Test("Default init creates uncompleted item")

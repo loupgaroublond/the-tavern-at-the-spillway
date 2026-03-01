@@ -12,6 +12,11 @@ import XCTest
 /// Run with: swift test --filter TavernStressTests.PermissionStressTests
 final class PermissionStressTests: XCTestCase {
 
+    override func setUp() async throws {
+        try await super.setUp()
+        executionTimeAllowance = 30
+    }
+
     private func freshDefaults() -> UserDefaults {
         let suiteName = "com.tavern.stress.permissions.\(UUID().uuidString)"
         return UserDefaults(suiteName: suiteName)!

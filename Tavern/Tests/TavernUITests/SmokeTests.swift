@@ -9,6 +9,7 @@ final class SmokeTests: XCTestCase {
 
     override func setUpWithError() throws {
         continueAfterFailure = false
+        executionTimeAllowance = 120
 
         app = XCUIApplication()
         app.launchArguments = ["--ui-testing", "--project-path", "/tmp/tavern-ui-test"]

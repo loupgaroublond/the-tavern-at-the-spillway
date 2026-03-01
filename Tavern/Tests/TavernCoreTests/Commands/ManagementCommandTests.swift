@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import TavernCore
 
-@Suite("Management Command Tests")
+@Suite("Management Command Tests", .timeLimit(.minutes(1)))
 struct ManagementCommandTests {
 
     // MARK: - Helper

@@ -1,8 +1,9 @@
 import Foundation
 import Testing
+import ClodKit
 @testable import TavernCore
 
-@Suite("TavernCore Tests")
+@Suite("TavernCore Tests", .timeLimit(.minutes(1)))
 struct TavernCoreTests {
 
     @Test("Version is set")
@@ -11,7 +12,7 @@ struct TavernCoreTests {
     }
 }
 
-@Suite("TestFixtures Tests")
+@Suite("TestFixtures Tests", .timeLimit(.minutes(1)))
 struct TestFixturesTests {
 
     @Test("Creates temp directory")
@@ -31,7 +32,7 @@ struct TestFixturesTests {
 
 // MARK: - MockSDKMessage Tests (new SDK helper tests)
 
-@Suite("MockSDKMessage Tests")
+@Suite("MockSDKMessage Tests", .timeLimit(.minutes(1)))
 struct MockSDKMessageTests {
 
     @Test("Result message has correct type")
@@ -62,7 +63,7 @@ struct MockSDKMessageTests {
     }
 }
 
-@Suite("MockQueryStream Tests")
+@Suite("MockQueryStream Tests", .timeLimit(.minutes(1)))
 struct MockQueryStreamTests {
 
     @Test("Stream yields all messages")

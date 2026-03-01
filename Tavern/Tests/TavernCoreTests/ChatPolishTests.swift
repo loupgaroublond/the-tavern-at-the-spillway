@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import TavernCore
 
-@Suite("Chat Polish Tests")
+@Suite("Chat Polish Tests", .timeLimit(.minutes(1)))
 struct ChatPolishTests {
 
     // MARK: - SessionUsage Tests

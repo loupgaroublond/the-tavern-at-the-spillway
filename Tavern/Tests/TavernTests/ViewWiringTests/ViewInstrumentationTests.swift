@@ -1,72 +1,28 @@
 import XCTest
 import SwiftUI
 import ViewInspector
-@testable import TavernCore
-@testable import Tavern
+@testable import ChatTile
+@testable import ResourcePanelTile
 
-/// Grade 1-2 tests verifying that view instrumentation is wired correctly.
+/// Grade 1-2 tests verifying that CoreUI view instrumentation is wired correctly.
 ///
 /// These tests verify:
 /// 1. Views with instrumentation render without crashing (the `let _ = Self.logger.debug(...)`
 ///    pattern evaluates during body computation without side effects that break rendering)
 /// 2. ViewInspector can introspect instrumented views (proving the logging code doesn't
 ///    interfere with the view hierarchy)
-/// 3. Views that should have loggers can be instantiated and rendered
 ///
-/// Note: We do NOT use OSLogStore to capture log output because os.log at .debug level
-/// is not persisted (only available during streaming). Instead, these tests validate
-/// that instrumented views render correctly, which proves the logging code path executes
-/// without error during body evaluation.
+/// Note: View-specific wiring tests for tiles live in their respective tile test targets.
+/// These tests cover shared CoreUI presentation components.
 @MainActor
 final class ViewInstrumentationTests: XCTestCase {
 
-    // MARK: - Helper Factories
-
-    private func makeServitorListViewModel() -> ServitorListViewModel {
-        let projectURL = URL(fileURLWithPath: "/tmp/tavern-instrumentation-test")
-        let jake = Jake(projectURL: projectURL, loadSavedSession: false)
-        let registry = ServitorRegistry()
-        let nameGen = NameGenerator(theme: .lotr)
-        let spawner = MortalSpawner(
-            registry: registry,
-            nameGenerator: nameGen,
-            projectURL: projectURL
-        )
-        return ServitorListViewModel(jake: jake, spawner: spawner)
+    override func setUp() {
+        super.setUp()
+        executionTimeAllowance = 10
     }
 
-    // MARK: - Non-Compliant Views (dow, 7jj) - Full Instrumentation
-
-    /// ServitorListView renders with all 5 instrumentation categories without crashing
-    func testServitorListViewRendersWithInstrumentation() throws {
-        let viewModel = makeServitorListViewModel()
-        let view = ServitorListView(viewModel: viewModel)
-        let sut = try view.inspect()
-
-        // View renders — proves body evaluation logging doesn't break rendering
-        let list = try sut.find(viewWithAccessibilityIdentifier: "servitorList")
-        XCTAssertNotNil(list)
-    }
-
-    /// FileContentView renders with instrumentation in all 4 conditional branches
-    func testFileContentViewRendersWithInstrumentation() throws {
-        let projectURL = URL(fileURLWithPath: "/tmp/tavern-instrumentation-test")
-        let viewModel = ResourcePanelViewModel(rootURL: projectURL)
-
-        // Empty state branch (no file selected, not loading, no error)
-        let view = FileContentView(viewModel: viewModel)
-        let sut = try view.inspect()
-        XCTAssertNotNil(sut)
-    }
-
-    /// FileTreeView renders with task instrumentation logging
-    func testFileTreeViewRendersWithInstrumentation() throws {
-        let projectURL = URL(fileURLWithPath: "/tmp/tavern-instrumentation-test")
-        let viewModel = ResourcePanelViewModel(rootURL: projectURL)
-        let view = FileTreeView(viewModel: viewModel)
-        let sut = try view.inspect()
-        XCTAssertNotNil(sut)
-    }
+    // MARK: - Presentation Components
 
     /// LineNumberedText renders with body evaluation logging
     func testLineNumberedTextRendersWithInstrumentation() throws {
@@ -74,8 +30,6 @@ final class ViewInstrumentationTests: XCTestCase {
         let sut = try view.inspect()
         XCTAssertNotNil(sut)
     }
-
-    // MARK: - Partially Compliant Views (ekq) - Lifecycle + State Change
 
     /// CollapsibleBlockView renders with body logging, lifecycle, and onChange
     func testCollapsibleBlockViewRendersWithInstrumentation() throws {
@@ -110,70 +64,5 @@ final class ViewInstrumentationTests: XCTestCase {
         let view = DiffView(content: "just plain text, no diff markers")
         let sut = try view.inspect()
         XCTAssertNotNil(sut)
-    }
-
-    /// BackgroundTasksView renders empty state with instrumentation
-    func testBackgroundTasksViewRendersEmptyState() throws {
-        let viewModel = BackgroundTaskViewModel()
-        let view = BackgroundTasksView(viewModel: viewModel)
-        let sut = try view.inspect()
-        XCTAssertNotNil(sut)
-    }
-
-    /// TodoListView renders empty state with instrumentation
-    func testTodoListViewRendersEmptyState() throws {
-        let viewModel = TodoListViewModel()
-        let view = TodoListView(viewModel: viewModel)
-        let sut = try view.inspect()
-        XCTAssertNotNil(sut)
-    }
-
-    /// ResourcePanelView renders with tab logging and branch instrumentation
-    func testResourcePanelViewRendersWithInstrumentation() throws {
-        let projectURL = URL(fileURLWithPath: "/tmp/tavern-instrumentation-test")
-        let resourceVM = ResourcePanelViewModel(rootURL: projectURL)
-        let taskVM = BackgroundTaskViewModel()
-        let todoVM = TodoListViewModel()
-        @State var selectedTab: SidePaneTab = .files
-
-        let view = ResourcePanelView(
-            resourceViewModel: resourceVM,
-            taskViewModel: taskVM,
-            todoViewModel: todoVM,
-            selectedTab: $selectedTab
-        )
-        let sut = try view.inspect()
-        XCTAssertNotNil(sut)
-    }
-
-    /// PermissionSettingsView renders with lifecycle and mode change instrumentation
-    func testPermissionSettingsViewRendersWithInstrumentation() throws {
-        let suiteName = "com.tavern.test.permissions.\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: suiteName)!
-        let store = PermissionStore(defaults: defaults)
-        let manager = PermissionManager(store: store)
-        let viewModel = PermissionSettingsViewModel(manager: manager)
-        let view = PermissionSettingsView(viewModel: viewModel)
-        let sut = try view.inspect()
-        XCTAssertNotNil(sut)
-    }
-
-    // MARK: - Instrumentation Completeness
-
-    /// All view files in the Views directory should have a logger property.
-    /// This test acts as a reminder: if a new view is added without instrumentation,
-    /// this count assertion will fail.
-    func testAllViewsHaveLoggerProperty() {
-        // As of this commit, all 15 view files have loggers (some shared via parent struct).
-        // The views: ServitorListView, BackgroundTasksView, ChatView, CodeBlockView,
-        // CollapsibleBlockView, DiffView, FileContentView, FileTreeView,
-        // LineNumberedText, MessageRowView, MultiLineTextInput, PermissionSettingsView,
-        // ResourcePanelView, TodoListView, ToolApprovalView
-        //
-        // This is a documentation test — it verifies the instrumentation audit was completed.
-        // If a new view is added, update this count.
-        let instrumentedViewCount = 15
-        XCTAssertEqual(instrumentedViewCount, 15,
-            "All 15 views should be instrumented. Update this if views are added/removed.")
     }
 }

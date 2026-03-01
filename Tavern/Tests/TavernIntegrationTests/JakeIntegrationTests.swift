@@ -32,6 +32,7 @@ final class JakeIntegrationTests: XCTestCase {
 
         var options = QueryOptions()
         options.maxTurns = 1
+        options.permissionMode = .plan
         options.systemPrompt = "You are a test assistant. Respond with exactly: JAKE_OK"
         options.workingDirectory = projectURL
 

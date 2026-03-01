@@ -13,6 +13,11 @@ import XCTest
 /// Run with: swift test --filter TavernStressTests.CommandDispatchStressTests
 final class CommandDispatchStressTests: XCTestCase {
 
+    override func setUp() async throws {
+        try await super.setUp()
+        executionTimeAllowance = 30
+    }
+
     /// Simple test command that returns its arguments
     private struct EchoCommand: SlashCommand {
         let name: String

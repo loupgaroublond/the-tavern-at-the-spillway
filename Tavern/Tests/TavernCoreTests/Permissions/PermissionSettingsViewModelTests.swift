@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import TavernCore
 
-@Suite("PermissionSettingsViewModel Tests")
+@Suite("PermissionSettingsViewModel Tests", .timeLimit(.minutes(1)))
 @MainActor
 struct PermissionSettingsViewModelTests {
 

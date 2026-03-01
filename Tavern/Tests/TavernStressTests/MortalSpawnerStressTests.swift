@@ -9,6 +9,11 @@ import XCTest
 /// Run with: swift test --filter TavernStressTests.MortalSpawnerStressTests
 final class MortalSpawnerStressTests: XCTestCase {
 
+    override func setUp() async throws {
+        try await super.setUp()
+        executionTimeAllowance = 30
+    }
+
     private func testProjectURL() -> URL {
         URL(fileURLWithPath: NSTemporaryDirectory())
             .appendingPathComponent("tavern-stress-\(UUID().uuidString)")

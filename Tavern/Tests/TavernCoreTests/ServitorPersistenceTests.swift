@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import TavernCore
 
-@Suite("ServitorNode Tests")
+@Suite("ServitorNode Tests", .timeLimit(.minutes(1)))
 struct ServitorNodeTests {
 
     private static func testProjectURL() -> URL {
@@ -154,7 +154,7 @@ struct ServitorNodeTests {
     }
 }
 
-@Suite("CommitmentNode Tests")
+@Suite("CommitmentNode Tests", .timeLimit(.minutes(1)))
 struct CommitmentNodeTests {
 
     @Test("CommitmentNode creates from Commitment")
@@ -209,7 +209,7 @@ struct CommitmentNodeTests {
     }
 }
 
-@Suite("ServitorPersistence Tests")
+@Suite("ServitorPersistence Tests", .timeLimit(.minutes(1)))
 struct ServitorPersistenceTests {
 
     private static func testProjectURL() -> URL {

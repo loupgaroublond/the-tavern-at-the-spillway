@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import TavernCore
 
-@Suite("FileTreeScanner Tests")
+@Suite("FileTreeScanner Tests", .timeLimit(.minutes(1)))
 struct FileTreeScannerTests {
 
     let scanner = FileTreeScanner()

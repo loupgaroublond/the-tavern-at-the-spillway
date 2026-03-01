@@ -1,4 +1,5 @@
 import Foundation
+import TavernKit
 import os.log
 
 // MARK: - Provenance: REQ-ARCH-005
@@ -29,6 +30,20 @@ public final class TavernProject: ObservableObject, Identifiable {
 
     /// Any error that occurred during initialization
     @Published public private(set) var initializationError: Error?
+
+    // MARK: - Providers (for tileboard architecture)
+
+    /// Provider for Claude session access
+    public private(set) var servitorProvider: (any ServitorProvider)?
+
+    /// Provider for file tree browsing
+    public private(set) var resourceProvider: (any ResourceProvider)?
+
+    /// Provider for slash command execution
+    public private(set) var commandProvider: (any CommandProvider)?
+
+    /// Provider for permission management
+    public private(set) var permissionProvider: (any PermissionProvider)?
 
     // MARK: - Initialization
 
@@ -70,15 +85,35 @@ public final class TavernProject: ObservableObject, Identifiable {
         TavernLogger.coordination.debug("[\(self.name)] MortalSpawner created")
 
         TavernLogger.coordination.debug("[\(self.name)] Creating TavernCoordinator...")
-        self.coordinator = TavernCoordinator(
+        let coordinator = TavernCoordinator(
             jake: jake,
             spawner: spawner,
             projectURL: rootURL,
             permissionManager: permissionManager
         )
-        self.isReady = true
+        self.coordinator = coordinator
 
-        TavernLogger.coordination.info("[\(self.name)] Project initialized successfully")
+        // Create concrete providers for tileboard architecture
+        let sessionManager = ClodSessionManager(
+            jake: jake,
+            spawner: spawner,
+            permissionManager: permissionManager,
+            commandDispatcher: coordinator.commandDispatcher,
+            projectURL: rootURL
+        )
+        // Wire MCP server from coordinator to session manager
+        sessionManager.jakeMCPServer = jake.mcpServer
+
+        self.servitorProvider = sessionManager
+        self.resourceProvider = DocumentStore(rootURL: rootURL)
+        self.commandProvider = CommandRegistry(
+            dispatcher: coordinator.commandDispatcher,
+            projectRoot: rootURL
+        )
+        self.permissionProvider = PermissionSettingsProvider(manager: permissionManager)
+
+        self.isReady = true
+        TavernLogger.coordination.info("[\(self.name)] Project initialized successfully (with providers)")
     }
 }
 

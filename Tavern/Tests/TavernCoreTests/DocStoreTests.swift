@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import TavernCore
 
-@Suite("Document Tests")
+@Suite("Document Tests", .timeLimit(.minutes(1)))
 struct DocumentTests {
 
     @Test("Document has all required properties", .tags(.reqDOC001, .reqDOC003))
@@ -117,7 +117,7 @@ struct DocumentTests {
     }
 }
 
-@Suite("DocStore Tests")
+@Suite("DocStore Tests", .timeLimit(.minutes(1)))
 struct DocStoreTests {
 
     func makeTempDirectory() throws -> URL {

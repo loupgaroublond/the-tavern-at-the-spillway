@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import TavernCore
 
-@Suite("SlashCommandParser Tests")
+@Suite("SlashCommandParser Tests", .timeLimit(.minutes(1)))
 struct SlashCommandParserTests {
 
     // MARK: - parse() tests

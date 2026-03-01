@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import TavernCore
 
-@Suite("Permission Enforcement Tests")
+@Suite("Permission Enforcement Tests", .timeLimit(.minutes(1)))
 struct PermissionEnforcementTests {
 
     // MARK: - Helpers

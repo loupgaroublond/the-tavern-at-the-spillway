@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import TavernCore
 
-@Suite("Commitment Tests")
+@Suite("Commitment Tests", .timeLimit(.minutes(1)))
 struct CommitmentTests {
 
     @Test("Commitment is created with correct initial state", .tags(.reqDET005))
@@ -93,7 +93,7 @@ struct CommitmentTests {
     }
 }
 
-@Suite("CommitmentList Tests")
+@Suite("CommitmentList Tests", .timeLimit(.minutes(1)))
 struct CommitmentListTests {
 
     @Test("List starts empty")
@@ -270,7 +270,7 @@ struct CommitmentListTests {
     }
 }
 
-@Suite("CommitmentVerifier Tests")
+@Suite("CommitmentVerifier Tests", .timeLimit(.minutes(1)))
 struct CommitmentVerifierTests {
 
     @Test("Verifier runs assertion", .tags(.reqINV003, .reqDET004))
@@ -473,7 +473,7 @@ struct CommitmentVerifierTests {
 
 // MARK: - ShellAssertionRunner Real Execution Tests
 
-@Suite("ShellAssertionRunner Tests")
+@Suite("ShellAssertionRunner Tests", .timeLimit(.minutes(1)))
 struct ShellAssertionRunnerTests {
 
     @Test("Shell runner executes passing command")

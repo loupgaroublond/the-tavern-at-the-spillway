@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import TavernCore
 
-@Suite("CommandFormatting Tests")
+@Suite("CommandFormatting Tests", .timeLimit(.minutes(1)))
 struct CommandFormattingTests {
 
     // MARK: - formatTokens

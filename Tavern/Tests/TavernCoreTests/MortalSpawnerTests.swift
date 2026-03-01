@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import TavernCore
 
-@Suite("MortalSpawner Tests")
+@Suite("MortalSpawner Tests", .timeLimit(.minutes(1)))
 struct MortalSpawnerTests {
 
     // MARK: - Test Setup

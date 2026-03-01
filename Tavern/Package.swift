@@ -20,10 +20,55 @@ let package = Package(
         .package(url: "https://github.com/nalexn/ViewInspector", from: "0.10.0")
     ],
     targets: [
-        // Core library - all logic, testable without UI
+        // Public interface — types, protocols, typealiases (zero ClodKit dependency)
+        .target(
+            name: "TavernKit",
+            path: "Sources/TavernKit"
+        ),
+
+        // Leaf tiles (depend only on TavernKit)
+        .target(
+            name: "ApprovalTile",
+            dependencies: ["TavernKit"],
+            path: "Sources/Tiles/ApprovalTile"
+        ),
+        .target(
+            name: "PermissionSettingsTile",
+            dependencies: ["TavernKit"],
+            path: "Sources/Tiles/PermissionSettingsTile"
+        ),
+        .target(
+            name: "ServitorListTile",
+            dependencies: ["TavernKit"],
+            path: "Sources/Tiles/ServitorListTile"
+        ),
+        .target(
+            name: "ResourcePanelTile",
+            dependencies: ["TavernKit"],
+            path: "Sources/Tiles/ResourcePanelTile"
+        ),
+        .target(
+            name: "ChatTile",
+            dependencies: ["TavernKit"],
+            path: "Sources/Tiles/ChatTile"
+        ),
+
+        // Board tile (composes all leaf tiles)
+        .target(
+            name: "TavernBoardTile",
+            dependencies: [
+                "TavernKit",
+                "ApprovalTile", "PermissionSettingsTile",
+                "ServitorListTile", "ResourcePanelTile", "ChatTile",
+            ],
+            path: "Sources/Tiles/TavernBoardTile"
+        ),
+
+        // Core library — private implementation, imports ClodKit
         .target(
             name: "TavernCore",
             dependencies: [
+                "TavernKit",
                 .product(name: "ClodKit", package: "ClodKit")
             ]
         ),
@@ -31,7 +76,7 @@ let package = Package(
         // SwiftUI App
         .executableTarget(
             name: "Tavern",
-            dependencies: ["TavernCore"],
+            dependencies: ["TavernCore", "TavernKit", "TavernBoardTile"],
             resources: [
                 .process("Assets.xcassets"),
                 .copy("AppIcon.icon")
@@ -41,7 +86,7 @@ let package = Package(
         // Core tests
         .testTarget(
             name: "TavernCoreTests",
-            dependencies: ["TavernCore"]
+            dependencies: ["TavernCore", "TavernKit"]
         ),
 
         // App tests (UI wiring tests + integration tests)
@@ -50,6 +95,9 @@ let package = Package(
             dependencies: [
                 "Tavern",
                 "TavernCore",
+                "TavernKit",
+                "ChatTile",
+                "ResourcePanelTile",
                 .product(name: "ViewInspector", package: "ViewInspector")
             ]
         ),
@@ -57,13 +105,13 @@ let package = Package(
         // Stress tests (slow, run before releases)
         .testTarget(
             name: "TavernStressTests",
-            dependencies: ["TavernCore"]
+            dependencies: ["TavernCore", "TavernKit"]
         ),
 
         // Integration tests (Grade 3 - real Claude API, headless)
         .testTarget(
             name: "TavernIntegrationTests",
-            dependencies: ["TavernCore"]
+            dependencies: ["TavernCore", "TavernKit"]
         )
     ]
 )

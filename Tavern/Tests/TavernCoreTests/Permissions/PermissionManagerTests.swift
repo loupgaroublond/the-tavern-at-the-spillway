@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import TavernCore
 
-@Suite("PermissionManager Tests")
+@Suite("PermissionManager Tests", .timeLimit(.minutes(1)))
 struct PermissionManagerTests {
 
     /// Create an isolated manager for each test

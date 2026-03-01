@@ -1,5 +1,7 @@
 import SwiftUI
 import TavernCore
+import TavernBoardTile
+import TavernKit
 import os.log
 
 // MARK: - Provenance: REQ-UX-001, REQ-V1-001
@@ -69,110 +71,50 @@ struct ProjectWindowView: View {
 
 // MARK: - Project View
 
-/// Shows an open project with its coordinator
+/// Shows an open project via its WindowBoard (tileboard architecture)
 struct ProjectView: View {
     @ObservedObject var project: TavernProject
+    @State private var windowBoard: WindowBoard?
+
+    private static let logger = Logger(subsystem: "com.tavern.spillway", category: "window")
 
     var body: some View {
+        let _ = Self.logger.debug("[ProjectView] body - isReady: \(project.isReady), hasBoard: \(windowBoard != nil), hasError: \(project.initializationError != nil)")
         Group {
-            if let coordinator = project.coordinator {
-                ProjectContentView(project: project, coordinator: coordinator)
+            if let board = windowBoard {
+                board.makeView()
             } else if let error = project.initializationError {
                 ProjectErrorView(project: project, error: error)
             } else {
                 ProjectLoadingView(project: project)
             }
         }
+        .onChange(of: project.isReady) {
+            createWindowBoardIfReady()
+        }
+        .onAppear {
+            createWindowBoardIfReady()
+        }
     }
-}
 
-// MARK: - Project Content View
+    private func createWindowBoardIfReady() {
+        guard windowBoard == nil,
+              let servitorProvider = project.servitorProvider,
+              let commandProvider = project.commandProvider,
+              let resourceProvider = project.resourceProvider,
+              let permissionProvider = project.permissionProvider else {
+            return
+        }
 
-/// Content view for an initialized project
-struct ProjectContentView: View {
-    @ObservedObject var project: TavernProject
-    @ObservedObject var coordinator: TavernCoordinator
-    @SceneStorage("resourcePanelVisible") private var isResourcePanelVisible: Bool = false
-    @SceneStorage("sidePaneTab") private var selectedTabRaw: String = SidePaneTab.files.rawValue
-    @StateObject private var resourcePanelViewModel: ResourcePanelViewModel
-    @StateObject private var backgroundTaskViewModel = BackgroundTaskViewModel()
-    @StateObject private var todoListViewModel = TodoListViewModel()
-    @StateObject private var autocomplete: SlashCommandAutocomplete
-    @StateObject private var fileMention: FileMentionAutocomplete
-
-    private var selectedTab: Binding<SidePaneTab> {
-        Binding(
-            get: { SidePaneTab(rawValue: selectedTabRaw) ?? .files },
-            set: { selectedTabRaw = $0.rawValue }
+        Self.logger.info("[ProjectView] Creating WindowBoard for: \(project.name, privacy: .public)")
+        windowBoard = WindowBoard(
+            servitorProvider: servitorProvider,
+            commandProvider: commandProvider,
+            resourceProvider: resourceProvider,
+            permissionProvider: permissionProvider,
+            projectName: project.name,
+            rootURL: project.rootURL
         )
-    }
-
-    init(project: TavernProject, coordinator: TavernCoordinator) {
-        self.project = project
-        self.coordinator = coordinator
-        self._resourcePanelViewModel = StateObject(wrappedValue: ResourcePanelViewModel(rootURL: project.rootURL))
-        self._autocomplete = StateObject(wrappedValue: SlashCommandAutocomplete(dispatcher: coordinator.commandDispatcher))
-        self._fileMention = StateObject(wrappedValue: FileMentionAutocomplete(projectRoot: project.rootURL))
-    }
-
-    var body: some View {
-        let coord = coordinator  // Capture for closures
-        NavigationSplitView {
-            // Sidebar with agent list
-            VStack(spacing: 0) {
-                TavernHeader(projectName: project.name, projectURL: project.rootURL)
-                Divider()
-                ServitorListView(
-                    viewModel: coordinator.servitorListViewModel,
-                    onSpawnServitor: {
-                        do {
-                            try coord.summonServitor()
-                        } catch {
-                            print("Failed to spawn servitor: \(error)")
-                        }
-                    },
-                    onCloseServitor: { id in
-                        do {
-                            try coord.closeServitor(id: id)
-                        } catch {
-                            print("Failed to close servitor: \(error)")
-                        }
-                    },
-                    onUpdateDescription: { id, description in
-                        SessionStore.updateServitor(id: id, chatDescription: description)
-                        coord.servitorListViewModel.refreshItems()
-                    },
-                    onSelectServitor: { id in
-                        coord.selectServitor(id: id)
-                    }
-                )
-            }
-            .frame(minWidth: 200)
-        } detail: {
-            // Detail: Chat + optional Side Pane
-            HSplitView {
-                ChatView(viewModel: coordinator.activeChatViewModel, autocomplete: autocomplete, fileMention: fileMention)
-
-                if isResourcePanelVisible {
-                    ResourcePanelView(
-                        resourceViewModel: resourcePanelViewModel,
-                        taskViewModel: backgroundTaskViewModel,
-                        todoViewModel: todoListViewModel,
-                        selectedTab: selectedTab
-                    )
-                    .frame(minWidth: 250, idealWidth: 350, maxWidth: 600)
-                }
-            }
-        }
-        .frame(minWidth: 800, minHeight: 500)
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button(action: { isResourcePanelVisible.toggle() }) {
-                    Image(systemName: "sidebar.right")
-                }
-                .help(isResourcePanelVisible ? "Hide Side Pane" : "Show Side Pane")
-            }
-        }
     }
 }
 
@@ -217,72 +159,8 @@ struct ProjectErrorView: View {
     }
 }
 
-// MARK: - Tavern Header
-
-private struct TavernHeader: View {
-    let projectName: String
-    let projectURL: URL
-
-    var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("The Tavern at the Spillway")
-                    .font(.headline)
-                Text(projectName)
-                    .font(.caption)
-                    .foregroundColor(.orange)
-            }
-
-            Spacer()
-
-            // Raise all windows for this project
-            Button(action: {
-                WindowOpeningService.shared.raiseAllWindowsForProject(url: projectURL)
-            }) {
-                Image(systemName: "rectangle.stack")
-                    .help("Bring all windows for this project to front")
-            }
-            .buttonStyle(.borderless)
-
-            // Status indicator
-            Circle()
-                .fill(Color.green)
-                .frame(width: 8, height: 8)
-            Text("Open")
-                .font(.caption)
-                .foregroundColor(.secondary)
-        }
-        .padding()
-    }
-}
-
 // MARK: - Preview
 
-#Preview("Project") {
-    // Preview sidebar and detail side-by-side without NavigationSplitView
-    // (NavigationSplitView's OutlineListCoordinator crashes in preview)
-    let projectURL = URL(fileURLWithPath: "/tmp/tavern-preview")
-    let jake = Jake(projectURL: projectURL, loadSavedSession: false)
-    let registry = ServitorRegistry()
-    let nameGenerator = NameGenerator(theme: .lotr)
-    let spawner = MortalSpawner(registry: registry, nameGenerator: nameGenerator, projectURL: projectURL)
-    let coordinator = TavernCoordinator(jake: jake, spawner: spawner, projectURL: projectURL)
-    let viewModel = ChatViewModel(jake: jake, loadHistory: false)
-    let dispatcher = SlashCommandDispatcher()
-    let autocomplete = SlashCommandAutocomplete(dispatcher: dispatcher)
-    let fileMention = FileMentionAutocomplete(projectRoot: projectURL)
-
-    HSplitView {
-        ServitorListView(
-            viewModel: coordinator.servitorListViewModel,
-            onSpawnServitor: {},
-            onCloseServitor: { _ in },
-            onUpdateDescription: { _, _ in },
-            onSelectServitor: { _ in }
-        )
-        .frame(width: 250)
-
-        ChatView(viewModel: viewModel, autocomplete: autocomplete, fileMention: fileMention)
-    }
-    .frame(width: 800, height: 500)
+#Preview("Project Loading") {
+    ProjectLoadingView(project: TavernProject(rootURL: URL(fileURLWithPath: "/tmp/tavern-preview")))
 }

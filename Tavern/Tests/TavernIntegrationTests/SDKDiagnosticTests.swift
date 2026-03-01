@@ -1,9 +1,15 @@
 import XCTest
+import ClodKit
 import TavernCore
 
 /// Diagnostic tests for ClodKit integration
 /// Run these to verify the SDK is working correctly in your environment
 final class SDKDiagnosticTests: XCTestCase {
+
+    override func setUp() async throws {
+        try await super.setUp()
+        executionTimeAllowance = 30
+    }
 
     /// Test that Claude Code CLI is installed and accessible
     func testClaudeCodeIsInstalled() async throws {

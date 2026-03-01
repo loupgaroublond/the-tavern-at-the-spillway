@@ -2,12 +2,12 @@ import Foundation
 import Testing
 @testable import TavernCore
 
-@Suite("FileMentionAutocomplete Tests")
+@Suite("FileMentionAutocomplete Tests", .timeLimit(.minutes(1)))
 struct FileMentionAutocompleteTests {
 
     // MARK: - Mention Prefix Extraction
 
-    @Suite("extractMentionPrefix")
+    @Suite("extractMentionPrefix", .timeLimit(.minutes(1)))
     struct ExtractMentionPrefix {
 
         @Test("Bare @ returns empty string prefix")
@@ -73,7 +73,7 @@ struct FileMentionAutocompleteTests {
 
     // MARK: - Replace Active Mention
 
-    @Suite("replaceActiveMention")
+    @Suite("replaceActiveMention", .timeLimit(.minutes(1)))
     struct ReplaceActiveMention {
 
         @Test("Replaces bare @ with path")

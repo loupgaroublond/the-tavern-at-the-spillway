@@ -8,16 +8,7 @@ import os.log
 @MainActor
 public final class ChatViewModel: ObservableObject {
 
-    // MARK: - Agent Activity
-
-    /// The agent's current activity state — single source of truth for UI indicators.
-    /// Eliminates impossible state combinations (e.g. cogitating + tool running).
-    public enum ServitorActivity: Equatable {
-        case idle
-        case cogitating(verb: String)
-        case streaming
-        case toolRunning(name: String, startTime: Date)
-    }
+    // ServitorActivity has moved to TavernKit as a top-level type.
 
     // MARK: - Published State
 

@@ -20,4 +20,6 @@ Tavern/Sources/Tavern/Assets.xcassets/AppIcon.appiconset/*.png
 scripts/__pycache__/
 beads_audit.epub
 beads_audit.md
+# Attestation artifacts (per-module files are build artifacts; dated reports are committed manually)
+docs/4-docs/attestations/
 attestation-report.md

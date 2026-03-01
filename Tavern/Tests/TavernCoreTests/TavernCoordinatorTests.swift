@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import TavernCore
 
-@Suite("TavernCoordinator Tests")
+@Suite("TavernCoordinator Tests", .timeLimit(.minutes(1)))
 struct TavernCoordinatorTests {
 
     private static func testProjectURL() -> URL {
