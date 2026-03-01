@@ -1,18 +1,15 @@
 import Foundation
 
-// MARK: - Provenance: REQ-ARCH-009, REQ-QA-002
+// MARK: - Provenance: REQ-ARCH-009, REQ-QA-002, REQ-QA-005
 
-/// A mock agent for testing ViewModels and coordinators without real Claude calls
+/// A mock agent for testing tiles and providers without real Claude calls.
 /// Conforms to `Servitor` protocol — pops canned responses from a queue.
 ///
 /// Usage:
 /// ```swift
 /// let mock = MockServitor(responses: ["Hello!", "Goodbye!"])
-/// let vm = ChatViewModel(agent: mock, loadHistory: false)
-/// vm.inputText = "Hi"
-/// await vm.sendMessage()
+/// // Use mock via a ServitorProvider or directly
 /// // mock.sendCalls == ["Hi"]
-/// // vm.messages contains user + agent messages
 /// ```
 public final class MockServitor: Servitor, @unchecked Sendable {
 

@@ -1,7 +1,10 @@
 import XCTest
-@testable import TavernCore
+import TavernKit
+@testable import ResourcePanelTile
 
-/// Stress tests for TodoList and BackgroundTask bulk operations (Bead flwg)
+// MARK: - Provenance: REQ-QA-006
+
+/// Stress tests for ResourcePanelTile bulk TODO and task operations
 ///
 /// Verifies:
 /// - 1000 TODO items managed without crashes
@@ -17,32 +20,41 @@ final class SidePaneStressTests: XCTestCase {
         executionTimeAllowance = 30
     }
 
-    // MARK: - TodoListViewModel Tests
+    // MARK: - Helpers
+
+    @MainActor
+    private func makeTile() -> ResourcePanelTile {
+        let provider = StubResourceProvider()
+        let responder = ResourcePanelResponder(onFileSelected: { _ in })
+        let root = URL(fileURLWithPath: "/tmp/stress-\(UUID().uuidString)")
+        return ResourcePanelTile(resourceProvider: provider, responder: responder, rootURL: root)
+    }
+
+    // MARK: - TODO Stress Tests
 
     /// Add 1000 TODO items. Verify counts and state are consistent.
     @MainActor
     func testTodoAdd1000Items() throws {
-        let vm = TodoListViewModel()
+        let tile = makeTile()
         let itemCount = 1000
         let timeBudget: TimeInterval = 2.0
-        var addedIds: [UUID] = []
 
         let startTime = Date()
         for i in 0..<itemCount {
-            let id = vm.addItem(text: "Task \(i)")
-            addedIds.append(id)
+            tile.todoDraftText = "Task \(i)"
+            tile.addTodoItem()
         }
         let duration = Date().timeIntervalSince(startTime)
 
-        XCTAssertEqual(vm.items.count, itemCount,
-            "Should have \(itemCount) items, got \(vm.items.count)")
-        XCTAssertEqual(vm.pendingCount, itemCount,
+        XCTAssertEqual(tile.todoItems.count, itemCount,
+            "Should have \(itemCount) items, got \(tile.todoItems.count)")
+        XCTAssertEqual(tile.pendingCount, itemCount,
             "All \(itemCount) should be pending")
-        XCTAssertEqual(vm.completedCount, 0,
+        XCTAssertEqual(tile.completedCount, 0,
             "None should be completed yet")
 
         // Verify all IDs are unique
-        let uniqueIds = Set(addedIds)
+        let uniqueIds = Set(tile.todoItems.map(\.id))
         XCTAssertEqual(uniqueIds.count, itemCount,
             "All \(itemCount) IDs should be unique")
 
@@ -55,36 +67,36 @@ final class SidePaneStressTests: XCTestCase {
     /// Toggle all 1000 items to completed, then toggle half back.
     @MainActor
     func testTodoToggle1000Items() throws {
-        let vm = TodoListViewModel()
+        let tile = makeTile()
         let itemCount = 1000
-        var ids: [UUID] = []
 
-        // Add items
         for i in 0..<itemCount {
-            ids.append(vm.addItem(text: "Toggle task \(i)"))
+            tile.todoDraftText = "Toggle task \(i)"
+            tile.addTodoItem()
         }
+        let ids = tile.todoItems.map(\.id)
 
         let timeBudget: TimeInterval = 2.0
         let startTime = Date()
 
         // Toggle all to completed
         for id in ids {
-            vm.toggleItem(id)
+            tile.toggleTodoItem(id)
         }
-        XCTAssertEqual(vm.completedCount, itemCount,
+        XCTAssertEqual(tile.completedCount, itemCount,
             "All items should be completed after toggle")
-        XCTAssertEqual(vm.pendingCount, 0)
+        XCTAssertEqual(tile.pendingCount, 0)
 
         // Toggle first half back to pending
         for id in ids.prefix(itemCount / 2) {
-            vm.toggleItem(id)
+            tile.toggleTodoItem(id)
         }
 
         let duration = Date().timeIntervalSince(startTime)
 
-        XCTAssertEqual(vm.completedCount, itemCount / 2,
+        XCTAssertEqual(tile.completedCount, itemCount / 2,
             "Half should be completed")
-        XCTAssertEqual(vm.pendingCount, itemCount / 2,
+        XCTAssertEqual(tile.pendingCount, itemCount / 2,
             "Half should be pending")
 
         XCTAssertLessThanOrEqual(duration, timeBudget,
@@ -94,33 +106,32 @@ final class SidePaneStressTests: XCTestCase {
     }
 
     /// Clear completed items from a list of 1000 (500 completed).
-    /// Must complete within 1 second.
     @MainActor
     func testTodoClearCompleted() throws {
-        let vm = TodoListViewModel()
+        let tile = makeTile()
         let itemCount = 1000
-        var ids: [UUID] = []
 
         for i in 0..<itemCount {
-            ids.append(vm.addItem(text: "Clear task \(i)"))
+            tile.todoDraftText = "Clear task \(i)"
+            tile.addTodoItem()
         }
 
         // Mark every other item as completed
-        for (i, id) in ids.enumerated() where i % 2 == 0 {
-            vm.toggleItem(id)
+        for (i, item) in tile.todoItems.enumerated() where i % 2 == 0 {
+            tile.toggleTodoItem(item.id)
         }
-        XCTAssertEqual(vm.completedCount, itemCount / 2)
+        XCTAssertEqual(tile.completedCount, itemCount / 2)
 
         let timeBudget: TimeInterval = 1.0
         let startTime = Date()
-        vm.clearCompleted()
+        tile.clearCompletedTodos()
         let duration = Date().timeIntervalSince(startTime)
 
-        XCTAssertEqual(vm.items.count, itemCount / 2,
+        XCTAssertEqual(tile.todoItems.count, itemCount / 2,
             "Should have \(itemCount / 2) remaining items")
-        XCTAssertEqual(vm.completedCount, 0,
+        XCTAssertEqual(tile.completedCount, 0,
             "No completed items should remain")
-        XCTAssertEqual(vm.pendingCount, itemCount / 2,
+        XCTAssertEqual(tile.pendingCount, itemCount / 2,
             "All remaining should be pending")
 
         XCTAssertLessThanOrEqual(duration, timeBudget,
@@ -132,24 +143,25 @@ final class SidePaneStressTests: XCTestCase {
     /// Remove items one by one from a 1000-item list.
     @MainActor
     func testTodoRemoveOneByOne() throws {
-        let vm = TodoListViewModel()
+        let tile = makeTile()
         let itemCount = 1000
-        var ids: [UUID] = []
 
         for i in 0..<itemCount {
-            ids.append(vm.addItem(text: "Remove task \(i)"))
+            tile.todoDraftText = "Remove task \(i)"
+            tile.addTodoItem()
         }
+        let ids = tile.todoItems.map(\.id)
 
         let timeBudget: TimeInterval = 2.0
         let startTime = Date()
 
         for id in ids {
-            vm.removeItem(id)
+            tile.removeTodoItem(id)
         }
 
         let duration = Date().timeIntervalSince(startTime)
 
-        XCTAssertEqual(vm.items.count, 0, "All items should be removed")
+        XCTAssertEqual(tile.todoItems.count, 0, "All items should be removed")
 
         XCTAssertLessThanOrEqual(duration, timeBudget,
             "Removing \(itemCount) items must complete within \(timeBudget)s, took \(String(format: "%.3f", duration))s")
@@ -157,191 +169,102 @@ final class SidePaneStressTests: XCTestCase {
         print("testTodoRemoveOneByOne: \(itemCount) removals in \(String(format: "%.3f", duration))s")
     }
 
-    /// Update text of all 1000 items.
+    // MARK: - Task Stress Tests
+
+    /// Manage 100 tasks and their lifecycle via direct task array manipulation.
     @MainActor
-    func testTodoUpdateText1000() throws {
-        let vm = TodoListViewModel()
-        let itemCount = 1000
-        var ids: [UUID] = []
-
-        for i in 0..<itemCount {
-            ids.append(vm.addItem(text: "Original \(i)"))
-        }
-
-        let timeBudget: TimeInterval = 2.0
-        let startTime = Date()
-
-        for (i, id) in ids.enumerated() {
-            vm.updateItemText(id, text: "Updated \(i) with longer text content")
-        }
-
-        let duration = Date().timeIntervalSince(startTime)
-
-        // Verify all texts were updated
-        for (i, item) in vm.items.enumerated() {
-            XCTAssertTrue(item.text.starts(with: "Updated"),
-                "Item \(i) should have updated text, got '\(item.text.prefix(20))'")
-        }
-
-        XCTAssertLessThanOrEqual(duration, timeBudget,
-            "Updating \(itemCount) items must complete within \(timeBudget)s, took \(String(format: "%.3f", duration))s")
-
-        print("testTodoUpdateText1000: \(itemCount) updates in \(String(format: "%.3f", duration))s")
-    }
-
-    // MARK: - BackgroundTaskViewModel Tests
-
-    /// Add 100 background tasks and manage their lifecycle.
-    @MainActor
-    func testBackgroundTaskAdd100() throws {
-        let vm = BackgroundTaskViewModel()
+    func testTaskManage100() throws {
+        let tile = makeTile()
         let taskCount = 100
         let timeBudget: TimeInterval = 2.0
-        var taskIds: [UUID] = []
-
-        let startTime = Date()
-        for i in 0..<taskCount {
-            let id = vm.addTask(name: "Background task \(i)")
-            taskIds.append(id)
-        }
-        let duration = Date().timeIntervalSince(startTime)
-
-        XCTAssertEqual(vm.tasks.count, taskCount,
-            "Should have \(taskCount) tasks, got \(vm.tasks.count)")
-        XCTAssertEqual(vm.runningCount, taskCount,
-            "All tasks should be running")
-
-        XCTAssertLessThanOrEqual(duration, timeBudget,
-            "Adding \(taskCount) tasks must complete within \(timeBudget)s, took \(String(format: "%.3f", duration))s")
-
-        print("testBackgroundTaskAdd100: \(taskCount) tasks in \(String(format: "%.3f", duration))s")
-    }
-
-    /// Run full lifecycle on 100 tasks: add, append output, update status, remove.
-    @MainActor
-    func testBackgroundTaskFullLifecycle() throws {
-        let vm = BackgroundTaskViewModel()
-        let taskCount = 100
-        let timeBudget: TimeInterval = 3.0
-        var taskIds: [UUID] = []
 
         let startTime = Date()
 
         // Phase 1: Add tasks
+        var createdTasks: [TavernTask] = []
         for i in 0..<taskCount {
-            taskIds.append(vm.addTask(name: "Lifecycle task \(i)"))
+            createdTasks.append(TavernTask(name: "Task \(i)"))
         }
+        tile.tasks = createdTasks
 
-        // Phase 2: Append output to each
-        for id in taskIds {
-            for j in 0..<10 {
-                vm.appendOutput(id, text: "Output line \(j)\n")
-            }
-        }
+        XCTAssertEqual(tile.tasks.count, taskCount)
+        XCTAssertEqual(tile.runningCount, taskCount)
 
-        // Phase 3: Complete half, fail the other half
-        for (i, id) in taskIds.enumerated() {
+        // Phase 2: Complete half, stop the other half
+        for i in 0..<taskCount {
             if i % 2 == 0 {
-                vm.updateStatus(id, status: .completed)
+                tile.tasks[i].status = .completed
+                tile.tasks[i].finishedAt = Date()
             } else {
-                vm.updateStatus(id, status: .failed)
+                tile.stopTask(tile.tasks[i].id)
             }
         }
 
-        XCTAssertEqual(vm.runningCount, 0, "No tasks should be running after status updates")
+        XCTAssertEqual(tile.runningCount, 0, "No tasks should be running after status updates")
 
-        // Phase 4: Verify output accumulated correctly
-        for id in taskIds {
-            let task = vm.tasks.first { $0.id == id }
-            XCTAssertNotNil(task)
-            // Each task got 10 lines of output
-            let lineCount = task?.output.components(separatedBy: "\n").filter { !$0.isEmpty }.count ?? 0
-            XCTAssertEqual(lineCount, 10,
-                "Each task should have 10 output lines, got \(lineCount)")
-        }
-
-        // Phase 5: Clear finished
-        vm.clearFinished()
+        // Phase 3: Clear finished
+        tile.clearFinishedTasks()
         let duration = Date().timeIntervalSince(startTime)
 
-        XCTAssertEqual(vm.tasks.count, 0,
-            "All tasks should be cleared")
+        XCTAssertEqual(tile.tasks.count, 0, "All tasks should be cleared")
 
         XCTAssertLessThanOrEqual(duration, timeBudget,
-            "Full lifecycle of \(taskCount) tasks must complete within \(timeBudget)s, took \(String(format: "%.3f", duration))s")
+            "Managing \(taskCount) tasks must complete within \(timeBudget)s, took \(String(format: "%.3f", duration))s")
 
-        print("testBackgroundTaskFullLifecycle: \(taskCount) tasks full lifecycle in \(String(format: "%.3f", duration))s")
+        print("testTaskManage100: \(taskCount) tasks full lifecycle in \(String(format: "%.3f", duration))s")
     }
 
     /// Selection state must stay consistent during bulk operations.
     @MainActor
-    func testBackgroundTaskSelectionConsistency() throws {
-        let vm = BackgroundTaskViewModel()
-        var taskIds: [UUID] = []
+    func testTaskSelectionConsistency() throws {
+        let tile = makeTile()
 
         // Add 50 tasks
+        var tasks: [TavernTask] = []
         for i in 0..<50 {
-            taskIds.append(vm.addTask(name: "Selection task \(i)"))
+            tasks.append(TavernTask(name: "Selection task \(i)"))
         }
+        tile.tasks = tasks
 
         // Select a task in the middle
-        let selectedId = taskIds[25]
-        vm.selectTask(selectedId)
-        XCTAssertEqual(vm.selectedTaskId, selectedId)
-        XCTAssertNotNil(vm.selectedTask)
+        let selectedId = tile.tasks[25].id
+        tile.selectedTaskId = selectedId
+        XCTAssertEqual(tile.selectedTaskId, selectedId)
+        XCTAssertNotNil(tile.selectedTask)
 
-        // Complete and remove tasks before and after the selected one
-        for id in taskIds.prefix(25) {
-            vm.updateStatus(id, status: .completed)
-            vm.removeTask(id)
+        // Complete and remove tasks before the selected one
+        for i in 0..<25 {
+            tile.tasks[i].status = .completed
+            tile.tasks[i].finishedAt = Date()
         }
         // Selected task should still be valid
-        XCTAssertEqual(vm.selectedTaskId, selectedId,
-            "Selection should survive removal of other tasks")
-        XCTAssertNotNil(vm.selectedTask)
+        XCTAssertEqual(tile.selectedTaskId, selectedId,
+            "Selection should survive status changes of other tasks")
+        XCTAssertNotNil(tile.selectedTask)
 
-        // Complete and remove the selected task
-        vm.updateStatus(selectedId, status: .completed)
-        vm.removeTask(selectedId)
-        XCTAssertNil(vm.selectedTaskId,
-            "Selection should clear when selected task is removed")
-        XCTAssertNil(vm.selectedTask)
+        // Clear finished — selected running task should survive
+        tile.clearFinishedTasks()
+        XCTAssertEqual(tile.selectedTaskId, selectedId)
+        XCTAssertNotNil(tile.selectedTask)
 
-        // Remove remaining tasks
-        for id in taskIds.suffix(24) {
-            vm.updateStatus(id, status: .stopped)
-        }
-        vm.clearFinished()
-        XCTAssertEqual(vm.tasks.count, 0)
+        // Now stop and clear the selected task
+        tile.stopTask(selectedId)
+        tile.clearFinishedTasks()
+        XCTAssertNil(tile.selectedTaskId,
+            "Selection should clear when selected task is cleared")
+        XCTAssertNil(tile.selectedTask)
 
-        print("testBackgroundTaskSelectionConsistency: selection tracking correct through lifecycle")
+        print("testTaskSelectionConsistency: selection tracking correct through lifecycle")
     }
+}
 
-    /// Cannot remove a running task; verify guard works at scale.
-    @MainActor
-    func testBackgroundTaskCannotRemoveRunning() throws {
-        let vm = BackgroundTaskViewModel()
-        var taskIds: [UUID] = []
+// MARK: - Stub
 
-        for i in 0..<50 {
-            taskIds.append(vm.addTask(name: "Running task \(i)"))
-        }
-
-        // Attempt to remove all running tasks (should all fail silently)
-        for id in taskIds {
-            vm.removeTask(id)
-        }
-
-        XCTAssertEqual(vm.tasks.count, 50,
-            "All 50 running tasks should still be present after failed removal attempts")
-
-        // Now stop them all and remove
-        for id in taskIds {
-            vm.stopTask(id)
-            vm.removeTask(id)
-        }
-        XCTAssertEqual(vm.tasks.count, 0, "All stopped tasks should be removable")
-
-        print("testBackgroundTaskCannotRemoveRunning: guard works correctly at scale")
-    }
+@MainActor
+private final class StubResourceProvider: ResourceProvider {
+    func scanDirectory(at url: URL) throws -> [FileTreeNode] { [] }
+    func scanChildren(of node: FileTreeNode) throws -> [FileTreeNode] { [] }
+    func readFile(at url: URL) throws -> String { "" }
+    func isFileTooLarge(at url: URL) -> Bool { false }
+    func isBinaryFile(at url: URL) -> Bool { false }
 }

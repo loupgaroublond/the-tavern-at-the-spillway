@@ -2,6 +2,8 @@ import XCTest
 import ClodKit
 import TavernCore
 
+// MARK: - Provenance: REQ-QA-003, REQ-QA-012
+
 /// Diagnostic tests for ClodKit integration
 /// Run these to verify the SDK is working correctly in your environment
 final class SDKDiagnosticTests: XCTestCase {
@@ -51,6 +53,5 @@ final class SDKDiagnosticTests: XCTestCase {
     }
 
     // MARK: - Tests requiring network access (skipped in CI)
-    // TODO: Add integration tests that actually call Claude
-    // These would need to be opt-in tests due to network/API usage
+    // Tracked in jake-298s: Add Grade 3 integration tests that actually call Claude
 }

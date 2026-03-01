@@ -1,5 +1,7 @@
 import Foundation
 
+// MARK: - Provenance: REQ-QA-001, REQ-QA-003
+
 /// Test fixtures and helpers for Tavern tests
 public enum TestFixtures {
 

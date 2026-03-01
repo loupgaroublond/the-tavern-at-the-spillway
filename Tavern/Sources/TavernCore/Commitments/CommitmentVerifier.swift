@@ -50,8 +50,9 @@ public final class CommitmentVerifier: @unchecked Sendable {
         } else {
             let message: String
             if result.timedOut {
-                message = "Assertion timed out"
-                Self.logger.warning("Commitment timed out: '\(desc)'")
+                let timeoutError = AssertionTimeoutError(command: assertion, timeout: .seconds(30))
+                message = timeoutError.description
+                Self.logger.warning("Commitment timed out: '\(desc)' - \(timeoutError.description)")
             } else if result.errorOutput.isEmpty {
                 message = "Assertion failed with exit code \(result.exitCode)"
             } else {

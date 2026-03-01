@@ -218,7 +218,7 @@ struct MortalTests {
         #expect(mortal.state == .idle)
     }
 
-    @Test("Mortal transitions to done via response", .tags(.reqAGT009))
+    @Test("Mortal transitions to done via response", .tags(.reqAGT009, .reqV1005))
     func mortalTransitionsToDone() async throws {
         let mock = MockMessenger(responses: ["Assignment complete. DONE"])
         let mortal = Mortal(
@@ -314,7 +314,7 @@ struct MortalTests {
         #expect(mortal.state == .done)
     }
 
-    @Test("Done triggers verification when commitments exist", .tags(.reqDET004))
+    @Test("Done triggers verification when commitments exist", .tags(.reqDET004, .reqV1005, .reqV1006))
     func doneTriggersVerification() async throws {
         let commitments = CommitmentList()
         commitments.add(description: "Always passes", assertion: "true")
@@ -336,7 +336,7 @@ struct MortalTests {
         #expect(mortal.allCommitmentsPassed == true)
     }
 
-    @Test("Verification pass marks done", .tags(.reqDET004))
+    @Test("Verification pass marks done", .tags(.reqDET004, .reqV1006))
     func verificationPassMarksDone() async throws {
         let commitments = CommitmentList()
         commitments.add(description: "Check 1", assertion: "true")
@@ -357,7 +357,7 @@ struct MortalTests {
         #expect(mortal.state == .done)
     }
 
-    @Test("Verification fail continues work", .tags(.reqDET004))
+    @Test("Verification fail continues work", .tags(.reqDET004, .reqV1006))
     func verificationFailContinuesWork() async throws {
         let commitments = CommitmentList()
         commitments.add(description: "Always fails", assertion: "false")

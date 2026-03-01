@@ -1,7 +1,7 @@
 import Testing
 @testable import TavernCore
 
-@Suite("Tavern App Tests")
+@Suite("Tavern App Tests", .timeLimit(.minutes(1)))
 struct TavernTests {
 
     @Test("App placeholder test")

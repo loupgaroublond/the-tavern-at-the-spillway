@@ -192,69 +192,6 @@ struct PermissionEnforcementTests {
         #expect(manager.rules.isEmpty)
     }
 
-    // MARK: - ChatViewModel Approval Handler Tests
-
-    @Test("ChatViewModel approval handler surfaces request and resumes on response")
-    @MainActor
-    func chatViewModelApprovalHandlerWorks() async {
-        let mock = MockServitor(responses: ["OK"])
-        let viewModel = ChatViewModel(servitor: mock, loadHistory: false)
-
-        let handler = viewModel.makeApprovalHandler()
-
-        // No pending approval initially
-        #expect(viewModel.pendingApproval == nil)
-
-        // Call handler in background — it will suspend
-        let task = Task {
-            let request = ToolApprovalRequest(toolName: "bash", agentName: "TestServitor")
-            return await handler(request)
-        }
-
-        // Give the handler time to set the pendingApproval
-        try? await Task.sleep(for: .milliseconds(50))
-
-        // Should now have a pending approval
-        #expect(viewModel.pendingApproval != nil)
-        #expect(viewModel.pendingApproval?.toolName == "bash")
-
-        // Respond to the approval
-        viewModel.respondToApproval(ToolApprovalResponse(approved: true, alwaysAllow: false))
-
-        // Handler should return the response
-        let response = await task.value
-        #expect(response.approved == true)
-        #expect(response.alwaysAllow == false)
-
-        // Pending approval should be cleared
-        #expect(viewModel.pendingApproval == nil)
-    }
-
-    @Test("ChatViewModel approval handler returns denial when dismissed")
-    @MainActor
-    func chatViewModelApprovalHandlerReturnsDenial() async {
-        let mock = MockServitor(responses: ["OK"])
-        let viewModel = ChatViewModel(servitor: mock, loadHistory: false)
-
-        let handler = viewModel.makeApprovalHandler()
-
-        let task = Task {
-            let request = ToolApprovalRequest(toolName: "edit", agentName: "TestServitor")
-            return await handler(request)
-        }
-
-        try? await Task.sleep(for: .milliseconds(50))
-
-        #expect(viewModel.pendingApproval != nil)
-
-        // User denies
-        viewModel.respondToApproval(ToolApprovalResponse(approved: false))
-
-        let response = await task.value
-        #expect(response.approved == false)
-        #expect(viewModel.pendingApproval == nil)
-    }
-
     // MARK: - Wildcard Rule Tests
 
     @Test("Wildcard rules match tool name prefixes")

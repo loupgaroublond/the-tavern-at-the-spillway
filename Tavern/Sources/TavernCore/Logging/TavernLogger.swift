@@ -1,6 +1,6 @@
 import os.log
 
-// MARK: - Provenance: REQ-INV-007, REQ-OBS-007, REQ-OBS-008, REQ-OBS-009
+// MARK: - Provenance: REQ-INV-007, REQ-OBS-007, REQ-OBS-008, REQ-OBS-009, REQ-QA-013
 
 /// Centralized logging for The Tavern at the Spillway
 ///

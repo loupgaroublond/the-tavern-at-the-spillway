@@ -74,3 +74,26 @@ private struct FileTreeRow: View {
         }
     }
 }
+
+// MARK: - Preview
+
+#Preview("File Tree") {
+    List {
+        DisclosureGroup("Sources") {
+            DisclosureGroup("Tavern") {
+                Label("TavernApp.swift", systemImage: "swift")
+            }
+            DisclosureGroup("TavernCore") {
+                Label("Jake.swift", systemImage: "swift")
+                Label("Mortal.swift", systemImage: "swift")
+            }
+        }
+        DisclosureGroup("Tests") {
+            Label("TavernCoreTests.swift", systemImage: "swift")
+        }
+        Label("Package.swift", systemImage: "swift")
+        Label("README.md", systemImage: "doc.text")
+    }
+    .listStyle(.sidebar)
+    .frame(width: 300, height: 400)
+}

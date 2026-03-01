@@ -38,6 +38,24 @@ public final class SlashCommandDispatcher: ObservableObject {
         commands.first { $0.name == name.lowercased() }
     }
 
+    /// Parse and dispatch raw user input
+    ///
+    /// Uses `SlashCommandParser.parse` to determine whether input is a slash command.
+    /// If it is, dispatches to the registered handler. If not, returns `nil` so the
+    /// caller can forward the input to the agent.
+    ///
+    /// - Parameter input: Raw user input text
+    /// - Returns: The command result if input was a slash command, or `nil` for agent passthrough
+    public func dispatchInput(_ input: String) async -> SlashCommandResult? {
+        let parsed = SlashCommandParser.parse(input)
+        switch parsed {
+        case .command(let name, let arguments):
+            return await dispatch(name: name, arguments: arguments)
+        case .notACommand:
+            return nil
+        }
+    }
+
     /// Dispatch a parsed command
     /// - Parameters:
     ///   - name: Command name

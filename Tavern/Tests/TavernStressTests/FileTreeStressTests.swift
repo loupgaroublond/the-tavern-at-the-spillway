@@ -1,6 +1,8 @@
 import XCTest
 @testable import TavernCore
 
+// MARK: - Provenance: REQ-QA-006, REQ-QA-014
+
 /// Stress tests for file tree scanning large directories (Bead a50p)
 ///
 /// Verifies:

@@ -2,7 +2,13 @@ import Foundation
 import ClodKit
 import os.log
 
-// MARK: - Provenance: REQ-ARCH-009, REQ-QA-002
+// MARK: - Provenance: REQ-ARCH-009, REQ-QA-002, REQ-QA-005
+
+// TODO: ClodSession consolidates session logic currently duplicated in Jake and Mortal
+// (send, streaming, session persistence, resetConversation). Wire as the backing type
+// for both servitor types to eliminate the duplication. Requires extracting the shared
+// session logic from Jake.swift and Mortal.swift into ClodSession, then having each
+// servitor delegate to a ClodSession instance.
 
 final class ClodSession: @unchecked Sendable {
 
@@ -103,10 +109,14 @@ final class ClodSession: @unchecked Sendable {
                     }
                     continuation.finish()
                 } catch {
+                    let userMessage = TavernErrorMessages.message(for: error)
                     if let sessionId = currentSessionId {
                         Self.logger.error("[ClodSession] stream error on session '\(sessionId)': \(error.localizedDescription)")
+                        continuation.yield(.error(userMessage))
                         continuation.finish(throwing: TavernError.sessionCorrupt(sessionId: sessionId, underlyingError: error))
                     } else {
+                        Self.logger.error("[ClodSession] stream error (no session): \(error.localizedDescription)")
+                        continuation.yield(.error(userMessage))
                         continuation.finish(throwing: error)
                     }
                 }

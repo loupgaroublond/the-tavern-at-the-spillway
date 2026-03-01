@@ -359,3 +359,46 @@ private struct ScrollToBottomButton: View {
         .buttonStyle(.plain)
     }
 }
+
+// MARK: - Preview
+
+#Preview("Chat Tile") {
+    VStack(spacing: 0) {
+        ChatHeader(
+            agentName: "Jake",
+            isEnabled: true,
+            tokenDisplay: "1024↑ 512↓",
+            onNewConversation: {}
+        )
+
+        Divider()
+
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 12) {
+                MessageRowView(
+                    message: .text(role: .user, content: "Hello Jake!"),
+                    agentName: "Jake"
+                )
+                MessageRowView(
+                    message: .text(role: .agent, content: "Well HOWDY there, friend! Welcome to the FINEST establishment this side of the spillway!"),
+                    agentName: "Jake"
+                )
+            }
+            .padding()
+        }
+
+        Divider()
+
+        SessionModeStrip(currentMode: .constant(.normal), isEnabled: true)
+
+        InputBar(
+            agentName: "Jake",
+            text: .constant(""),
+            isEnabled: true,
+            isStreaming: false,
+            onSend: {},
+            onCancel: {}
+        )
+    }
+    .frame(width: 500, height: 500)
+}

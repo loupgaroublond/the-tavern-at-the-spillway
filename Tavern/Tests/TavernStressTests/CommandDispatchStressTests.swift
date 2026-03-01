@@ -1,6 +1,8 @@
 import XCTest
 @testable import TavernCore
 
+// MARK: - Provenance: REQ-QA-006
+
 /// Stress tests for command dispatch under rapid fire (Bead aog1)
 ///
 /// Verifies:

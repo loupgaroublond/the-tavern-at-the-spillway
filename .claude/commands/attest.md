@@ -20,7 +20,7 @@ Determine the invocation mode:
 - **Single ID** (`REQ-XXX-NNN`): Use directly
 - **Prefix** (`REQ-XXX`): Find the module in `docs/2-spec/000-index.md` Module Status Overview table by matching the Prefix column. Read that spec file and extract all requirement IDs matching `^### (REQ-[A-Z]+-[0-9]{3}):`
 - **Module number** (`NNN`): Look up the filename in `docs/2-spec/000-index.md` Module Status Overview table by matching the Doc # column. Read that spec file and extract all requirement IDs matching `^### (REQ-[A-Z]+-[0-9]{3}):`
-- **No argument or invalid**: Read the Module Status Overview from `docs/2-spec/000-index.md`, list the available prefixes and module numbers, and ask the user to pick one
+- **No argument or invalid**: This is an error. Print the available modules from the index and stop. Do NOT prompt for input — this command is designed to run autonomously (e.g., as a swarm worker).
 
 #### 2. Read Spec Blocks
 
@@ -154,4 +154,6 @@ Then output individual report cards for each requirement.
 
 ## Output
 
-Display the full attestation directly in the conversation. Do not write to a file unless explicitly asked.
+Write the attestation report to `docs/4-docs/attestations/attest-{NNN}-{module-name}.md` where NNN is the module number and module-name is the module slug (e.g., `attest-004-agents.md`). For single-requirement attestations, use `attest-{REQ-ID}.md` (e.g., `attest-REQ-AGT-001.md`). Create the `attestations/` directory if it doesn't exist.
+
+Also display the summary table in the conversation so progress is visible.

@@ -1,5 +1,7 @@
 import Foundation
 
+// MARK: - Provenance: REQ-QA-003, REQ-QA-005
+
 /// Mock assertion runner for testing
 public final class MockAssertionRunner: AssertionRunner, @unchecked Sendable {
 

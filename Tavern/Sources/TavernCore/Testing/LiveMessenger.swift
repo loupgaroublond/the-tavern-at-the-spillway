@@ -2,6 +2,8 @@ import Foundation
 import ClodKit
 import os.log
 
+// MARK: - Provenance: REQ-QA-005
+
 // MARK: - LiveMessenger
 
 /// Production messenger that calls real Claude via ClodKit SDK.

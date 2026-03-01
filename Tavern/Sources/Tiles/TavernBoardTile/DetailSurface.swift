@@ -33,3 +33,10 @@ private struct EmptyDetailView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
+
+// MARK: - Preview
+
+#Preview("Detail Surface - Empty") {
+    EmptyDetailView()
+        .frame(width: 500, height: 400)
+}

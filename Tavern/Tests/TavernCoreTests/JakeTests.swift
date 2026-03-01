@@ -12,7 +12,7 @@ struct JakeTests {
             .appendingPathComponent("tavern-test-\(UUID().uuidString)")
     }
 
-    @Test("Jake has system prompt", .tags(.reqAGT001))
+    @Test("Jake has system prompt", .tags(.reqAGT001, .reqV1001))
     func jakeHasSystemPrompt() {
         // The system prompt should be non-empty and contain key character elements
         let prompt = Jake.systemPrompt
@@ -24,7 +24,7 @@ struct JakeTests {
         #expect(prompt.contains("Slop Squad"))
     }
 
-    @Test("Jake initializes with correct state", .tags(.reqAGT001))
+    @Test("Jake initializes with correct state", .tags(.reqAGT001, .reqV1001))
     func jakeInitializesCorrectly() {
         let jake = Jake(projectURL: Self.testProjectURL(), loadSavedSession: false)
 
@@ -79,7 +79,7 @@ struct JakeTests {
 
     // MARK: - Grade 2 Mock Tests (using MockMessenger)
 
-    @Test("Jake responds to message", .tags(.reqAGT008, .reqARCH009))
+    @Test("Jake responds to message", .tags(.reqAGT008, .reqARCH009, .reqV1001, .reqQA005))
     func jakeRespondsToMessage() async throws {
         let mock = MockMessenger(responses: ["Well WELL, look who showed up!"])
         let jake = Jake(projectURL: Self.testProjectURL(), messenger: mock, loadSavedSession: false)

@@ -166,4 +166,70 @@ struct SlashCommandDispatcherTests {
         let matches = dispatcher.matchingCommands(prefix: "zzz")
         #expect(matches.isEmpty)
     }
+
+    // MARK: - dispatchInput (parser-integrated dispatch)
+
+    @Test("dispatchInput routes slash command to handler")
+    @MainActor
+    func dispatchInputRoutesCommand() async {
+        let dispatcher = SlashCommandDispatcher()
+        dispatcher.register(TestSlashCommand(name: "compact", result: .message("compacted")))
+
+        let result = await dispatcher.dispatchInput("/compact")
+        #expect(result == .message("compacted"))
+    }
+
+    @Test("dispatchInput with arguments passes them through")
+    @MainActor
+    func dispatchInputPassesArguments() async {
+        let dispatcher = SlashCommandDispatcher()
+        let cmd = ArgumentCapturingCommand(name: "model")
+        dispatcher.register(cmd)
+
+        let result = await dispatcher.dispatchInput("/model sonnet")
+        #expect(result == .message("args: sonnet"))
+    }
+
+    @Test("dispatchInput returns nil for non-command input")
+    @MainActor
+    func dispatchInputReturnsNilForNonCommand() async {
+        let dispatcher = SlashCommandDispatcher()
+        dispatcher.register(TestSlashCommand(name: "compact"))
+
+        let result = await dispatcher.dispatchInput("hello world")
+        #expect(result == nil)
+    }
+
+    @Test("dispatchInput returns nil for empty input")
+    @MainActor
+    func dispatchInputReturnsNilForEmpty() async {
+        let dispatcher = SlashCommandDispatcher()
+
+        let result = await dispatcher.dispatchInput("")
+        #expect(result == nil)
+    }
+
+    @Test("dispatchInput returns error for unknown slash command")
+    @MainActor
+    func dispatchInputUnknownCommand() async {
+        let dispatcher = SlashCommandDispatcher()
+        dispatcher.register(TestSlashCommand(name: "compact"))
+
+        let result = await dispatcher.dispatchInput("/nonexistent")
+        if case .error(let msg) = result {
+            #expect(msg.contains("Unknown command"))
+        } else {
+            Issue.record("Expected error result, got \(String(describing: result))")
+        }
+    }
+}
+
+/// A command that echoes its arguments for testing argument passthrough
+private struct ArgumentCapturingCommand: SlashCommand {
+    let name: String
+    let description: String = "Captures arguments"
+
+    func execute(arguments: String) async -> SlashCommandResult {
+        .message("args: \(arguments)")
+    }
 }

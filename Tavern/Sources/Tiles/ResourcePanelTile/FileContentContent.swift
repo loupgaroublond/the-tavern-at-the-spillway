@@ -66,3 +66,43 @@ struct FileContentContent: View {
         }
     }
 }
+
+// MARK: - Preview
+
+#Preview("File Content - Empty") {
+    VStack(spacing: 8) {
+        Image(systemName: "doc.text")
+            .font(.title)
+            .foregroundColor(.secondary)
+        Text("Select a file to view")
+            .foregroundColor(.secondary)
+    }
+    .frame(width: 300, height: 200)
+}
+
+#Preview("File Content - With File") {
+    VStack(spacing: 0) {
+        HStack {
+            Image(systemName: "swift")
+                .foregroundColor(.secondary)
+            Text("Package.swift")
+                .font(.system(.caption, design: .monospaced))
+                .fontWeight(.medium)
+                .lineLimit(1)
+            Spacer()
+            Button(action: {}) {
+                Image(systemName: "xmark.circle.fill")
+                    .foregroundColor(.secondary)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(Color(NSColor.controlBackgroundColor))
+
+        Divider()
+
+        LineNumberedText(content: "// swift-tools-version: 6.0\nimport PackageDescription\n\nlet package = Package(\n    name: \"Tavern\"\n)")
+    }
+    .frame(width: 400, height: 250)
+}

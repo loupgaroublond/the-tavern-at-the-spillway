@@ -2,6 +2,8 @@ import XCTest
 import ClodKit
 @testable import TavernCore
 
+// MARK: - Provenance: REQ-QA-009, REQ-QA-012
+
 /// Live integration tests that actually call the Claude CLI
 /// These tests verify that the SDK can communicate with Claude correctly
 ///

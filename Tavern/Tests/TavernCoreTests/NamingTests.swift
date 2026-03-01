@@ -5,7 +5,7 @@ import Testing
 @Suite("NamingTheme Tests", .timeLimit(.minutes(1)))
 struct NamingThemeTests {
 
-    @Test("Theme has all required properties", .tags(.reqSPN004))
+    @Test("Theme has all required properties", .tags(.reqSPN004, .reqV1017))
     func themeHasRequiredProperties() {
         let theme = NamingTheme.lotr
 
@@ -27,7 +27,7 @@ struct NamingThemeTests {
         #expect(allNames.contains("Glorfindel")) // Tier 3
     }
 
-    @Test("Built-in themes are available", .tags(.reqSPN007))
+    @Test("Built-in themes are available", .tags(.reqSPN007, .reqV1017))
     func builtInThemesAvailable() {
         let themes = NamingTheme.builtIn
 
@@ -42,7 +42,7 @@ struct NamingThemeTests {
 @Suite("NameGenerator Tests", .timeLimit(.minutes(1)))
 struct NameGeneratorTests {
 
-    @Test("Generator generates names in tier order", .tags(.reqSPN005, .reqSPN006))
+    @Test("Generator generates names in tier order", .tags(.reqSPN005, .reqSPN006, .reqV1017))
     func generatorGeneratesInTierOrder() {
         let generator = NameGenerator(theme: .lotr)
 
@@ -62,7 +62,7 @@ struct NameGeneratorTests {
         #expect(tier0.contains(name3!))
     }
 
-    @Test("Generator generates unique names", .tags(.reqSPN005))
+    @Test("Generator generates unique names", .tags(.reqSPN005, .reqV1017))
     func generatorGeneratesUniqueNames() {
         let generator = NameGenerator(theme: .lotr)
 

@@ -86,7 +86,10 @@ let package = Package(
         // Core tests
         .testTarget(
             name: "TavernCoreTests",
-            dependencies: ["TavernCore", "TavernKit"]
+            dependencies: [
+                "TavernCore", "TavernKit",
+                "ResourcePanelTile", "PermissionSettingsTile",
+            ]
         ),
 
         // App tests (UI wiring tests + integration tests)
@@ -105,7 +108,7 @@ let package = Package(
         // Stress tests (slow, run before releases)
         .testTarget(
             name: "TavernStressTests",
-            dependencies: ["TavernCore", "TavernKit"]
+            dependencies: ["TavernCore", "TavernKit", "ResourcePanelTile"]
         ),
 
         // Integration tests (Grade 3 - real Claude API, headless)

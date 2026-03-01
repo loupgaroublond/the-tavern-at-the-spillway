@@ -159,6 +159,64 @@ targets:
       properties:
         com.apple.security.app-sandbox: false
 
+  TavernCoreTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: Tests/TavernCoreTests
+    dependencies:
+      - target: TavernCore
+      - target: TavernKit
+      - target: ResourcePanelTile
+      - target: PermissionSettingsTile
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.tavern.coretests
+      SWIFT_VERSION: "6.0"
+      GENERATE_INFOPLIST_FILE: YES
+
+  TavernTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: Tests/TavernTests
+    dependencies:
+      - target: Tavern
+      - target: TavernCore
+      - target: TavernKit
+      - target: ChatTile
+      - target: ResourcePanelTile
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.tavern.tests
+      SWIFT_VERSION: "6.0"
+      GENERATE_INFOPLIST_FILE: YES
+
+  TavernStressTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: Tests/TavernStressTests
+    dependencies:
+      - target: TavernCore
+      - target: TavernKit
+      - target: ResourcePanelTile
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.tavern.stresstests
+      SWIFT_VERSION: "6.0"
+      GENERATE_INFOPLIST_FILE: YES
+
+  TavernIntegrationTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: Tests/TavernIntegrationTests
+    dependencies:
+      - target: TavernCore
+      - target: TavernKit
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.tavern.integrationtests
+      SWIFT_VERSION: "6.0"
+      GENERATE_INFOPLIST_FILE: YES
+
   TavernUITests:
     type: bundle.ui-testing
     platform: macOS
@@ -178,6 +236,10 @@ schemes:
       targets:
         Tavern: all
         TavernCore: all
+        TavernCoreTests: [test]
+        TavernTests: [test]
+        TavernStressTests: [test]
+        TavernIntegrationTests: [test]
         TavernUITests: [test]
     run:
       executable: Tavern
@@ -185,4 +247,8 @@ schemes:
     test:
       config: Debug
       targets:
+        - TavernCoreTests
+        - TavernTests
+        - TavernStressTests
+        - TavernIntegrationTests
         - TavernUITests

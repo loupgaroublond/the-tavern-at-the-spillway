@@ -169,3 +169,47 @@ private struct BackgroundTaskRow: View {
         }
     }
 }
+
+// MARK: - Preview
+
+#Preview("Background Tasks - Empty") {
+    VStack(spacing: 8) {
+        Image(systemName: "terminal")
+            .font(.title)
+            .foregroundColor(.secondary)
+        Text("No background tasks")
+            .foregroundColor(.secondary)
+    }
+    .frame(width: 300, height: 200)
+}
+
+#Preview("Background Tasks - With Tasks") {
+    VStack(spacing: 0) {
+        HStack {
+            Text("3 tasks").font(.caption).foregroundColor(.secondary)
+            Spacer()
+            Button("Clear Finished") {}.font(.caption).buttonStyle(.plain).foregroundColor(.accentColor)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 4)
+
+        Divider()
+
+        List {
+            BackgroundTaskRow(
+                bgTask: TavernTask(name: "redo build", status: .running),
+                onStop: {}
+            )
+            BackgroundTaskRow(
+                bgTask: TavernTask(name: "redo test", status: .completed, output: "All tests passed"),
+                onStop: {}
+            )
+            BackgroundTaskRow(
+                bgTask: TavernTask(name: "redo test-grade3", status: .failed, output: "2 failures"),
+                onStop: {}
+            )
+        }
+        .listStyle(.sidebar)
+    }
+    .frame(width: 300, height: 300)
+}

@@ -273,7 +273,7 @@ struct CommitmentListTests {
 @Suite("CommitmentVerifier Tests", .timeLimit(.minutes(1)))
 struct CommitmentVerifierTests {
 
-    @Test("Verifier runs assertion", .tags(.reqINV003, .reqDET004))
+    @Test("Verifier runs assertion", .tags(.reqINV003, .reqDET004, .reqV1006))
     func verifierRunsAssertion() async throws {
         let mockRunner = MockAssertionRunner()
         mockRunner.setPass(for: "echo test", output: "test\n")
@@ -346,7 +346,7 @@ struct CommitmentVerifierTests {
         #expect(updated?.status == .passed)
     }
 
-    @Test("VerifyAll verifies all pending commitments", .tags(.reqINV003, .reqDET004))
+    @Test("VerifyAll verifies all pending commitments", .tags(.reqINV003, .reqDET004, .reqV1006))
     func verifyAllVerifiesAllPending() async throws {
         let mockRunner = MockAssertionRunner()
         mockRunner.setPass(for: "echo 1")
@@ -467,7 +467,7 @@ struct CommitmentVerifierTests {
 
         #expect(passed == false)
         #expect(commitment.status == .failed)
-        #expect(commitment.failureMessage == "Assertion timed out")
+        #expect(commitment.failureMessage == "Assertion timed out after 30.0 seconds: slow-test")
     }
 }
 

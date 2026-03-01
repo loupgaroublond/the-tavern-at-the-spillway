@@ -1,5 +1,7 @@
 import Testing
 
+// MARK: - Provenance: REQ-FID-002, REQ-FID-003, REQ-FID-007
+
 // Tag declarations for provenance tracking (ADR-007).
 // Convention: REQ-AGT-001 → .reqAGT001
 extension Tag {
@@ -71,4 +73,21 @@ extension Tag {
     @Tag static var reqUX005: Self
     @Tag static var reqUX006: Self
     @Tag static var reqUX009: Self
+
+    // 016-quality
+    @Tag static var reqQA001: Self
+    @Tag static var reqQA002: Self
+    @Tag static var reqQA005: Self
+    @Tag static var reqQA007: Self
+    @Tag static var reqQA011: Self
+    @Tag static var reqQA013: Self
+
+    // 017-v1-scope
+    @Tag static var reqV1001: Self
+    @Tag static var reqV1002: Self
+    @Tag static var reqV1003: Self
+    @Tag static var reqV1004: Self
+    @Tag static var reqV1005: Self
+    @Tag static var reqV1006: Self
+    @Tag static var reqV1017: Self
 }

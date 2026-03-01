@@ -46,12 +46,19 @@ public final class CommitmentList: @unchecked Sendable {
 
     /// All pending commitments
     public var pendingCommitments: [Commitment] {
-        queue.sync { _commitments.filter { $0.status == .pending } }
+        commitments(withStatus: .pending)
     }
 
     /// All failed commitments
     public var failedCommitments: [Commitment] {
-        queue.sync { _commitments.filter { $0.status == .failed } }
+        commitments(withStatus: .failed)
+    }
+
+    /// Filter commitments by status
+    /// - Parameter status: The status to filter by
+    /// - Returns: Commitments matching the given status
+    public func commitments(withStatus status: CommitmentStatus) -> [Commitment] {
+        queue.sync { _commitments.filter { $0.status == status } }
     }
 
     // MARK: - Initialization

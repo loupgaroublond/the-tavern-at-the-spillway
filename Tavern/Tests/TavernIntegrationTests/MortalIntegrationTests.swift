@@ -3,6 +3,8 @@ import XCTest
 import ClodKit
 @testable import TavernCore
 
+// MARK: - Provenance: REQ-QA-009, REQ-QA-012, REQ-V1-002, REQ-V1-005, REQ-V1-016
+
 /// Grade 3 integration tests for Mortal — real Claude API calls
 /// Run with: redo test-grade3
 /// Or: swift test --filter TavernIntegrationTests/MortalIntegrationTests

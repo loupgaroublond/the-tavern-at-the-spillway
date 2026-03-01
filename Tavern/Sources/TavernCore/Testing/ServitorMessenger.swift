@@ -1,7 +1,7 @@
 import Foundation
 import ClodKit
 
-// MARK: - Provenance: REQ-ARCH-009, REQ-QA-002
+// MARK: - Provenance: REQ-ARCH-009, REQ-QA-002, REQ-QA-005
 
 // SessionUsage and StreamEvent have moved to TavernKit.
 

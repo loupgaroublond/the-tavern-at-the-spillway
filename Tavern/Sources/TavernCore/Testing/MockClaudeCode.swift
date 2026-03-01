@@ -1,7 +1,7 @@
 import Foundation
 import ClodKit
 
-// MARK: - Provenance: REQ-QA-002
+// MARK: - Provenance: REQ-QA-002, REQ-QA-005
 
 /// Mock helpers for testing with ClodKit
 /// Since ClodKit uses static functions and AsyncSequence, mocking requires

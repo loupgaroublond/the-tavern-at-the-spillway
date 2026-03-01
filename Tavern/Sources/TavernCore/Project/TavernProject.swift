@@ -22,9 +22,6 @@ public final class TavernProject: ObservableObject, Identifiable {
         rootURL.lastPathComponent
     }
 
-    /// The coordinator for this project (owns Jake and agents)
-    @Published public private(set) var coordinator: TavernCoordinator?
-
     /// Whether the project is fully initialized
     @Published public private(set) var isReady: Bool = false
 
@@ -84,30 +81,92 @@ public final class TavernProject: ObservableObject, Identifiable {
         )
         TavernLogger.coordination.debug("[\(self.name)] MortalSpawner created")
 
-        TavernLogger.coordination.debug("[\(self.name)] Creating TavernCoordinator...")
-        let coordinator = TavernCoordinator(
-            jake: jake,
-            spawner: spawner,
-            projectURL: rootURL,
-            permissionManager: permissionManager
-        )
-        self.coordinator = coordinator
-
-        // Create concrete providers for tileboard architecture
+        // Create the session manager (ServitorProvider)
         let sessionManager = ClodSessionManager(
             jake: jake,
             spawner: spawner,
             permissionManager: permissionManager,
-            commandDispatcher: coordinator.commandDispatcher,
             projectURL: rootURL
         )
-        // Wire MCP server from coordinator to session manager
-        sessionManager.jakeMCPServer = jake.mcpServer
 
+        // Setup MCP server for Jake
+        let mcpServer = createTavernMCPServer(
+            spawner: spawner,
+            onSummon: { servitor in
+                await MainActor.run {
+                    let persisted = SessionStore.PersistedServitor(
+                        id: servitor.id,
+                        name: servitor.name,
+                        sessionId: servitor.sessionId,
+                        chatDescription: servitor.chatDescription
+                    )
+                    SessionStore.addServitor(persisted)
+                }
+                TavernLogger.coordination.info("Jake summoned servitor: \(servitor.name)")
+            },
+            onDismiss: { servitorId in
+                await MainActor.run {
+                    SessionStore.removeServitor(id: servitorId)
+                }
+                TavernLogger.coordination.info("Jake dismissed servitor: \(servitorId)")
+            }
+        )
+        jake.mcpServer = mcpServer
+        sessionManager.jakeMCPServer = mcpServer
+
+        // Create slash command dispatcher and register commands
+        let commandDispatcher = SlashCommandDispatcher()
+        let commandContext = CommandContext()
+        commandDispatcher.registerAll([
+            HelpCommand(dispatcher: commandDispatcher),
+            CompactCommand(context: commandContext),
+            CostCommand(context: commandContext),
+            ModelCommand(context: commandContext),
+            StatusCommand(context: commandContext),
+            ContextCommand(context: commandContext),
+            StatsCommand(context: commandContext),
+            ThinkingCommand(context: commandContext),
+            ServitorsCommand(servitorListProvider: { [weak sessionManager] in
+                sessionManager?.allServitors() ?? []
+            }),
+            HooksCommand(projectPath: rootURL.path),
+            MCPCommand(projectPath: rootURL.path)
+        ])
+        let customCommands = CustomCommandLoader.loadCommands(projectPath: rootURL.path)
+        commandDispatcher.registerAll(customCommands)
+        TavernLogger.coordination.info("[\(self.name)] Registered \(commandDispatcher.commands.count) slash commands (\(customCommands.count) custom)")
+
+        // Restore persisted servitors
+        let persistedServitors = SessionStore.loadServitorList()
+        for persisted in persistedServitors {
+            let mortal = Mortal(
+                id: persisted.id,
+                name: persisted.name,
+                assignment: nil,
+                chatDescription: persisted.chatDescription,
+                projectURL: rootURL,
+                messenger: LiveMessenger(
+                    permissionManager: permissionManager,
+                    agentName: persisted.name
+                ),
+                loadSavedSession: true
+            )
+            do {
+                try spawner.register(mortal)
+                TavernLogger.coordination.info("[\(self.name)] Restored mortal: \(persisted.name)")
+            } catch {
+                TavernLogger.coordination.error("[\(self.name)] Failed to restore mortal \(persisted.name): \(error.localizedDescription)")
+            }
+        }
+        if !persistedServitors.isEmpty {
+            TavernLogger.coordination.info("[\(self.name)] Restored \(persistedServitors.count) persisted servitors")
+        }
+
+        // Wire up providers
         self.servitorProvider = sessionManager
         self.resourceProvider = DocumentStore(rootURL: rootURL)
         self.commandProvider = CommandRegistry(
-            dispatcher: coordinator.commandDispatcher,
+            dispatcher: commandDispatcher,
             projectRoot: rootURL
         )
         self.permissionProvider = PermissionSettingsProvider(manager: permissionManager)

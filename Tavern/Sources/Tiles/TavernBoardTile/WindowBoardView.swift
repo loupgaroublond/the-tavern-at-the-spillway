@@ -86,3 +86,39 @@ private struct BoardHeader: View {
         .padding()
     }
 }
+
+// MARK: - Preview
+
+#Preview("Window Board") {
+    NavigationSplitView {
+        VStack(spacing: 0) {
+            BoardHeader(
+                projectName: "my-project",
+                rootURL: URL(fileURLWithPath: "/tmp/my-project")
+            )
+
+            Divider()
+
+            List {
+                HStack(spacing: 12) {
+                    Circle().fill(.orange).frame(width: 10, height: 10)
+                    Text("Jake").font(.headline).fontWeight(.bold)
+                    Spacer()
+                }
+            }
+            .listStyle(.sidebar)
+        }
+        .frame(minWidth: 200)
+    } detail: {
+        VStack(spacing: 12) {
+            Image(systemName: "bubble.left.and.bubble.right")
+                .font(.system(size: 48))
+                .foregroundColor(.secondary)
+            Text("Select an agent to start chatting")
+                .font(.headline)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+    .frame(width: 900, height: 600)
+}

@@ -1,6 +1,8 @@
 import XCTest
 @testable import TavernCore
 
+// MARK: - Provenance: REQ-QA-006
+
 /// Stress tests for mortal spawning and lifecycle (Bead 1z56 — supplemental)
 ///
 /// Tests sequential spawning at scale: 100+ mortals, rapid summon/dismiss cycles,

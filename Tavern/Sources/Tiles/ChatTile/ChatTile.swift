@@ -98,6 +98,20 @@ public final class ChatTile {
 
         messages.append(ChatMessage(role: .user, content: text))
 
+        // Try slash command dispatch first
+        if let commandResult = await commandProvider.dispatchInput(text) {
+            Self.logger.info("[ChatTile] handled as slash command")
+            switch commandResult {
+            case .message(let output):
+                messages.append(ChatMessage(role: .agent, content: output))
+            case .error(let error):
+                messages.append(ChatMessage(role: .agent, content: "Error: \(error)"))
+            case .silent:
+                break
+            }
+            return
+        }
+
         isCogitating = true
         isStreaming = false
         currentToolName = nil
@@ -110,6 +124,7 @@ public final class ChatTile {
 
         var accumulatedText = ""
         var streamingMessageId: UUID?
+        var errorEventReceived = false
 
         do {
             for try await event in stream {
@@ -158,11 +173,12 @@ public final class ChatTile {
                 case .error(let errorMessage):
                     Self.logger.error("[ChatTile] stream error: \(errorMessage)")
                     messages.append(ChatMessage(role: .agent, content: "Error: \(errorMessage)"))
+                    errorEventReceived = true
                 }
             }
         } catch {
             Self.logger.error("[ChatTile] streaming failed: \(error.localizedDescription)")
-            if accumulatedText.isEmpty {
+            if !errorEventReceived && accumulatedText.isEmpty {
                 messages.append(ChatMessage(role: .agent, content: "Error: \(error.localizedDescription)"))
             }
         }

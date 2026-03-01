@@ -114,3 +114,55 @@ struct PermissionSettingsTileView: View {
         }
     }
 }
+
+// MARK: - Preview
+
+#Preview("Permission Settings") {
+    VStack(alignment: .leading, spacing: 16) {
+        Section {
+            Picker("Permission Mode", selection: .constant(PermissionMode.normal)) {
+                ForEach(PermissionMode.allCases, id: \.self) { mode in
+                    Text(mode.displayName).tag(mode)
+                }
+            }
+            .pickerStyle(.segmented)
+
+            Text(PermissionMode.normal.modeDescription)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        } header: {
+            Text("Mode").font(.headline)
+        }
+
+        Divider()
+
+        Section {
+            HStack {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+                VStack(alignment: .leading) {
+                    Text("bash").font(.body.monospaced())
+                    Text("Allow shell commands").font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer()
+                Text("Allow").font(.caption).foregroundStyle(.secondary)
+            }
+
+            HStack {
+                TextField("Tool pattern (e.g. bash)", text: .constant(""))
+                    .textFieldStyle(.roundedBorder)
+                Picker("", selection: .constant(PermissionDecisionInfo.allow)) {
+                    Text("Allow").tag(PermissionDecisionInfo.allow)
+                    Text("Deny").tag(PermissionDecisionInfo.deny)
+                }
+                .frame(width: 100)
+                Button("Add") {}
+                    .disabled(true)
+            }
+        } header: {
+            Text("Rules").font(.headline)
+        }
+    }
+    .padding()
+    .frame(width: 500, height: 300)
+}

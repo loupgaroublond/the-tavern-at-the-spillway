@@ -1,6 +1,8 @@
 import XCTest
 @testable import TavernCore
 
+// MARK: - Provenance: REQ-QA-006, REQ-QA-014
+
 /// Stress tests for streaming under concurrent load (Bead 618c)
 ///
 /// Verifies:

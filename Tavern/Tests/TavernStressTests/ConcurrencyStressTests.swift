@@ -1,6 +1,8 @@
 import XCTest
 @testable import TavernCore
 
+// MARK: - Provenance: REQ-QA-006, REQ-QA-014
+
 /// Stress tests for concurrent servitor spawning and dismissal (Bead 1z56)
 ///
 /// Verifies ServitorRegistry stays consistent under concurrent load:

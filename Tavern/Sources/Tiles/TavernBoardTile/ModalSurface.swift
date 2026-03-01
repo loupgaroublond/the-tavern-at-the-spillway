@@ -22,3 +22,32 @@ struct ModalSurface: View {
         }
     }
 }
+
+// MARK: - Preview
+
+#Preview("Modal Surface - Permission Settings") {
+    VStack(alignment: .leading, spacing: 16) {
+        Section {
+            Picker("Permission Mode", selection: .constant(PermissionMode.normal)) {
+                ForEach(PermissionMode.allCases, id: \.self) { mode in
+                    Text(mode.displayName).tag(mode)
+                }
+            }
+            .pickerStyle(.segmented)
+
+            Text("Tools require approval unless an always-allow rule matches.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        } header: {
+            Text("Mode").font(.headline)
+        }
+
+        Divider()
+
+        Text("No permission rules configured.")
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .center)
+    }
+    .padding()
+    .frame(width: 500, height: 300)
+}

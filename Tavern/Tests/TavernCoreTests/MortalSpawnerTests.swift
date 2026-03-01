@@ -25,7 +25,7 @@ struct MortalSpawnerTests {
 
     // MARK: - Summon Tests
 
-    @Test("Summon creates mortal with themed name", .tags(.reqSPN001, .reqSPN010))
+    @Test("Summon creates mortal with themed name", .tags(.reqSPN001, .reqSPN010, .reqV1002, .reqV1004))
     func summonCreatesMortalWithThemedName() throws {
         let (spawner, registry, _) = createSpawner()
 
@@ -37,7 +37,7 @@ struct MortalSpawnerTests {
         #expect(mortal.assignment == "Test assignment")
     }
 
-    @Test("Summon registers mortal in registry", .tags(.reqAGT007, .reqSPN001))
+    @Test("Summon registers mortal in registry", .tags(.reqAGT007, .reqSPN001, .reqV1002))
     func summonRegistersMortalInRegistry() throws {
         let (spawner, registry, _) = createSpawner()
 
@@ -47,7 +47,7 @@ struct MortalSpawnerTests {
         #expect(registry.servitor(named: mortal.name) != nil)
     }
 
-    @Test("Summoned mortal has assignment", .tags(.reqSPN002))
+    @Test("Summoned mortal has assignment", .tags(.reqSPN002, .reqV1004))
     func summonedMortalHasAssignment() throws {
         let (spawner, _, _) = createSpawner()
 

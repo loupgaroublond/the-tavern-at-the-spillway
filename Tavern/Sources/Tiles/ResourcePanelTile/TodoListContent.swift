@@ -105,3 +105,40 @@ private struct TodoItemRow: View {
         .padding(.vertical, 2)
     }
 }
+
+// MARK: - Preview
+
+#Preview("TODO List") {
+    VStack(spacing: 0) {
+        HStack(spacing: 8) {
+            TextField("Add a TODO...", text: .constant(""))
+                .textFieldStyle(.roundedBorder)
+            Button(action: {}) {
+                Image(systemName: "plus.circle.fill")
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+
+        Divider()
+
+        HStack {
+            Text("2 pending").font(.caption).foregroundColor(.secondary)
+            Spacer()
+            Button("Clear Done") {}.font(.caption).buttonStyle(.plain).foregroundColor(.accentColor)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 4)
+
+        Divider()
+
+        List {
+            TodoItemRow(item: TodoItem(text: "Fix streaming bug"), onToggle: {}, onDelete: {})
+            TodoItemRow(item: TodoItem(text: "Add preview blocks"), onToggle: {}, onDelete: {})
+            TodoItemRow(item: TodoItem(text: "Write tests", isCompleted: true), onToggle: {}, onDelete: {})
+        }
+        .listStyle(.sidebar)
+    }
+    .frame(width: 300, height: 350)
+}

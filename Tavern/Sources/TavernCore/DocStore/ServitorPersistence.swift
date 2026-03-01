@@ -1,9 +1,12 @@
 import Foundation
+import os.log
 
 // MARK: - Provenance: REQ-INV-005, REQ-LCM-004
 
 /// Manages persisting servitors to the doc store
 public final class ServitorPersistence: @unchecked Sendable {
+
+    private static let logger = Logger(subsystem: "com.tavern.spillway", category: "persistence")
 
     // MARK: - Dependencies
 
@@ -46,8 +49,13 @@ public final class ServitorPersistence: @unchecked Sendable {
     /// - Throws: If loading fails
     public func load(name: String) throws -> ServitorNode {
         let documentId = name.lowercased().replacingOccurrences(of: " ", with: "-")
-        let document = try docStore.read(id: documentId)
-        return try ServitorNode.from(document: document)
+        do {
+            let document = try docStore.read(id: documentId)
+            return try ServitorNode.from(document: document)
+        } catch let error as DocStoreError {
+            Self.logger.debugError("Failed to load servitor '\(name)': \(error)")
+            throw error
+        }
     }
 
     /// Load all servitor nodes from the doc store
@@ -110,7 +118,12 @@ public final class ServitorPersistence: @unchecked Sendable {
     /// - Throws: If deletion fails
     public func delete(name: String) throws {
         let documentId = name.lowercased().replacingOccurrences(of: " ", with: "-")
-        try docStore.delete(id: documentId)
+        do {
+            try docStore.delete(id: documentId)
+        } catch let error as DocStoreError {
+            Self.logger.debugError("Failed to delete servitor '\(name)': \(error)")
+            throw error
+        }
     }
 
     /// Check if a servitor exists in the doc store

@@ -53,3 +53,30 @@ private struct FilesTabContent: View {
         }
     }
 }
+
+// MARK: - Preview
+
+#Preview("Resource Panel") {
+    VStack(spacing: 0) {
+        Picker("", selection: .constant(SidePaneTab.files)) {
+            ForEach(SidePaneTab.allCases) { tab in
+                Label(tab.rawValue, systemImage: tab.symbolName)
+                    .tag(tab)
+            }
+        }
+        .pickerStyle(.segmented)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+
+        Divider()
+
+        List {
+            Label("Sources", systemImage: "folder.fill")
+            Label("Tests", systemImage: "folder.fill")
+            Label("Package.swift", systemImage: "swift")
+            Label("README.md", systemImage: "doc.text")
+        }
+        .listStyle(.sidebar)
+    }
+    .frame(width: 300, height: 400)
+}

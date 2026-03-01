@@ -16,6 +16,10 @@ public final class CommandRegistry: CommandProvider {
         self.projectRoot = projectRoot
     }
 
+    public func dispatchInput(_ input: String) async -> SlashCommandResult? {
+        await dispatcher.dispatchInput(input)
+    }
+
     public func execute(name: String, arguments: String) async -> SlashCommandResult {
         Self.logger.info("[CommandRegistry] executing /\(name) with args: \(arguments.prefix(50))")
         return await dispatcher.dispatch(name: name, arguments: arguments)
@@ -34,7 +38,7 @@ public final class CommandRegistry: CommandProvider {
     }
 
     public func fileMentionSuggestions(for prefix: String, projectRoot: URL) -> [FileMentionSuggestion] {
-        // TODO: wire to FileTreeScanner when ChatTile absorbs FileMentionAutocomplete
+        // Tracked in jake-3eu8: wire to FileTreeScanner when ChatTile absorbs FileMentionAutocomplete
         []
     }
 }

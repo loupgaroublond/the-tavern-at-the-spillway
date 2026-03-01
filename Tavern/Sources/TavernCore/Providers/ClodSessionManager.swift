@@ -12,7 +12,6 @@ public final class ClodSessionManager: ServitorProvider {
     let jake: Jake
     let spawner: MortalSpawner
     private let permissionManager: PermissionManager
-    private let commandDispatcher: SlashCommandDispatcher
     private let projectURL: URL
 
     var jakeMCPServer: SDKMCPServer? {
@@ -26,13 +25,11 @@ public final class ClodSessionManager: ServitorProvider {
         jake: Jake,
         spawner: MortalSpawner,
         permissionManager: PermissionManager,
-        commandDispatcher: SlashCommandDispatcher,
         projectURL: URL
     ) {
         self.jake = jake
         self.spawner = spawner
         self.permissionManager = permissionManager
-        self.commandDispatcher = commandDispatcher
         self.projectURL = projectURL
 
         Self.logger.info("[ClodSessionManager] initialized for project: \(projectURL.lastPathComponent)")
@@ -128,9 +125,10 @@ public final class ClodSessionManager: ServitorProvider {
     }
 
     public func closeServitor(id: UUID) throws {
+        let persisted = SessionStore.getServitor(id: id)
         SessionStore.removeServitor(id: id)
         try spawner.dismiss(id: id)
-        Self.logger.info("[ClodSessionManager] closed servitor: \(id)")
+        Self.logger.info("[ClodSessionManager] closed servitor: \(persisted?.name ?? id.uuidString)")
     }
 
     public func updateDescription(id: UUID, description: String?) {
@@ -138,6 +136,16 @@ public final class ClodSessionManager: ServitorProvider {
         if let mortal = spawner.activeMortals.first(where: { $0.id == id }) as? Mortal {
             mortal.chatDescription = description
         }
+    }
+
+    // MARK: - Bulk Operations
+
+    /// Reset all persisted session data (sessions + servitor list).
+    /// Use for project teardown or debug reset.
+    public func resetAllSessions() {
+        SessionStore.clearAllSessions()
+        SessionStore.clearServitorList()
+        Self.logger.info("[ClodSessionManager] all sessions and servitor list cleared")
     }
 
     // MARK: - Private Helpers
