@@ -142,8 +142,21 @@ targets:
       - path: Sources/Tavern
     dependencies:
       - target: TavernCore
+        embed: true
       - target: TavernKit
+        embed: true
       - target: TavernBoardTile
+        embed: true
+      - target: ApprovalTile
+        embed: true
+      - target: PermissionSettingsTile
+        embed: true
+      - target: ServitorListTile
+        embed: true
+      - target: ResourcePanelTile
+        embed: true
+      - target: ChatTile
+        embed: true
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: com.tavern.app
       SWIFT_VERSION: "6.0"
