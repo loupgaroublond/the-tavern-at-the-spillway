@@ -16,6 +16,7 @@
 {"issue_id":"jake-0ps","label":"agents"}
 {"issue_id":"jake-0ps","label":"communication"}
 {"issue_id":"jake-0ps","label":"tavern"}
+{"issue_id":"jake-0py","label":"cluster:ui-polish"}
 {"issue_id":"jake-0py","label":"resource-panel"}
 {"issue_id":"jake-0py","label":"ui"}
 {"issue_id":"jake-0py","label":"ux"}
@@ -36,6 +37,7 @@
 {"issue_id":"jake-28x","label":"persistence"}
 {"issue_id":"jake-28x","label":"tavern"}
 {"issue_id":"jake-28x","label":"ui"}
+{"issue_id":"jake-298s","label":"cluster:testing-dx"}
 {"issue_id":"jake-298s","label":"grade-3"}
 {"issue_id":"jake-298s","label":"tavern"}
 {"issue_id":"jake-298s","label":"testing"}
@@ -43,6 +45,7 @@
 {"issue_id":"jake-2ah","label":"management"}
 {"issue_id":"jake-2ah","label":"v1"}
 {"issue_id":"jake-2am","label":"agents"}
+{"issue_id":"jake-2am","label":"cluster:agent-controls"}
 {"issue_id":"jake-2am","label":"permissions"}
 {"issue_id":"jake-2bc","label":"agents"}
 {"issue_id":"jake-2bc","label":"core"}
@@ -70,6 +73,7 @@
 {"issue_id":"jake-3a30","label":"quality"}
 {"issue_id":"jake-3a30","label":"tavern"}
 {"issue_id":"jake-3eu8","label":"chat"}
+{"issue_id":"jake-3eu8","label":"cluster:ui-polish"}
 {"issue_id":"jake-3eu8","label":"tavern"}
 {"issue_id":"jake-3p9","label":"pipeline"}
 {"issue_id":"jake-3p9","label":"spec"}
@@ -92,6 +96,9 @@
 {"issue_id":"jake-5hg","label":"architecture"}
 {"issue_id":"jake-5hg","label":"docs"}
 {"issue_id":"jake-5hg","label":"gap-analysis"}
+{"issue_id":"jake-5nmo","label":"cluster:pipeline-commands"}
+{"issue_id":"jake-5nmo","label":"pipeline"}
+{"issue_id":"jake-5nmo","label":"tooling"}
 {"issue_id":"jake-5ym","label":"observability"}
 {"issue_id":"jake-5ym","label":"provenance"}
 {"issue_id":"jake-60c","label":"chat"}
@@ -122,6 +129,7 @@
 {"issue_id":"jake-754","label":"provenance"}
 {"issue_id":"jake-75p","label":"errors"}
 {"issue_id":"jake-7b4","label":"agents"}
+{"issue_id":"jake-7b4","label":"cluster:agent-controls"}
 {"issue_id":"jake-7b4","label":"commitments"}
 {"issue_id":"jake-7b4","label":"prompts"}
 {"issue_id":"jake-7b4","label":"quality"}
@@ -151,6 +159,7 @@
 {"issue_id":"jake-7us","label":"views"}
 {"issue_id":"jake-815","label":"agents"}
 {"issue_id":"jake-815","label":"architecture"}
+{"issue_id":"jake-815","label":"cluster:agent-controls"}
 {"issue_id":"jake-815","label":"jukebox"}
 {"issue_id":"jake-84c","label":"agents"}
 {"issue_id":"jake-84c","label":"communication"}
@@ -177,16 +186,19 @@
 {"issue_id":"jake-9p3","label":"commands"}
 {"issue_id":"jake-9p3","label":"customization"}
 {"issue_id":"jake-9p3","label":"v1"}
+{"issue_id":"jake-9uc","label":"cluster:pipeline-commands"}
 {"issue_id":"jake-9uc","label":"pipeline"}
 {"issue_id":"jake-9uc","label":"spec"}
 {"issue_id":"jake-9uc","label":"tooling"}
 {"issue_id":"jake-9um","label":"agents"}
 {"issue_id":"jake-9um","label":"refactor"}
+{"issue_id":"jake-9x6","label":"cluster:testing-dx"}
 {"issue_id":"jake-9x6","label":"dx"}
 {"issue_id":"jake-9x6","label":"testing"}
 {"issue_id":"jake-9y6","label":"side-pane"}
 {"issue_id":"jake-9y6","label":"todos"}
 {"issue_id":"jake-9y6","label":"v1"}
+{"issue_id":"jake-a7e","label":"cluster:testing-dx"}
 {"issue_id":"jake-a7e","label":"debug"}
 {"issue_id":"jake-a7e","label":"tooling"}
 {"issue_id":"jake-a7e","label":"ui"}
@@ -206,6 +218,7 @@
 {"issue_id":"jake-azu","label":"backlog"}
 {"issue_id":"jake-azu","label":"tavern"}
 {"issue_id":"jake-azu","label":"triage"}
+{"issue_id":"jake-azy","label":"cluster:pipeline-commands"}
 {"issue_id":"jake-azy","label":"process"}
 {"issue_id":"jake-azy","label":"tavern"}
 {"issue_id":"jake-azy","label":"tooling"}
@@ -260,6 +273,7 @@
 {"issue_id":"jake-cu8","label":"chat"}
 {"issue_id":"jake-cu8","label":"polish"}
 {"issue_id":"jake-cu8","label":"v1"}
+{"issue_id":"jake-cvk","label":"cluster:pipeline-commands"}
 {"issue_id":"jake-cvk","label":"management"}
 {"issue_id":"jake-cvk","label":"mcp"}
 {"issue_id":"jake-cvk","label":"ui"}
@@ -272,6 +286,7 @@
 {"issue_id":"jake-cyi","label":"ui"}
 {"issue_id":"jake-cyi","label":"v1"}
 {"issue_id":"jake-d2ba","label":"spec-pin"}
+{"issue_id":"jake-d2z","label":"cluster:ui-polish"}
 {"issue_id":"jake-dd4","label":"core"}
 {"issue_id":"jake-dd4","label":"tavern"}
 {"issue_id":"jake-dd4","label":"verification"}
@@ -283,7 +298,9 @@
 {"issue_id":"jake-dqt","label":"operating-modes"}
 {"issue_id":"jake-dqt","label":"provenance"}
 {"issue_id":"jake-dro","label":"agents"}
+{"issue_id":"jake-dro","label":"cluster:agent-controls"}
 {"issue_id":"jake-dro","label":"ui"}
+{"issue_id":"jake-drq","label":"cluster:pipeline-commands"}
 {"issue_id":"jake-drq","label":"hooks"}
 {"issue_id":"jake-drq","label":"management"}
 {"issue_id":"jake-drq","label":"ui"}
@@ -293,6 +310,7 @@
 {"issue_id":"jake-e2p","label":"commands"}
 {"issue_id":"jake-e2p","label":"management"}
 {"issue_id":"jake-e2p","label":"v1"}
+{"issue_id":"jake-e4p","label":"cluster:pipeline-commands"}
 {"issue_id":"jake-e4p","label":"pipeline"}
 {"issue_id":"jake-e4p","label":"spec"}
 {"issue_id":"jake-e4p","label":"tooling"}
@@ -302,6 +320,7 @@
 {"issue_id":"jake-egf","label":"persistence"}
 {"issue_id":"jake-egf","label":"tavern"}
 {"issue_id":"jake-eh9","label":"agents"}
+{"issue_id":"jake-eh9","label":"cluster:agent-controls"}
 {"issue_id":"jake-eh9","label":"ui"}
 {"issue_id":"jake-ejj","label":"changesets"}
 {"issue_id":"jake-ejj","label":"tavern"}
@@ -312,6 +331,7 @@
 {"issue_id":"jake-el4","label":"concurrency"}
 {"issue_id":"jake-f95","label":"lifecycle"}
 {"issue_id":"jake-f95","label":"provenance"}
+{"issue_id":"jake-f99","label":"cluster:pipeline-commands"}
 {"issue_id":"jake-f99","label":"pipeline"}
 {"issue_id":"jake-f99","label":"spec"}
 {"issue_id":"jake-f99","label":"tooling"}
@@ -322,6 +342,7 @@
 {"issue_id":"jake-fjb","label":"streaming"}
 {"issue_id":"jake-fjb","label":"v1"}
 {"issue_id":"jake-ftjy","label":"spec-pin"}
+{"issue_id":"jake-fvof","label":"spec-pin"}
 {"issue_id":"jake-g0ao","label":"quality"}
 {"issue_id":"jake-g0ao","label":"tavern"}
 {"issue_id":"jake-gc8","label":"messenger"}
@@ -341,6 +362,7 @@
 {"issue_id":"jake-gzq","label":"spec"}
 {"issue_id":"jake-hkg","label":"commands"}
 {"issue_id":"jake-hkg","label":"v1"}
+{"issue_id":"jake-hnb","label":"cluster:ui-polish"}
 {"issue_id":"jake-hnb","label":"resource-panel"}
 {"issue_id":"jake-hnb","label":"ux"}
 {"issue_id":"jake-hq1","label":"chat"}
@@ -398,10 +420,12 @@
 {"issue_id":"jake-l6g","label":"tavern"}
 {"issue_id":"jake-l6g","label":"tooling"}
 {"issue_id":"jake-lew","label":"agents"}
+{"issue_id":"jake-lew","label":"cluster:testing-dx"}
 {"issue_id":"jake-lew","label":"debug"}
 {"issue_id":"jake-lew","label":"permissions"}
 {"issue_id":"jake-lew","label":"testing"}
 {"issue_id":"jake-lls","label":"agents"}
+{"issue_id":"jake-lls","label":"cluster:testing-dx"}
 {"issue_id":"jake-lls","label":"grade-3"}
 {"issue_id":"jake-lls","label":"ollama"}
 {"issue_id":"jake-lls","label":"testing"}
@@ -434,6 +458,7 @@
 {"issue_id":"jake-n1r","label":"refactor"}
 {"issue_id":"jake-nkl","label":"chat"}
 {"issue_id":"jake-nkl","label":"cleanup"}
+{"issue_id":"jake-nm3z","label":"spec-pin"}
 {"issue_id":"jake-no9","label":"permissions"}
 {"issue_id":"jake-no9","label":"v1"}
 {"issue_id":"jake-nt2","label":"safety"}
@@ -477,6 +502,8 @@
 {"issue_id":"jake-q07k","label":"quality"}
 {"issue_id":"jake-q07k","label":"tavern"}
 {"issue_id":"jake-q07k","label":"verification"}
+{"issue_id":"jake-qejz","label":"agents"}
+{"issue_id":"jake-qejz","label":"cluster:agent-controls"}
 {"issue_id":"jake-qgy","label":"cleanup"}
 {"issue_id":"jake-qgy","label":"testing"}
 {"issue_id":"jake-qn7","label":"agents"}
@@ -493,6 +520,8 @@
 {"issue_id":"jake-rm0","label":"architecture"}
 {"issue_id":"jake-rm0","label":"errors"}
 {"issue_id":"jake-rm0","label":"gap-analysis"}
+{"issue_id":"jake-rxba","label":"cluster:ui-polish"}
+{"issue_id":"jake-rxba","label":"ui"}
 {"issue_id":"jake-ryhq","label":"quality"}
 {"issue_id":"jake-ryhq","label":"tavern"}
 {"issue_id":"jake-s3u","label":"provenance"}
@@ -500,6 +529,7 @@
 {"issue_id":"jake-syt","label":"cleanup"}
 {"issue_id":"jake-syt","label":"commands"}
 {"issue_id":"jake-tbj","label":"animation"}
+{"issue_id":"jake-tbj","label":"cluster:ui-polish"}
 {"issue_id":"jake-tbj","label":"ui"}
 {"issue_id":"jake-thv","label":"agents"}
 {"issue_id":"jake-thv","label":"architecture"}
@@ -516,6 +546,7 @@
 {"issue_id":"jake-upl","label":"ui"}
 {"issue_id":"jake-v7f","label":"bug"}
 {"issue_id":"jake-v7f","label":"chat"}
+{"issue_id":"jake-v7f","label":"cluster:ui-polish"}
 {"issue_id":"jake-v7f","label":"rendering"}
 {"issue_id":"jake-v7k","label":"agents"}
 {"issue_id":"jake-v7k","label":"di"}
@@ -551,6 +582,8 @@
 {"issue_id":"jake-wdk","label":"agents"}
 {"issue_id":"jake-wdk","label":"safety"}
 {"issue_id":"jake-wdk","label":"tavern"}
+{"issue_id":"jake-wgct","label":"cluster:testing-dx"}
+{"issue_id":"jake-wgct","label":"testing"}
 {"issue_id":"jake-whf","label":"engagement"}
 {"issue_id":"jake-whf","label":"tavern"}
 {"issue_id":"jake-whf","label":"ui"}
@@ -569,6 +602,7 @@
 {"issue_id":"jake-xnp","label":"ui"}
 {"issue_id":"jake-xnp","label":"v1"}
 {"issue_id":"jake-ycm","label":"agents"}
+{"issue_id":"jake-ycm","label":"cluster:agent-controls"}
 {"issue_id":"jake-ycm","label":"ui"}
 {"issue_id":"jake-yfc","label":"pipeline"}
 {"issue_id":"jake-yfc","label":"spec"}
