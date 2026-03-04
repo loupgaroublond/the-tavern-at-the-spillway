@@ -36,6 +36,9 @@ public struct ChatMessage: Identifiable, Equatable, Sendable {
     /// Whether this message is still being streamed (tokens arriving)
     public var isStreaming: Bool
 
+    /// Tool use ID for correlating tool_use → tool_result (nil for non-tool messages)
+    public let toolUseId: String?
+
     public init(
         id: UUID = UUID(),
         role: Role,
@@ -44,7 +47,8 @@ public struct ChatMessage: Identifiable, Equatable, Sendable {
         messageType: MessageType = .text,
         toolName: String? = nil,
         isError: Bool = false,
-        isStreaming: Bool = false
+        isStreaming: Bool = false,
+        toolUseId: String? = nil
     ) {
         self.id = id
         self.role = role
@@ -54,6 +58,7 @@ public struct ChatMessage: Identifiable, Equatable, Sendable {
         self.toolName = toolName
         self.isError = isError
         self.isStreaming = isStreaming
+        self.toolUseId = toolUseId
     }
 
     /// Convenience initializer for simple text messages (backward compatible)

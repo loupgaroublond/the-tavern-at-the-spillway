@@ -63,6 +63,7 @@ For each spec module, output a table:
 
 - Code/Test Files columns show relative paths (e.g., `Agents/Jake.swift`) or `—` if none
 - If multiple files, comma-separate them
+- **Sort rows by implementation status:** `specified` first, then `implemented`, then `tested`. Within each status group, sort by req ID.
 
 ### 6. Output Summary Table
 
@@ -77,6 +78,8 @@ For each spec module, output a table:
 ```
 
 Coverage% = (Tested + Implemented) / Total × 100, rounded to nearest integer.
+
+**Sort rows by Coverage% ascending** (least covered modules first). The TOTAL row stays at the bottom.
 
 ### 7. Flag Anomalies
 
@@ -95,4 +98,6 @@ After the summary table, list any anomalies found:
 
 ## Output
 
-Display the full dashboard directly in the conversation. Do not write to a file unless explicitly asked.
+Display the full dashboard in the conversation.
+
+Additionally, write the complete dashboard to `docs/4-docs/spec-status-report_{YYYY-MM-DD}.md` (using today's date, overwriting any same-day report). This file is consumed by downstream commands (`/audit-spec`, `/verify`) to avoid redundant provenance scanning.

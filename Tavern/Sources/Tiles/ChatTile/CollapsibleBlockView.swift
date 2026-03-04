@@ -61,12 +61,14 @@ struct CollapsibleBlockView: View {
 
     let blockType: BlockType
     let content: String
+    let isStreaming: Bool
 
     @State private var isExpanded: Bool
 
-    public init(blockType: BlockType, content: String) {
+    public init(blockType: BlockType, content: String, isStreaming: Bool = false) {
         self.blockType = blockType
         self.content = content
+        self.isStreaming = isStreaming
         self._isExpanded = State(initialValue: blockType.defaultExpanded)
     }
 
@@ -85,6 +87,12 @@ struct CollapsibleBlockView: View {
                 Text(blockType.label)
                     .font(.caption)
                     .foregroundColor(blockType.accentColor)
+
+                if isStreaming {
+                    ProgressView()
+                        .controlSize(.mini)
+                        .padding(.leading, 4)
+                }
 
                 if !isExpanded {
                     Text(contentPreview)

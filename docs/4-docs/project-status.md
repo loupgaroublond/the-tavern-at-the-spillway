@@ -1,6 +1,6 @@
 # Project Status Summary
 
-**Generated:** 2026-02-12
+**Generated:** 2026-03-02
 **Source:** Synthesis of all seed-design transcripts
 
 
@@ -62,6 +62,8 @@
 
 - **2026-02-01** — SDK migration from local ClaudeCodeSDK fork to ClodeMonster/NativeClaudeCodeSDK: static function API (`ClaudeCode.query`), `QueryOptions` replacing split config types, session storage forensics (corrupt session recovery), JSON-in-JSON issue for Jake's history display
 
+- **2026-02-02 01:00** — SDK migration design: established that session history reading (`ClaudeNativeSessionStorage`) is Tavern-specific, not SDK functionality. Moved to TavernCore/Persistence. ClodeMonster correctly implements official SDK spec without session history. API transformation: protocol-based → namespace-based (`ClaudeCode.query()`)
+
 - **2026-02-02** — Comprehensive transcript audit system: parallel rewind analyzer agents verify coverage across date ranges, discovered 2 missing transcripts (agent-registry-architecture Jan 25, jake-spawn-tool Jan 28), verified 30 sessions covering all existing transcripts
 
 - **2026-02-02 16:50** — Servitor naming: MortalAgent renamed to Servitor (code), Jake calls them "The Regulars" (voice). MCP tool design (`summon_servitor`/`dismiss_servitor`) replacing JSON envelope hack. Phase 1 scope: minimal viable dispatcher (summon + dismiss only), defer message forwarding, resummon, capability distribution
@@ -90,11 +92,51 @@
 
 - **2026-02-08/09 (gap remediation)** — Second swarm: 12 gaps from post-v1-parity audit remediated via 8 parallel worktrees (34 beads). `PermissionManager` wired to SDK, streaming race conditions fixed, `AnyAgent` type-erasure replaced with existentials, blocking `waitUntilExit` fixed, 14 views instrumented, Grade 5 stress tests (8 files), `CommandFormattingUtils` extracted, sidecar pattern removed from docs. 574 Grade 1+2 + 32 Grade 3 tests passing.
 
+- **2026-02-09 (CLAUDE.md revamp)** — Major CLAUDE.md overhaul: added 6 new sections (Non-Negotiable Invariants, Servitor Types, Key Patterns, Session Persistence Model, Documentation Pipeline, Slash Commands). Expanded testing section with grade system. Restored Jake's contractions after ClodKit apostrophe bug fix upstream. Established "agent briefing" principle: CLAUDE.md is the document agents read at session start.
+
 - **2026-02-09** — Multi-type file audit: 90 Swift files audited, 15 with multiple top-level types, 3 split (AgentMessenger → 3 files, CommitmentVerifier → 4 files, TavernApp → 5 files). Anti-pattern identified: protocol + production impl + mock impl + data types in single file. iCloud duplicate cleanup.
 
 - **2026-02-10** — Property-based spec reframing: all 16 spec modules rewritten to lead with properties ("whenever X, then Y") instead of procedural workflows. Four-gap framework: (1) promote testable assertions to primary framing, (2) convert flowcharts to property tables, (3) separate "what must hold" from "how to implement", (4) distinguish illustrative examples from prescriptive specs.
 
 - **2026-02-12** — Spec enumeration with stable content addressing: files renamed to §000–§017, `§DOC.SECTION.SUBSECTION` addressing scheme for cross-references. 27 cross-reference opportunities identified, 12 major duplicated concepts assigned canonical homes. Append-only numbering ensures permanent addresses.
+
+- **2026-02-13** — Preview requirements and crash fix: investigated NavigationSplitView preview crash (macOS SwiftUI NSOutlineView bug), added `#Preview` blocks to all 18 views, created ADR-006 requiring previews on every SwiftUI view file. Standard preview project URL: `/tmp/tavern-preview`. Updated CLAUDE.md Honor System.
+
+- **2026-02-14 (provenance tracking)** — Provenance tracking system: created PRD §19.4 ("Completeness and Correctness Standards"), spec module §018 (spec fidelity, 7 requirements REQ-FID-001 through REQ-FID-007), ADR-007 (provenance MARK comments for code, `.tags()` for tests, bidirectional traceability). Closed `vpn` epic (16/16 complete). Self-verification principle: development process subject to same rigor as the system itself.
+
+- **2026-02-14 (redo skill)** — Redo build system operationalized: created `/redo` skill with full `.do` file table, dependencies, and patterns. Added build dependency graph to CLAUDE.md. Established frequency-based placement principle: 95% info in CLAUDE.md, specialized context in skills, tutorials for humans.
+
+- **2026-02-14 (session mode control)** — Per-agent session mode control designed: each servitor gets independent permission mode (Plan/Normal/Auto-Edit/YOLO). UI placement in input bar area. ExitPlanMode approval flow through `canUseTool` callback. Mode mapping between Tavern and ClodKit enums. Stub beads created for model selection, thinking tokens, and full session control panel.
+
+- **2026-02-14 (Xcode preview automation)** — Developed Xcode preview automation loop (Grade 4 pattern): Cmd+Option+P triggers preview resume, DiagnosticReports `.ips` files detect crashes automatically. Discovered NSOutlineView preview invariant: any SwiftUI property wrapper in preview views triggers crash during NSOutlineView initial layout. Fix: pure static inline views with no property wrappers in `#Preview` blocks.
+
+- **2026-02-15** — Test performance: Grade 1+2 wallclock time cut from 13 minutes to 1.5 seconds. Three independent bugs fixed: (1) SDK live tests in wrong grade target (moved to Grade 3), (2) redo-log Unicode crash on Swift Testing symbols, (3) test runner hang from `loadCustomCommands()`/`restoreServitors()` keeping CFRunLoop alive. Added `restoreState` parameter to `TavernCoordinator.init`.
+
+- **2026-02-16 (attestation concept)** — Designed `/attest` command for semantic conformance analysis. Fills the gap between traceability (structural links exist) and conformance (code satisfies requirements). Three-phase process: mechanical gathering → semantic analysis (per-property verdicts) → verdict synthesis (CONFORMANT/PARTIAL/NON-CONFORMANT). Three invocation modes: single requirement, prefix, or module number.
+
+- **2026-02-16 (spec review)** — Batched Q&A across all 16 spec modules. Terminology decisions: "agent" → "servitor", "spawn" → "summon", "outputs" → "connectors", view "modes" → "representations". Architecture drops: closed plugin set, three storage layers, Jake's tool handler protocol, continuation loop, expert prompts, workflow metrics, Combine minimized. Seven new spec modules decided (§019–§025): States & Modes, Servitor Trees, Capability Delegation, Chat Discussions & Sessions, Keyboard Shortcuts, Accessibility, Search. Failure boundaries concept (Erlang-style supervision). Capability delegation as async with handle. Done vs Complete distinction. Distribution: source code only.
+
+- **2026-02-16 (audit-spec pipeline)** — Extended `/audit-spec` with top-to-bottom PRD pipeline flow reporting: per-PRD-section downstream coverage table with implementation and test percentages. Established spec convention: strikethrough for dropped requirements (content preserved for history, rationale visible inline). Documented in `000-index.md` §5.
+
+- **2026-02-21** — Servitor taxonomy finalized and Grade 4 XCUITest fix. Definitive rename: `Agent` protocol → `Servitor`, `Servitor` class → `Mortal`, `ServitorSpawner` → `MortalSpawner`, `AgentRegistry` → `ServitorRegistry`, `AgentMessenger` → `ServitorMessenger`, `AgentListViewModel` → `ServitorListViewModel`. Grade 4 tests fixed: 4/8 failing from duplicate windows. Root cause: SwiftUI window persistence (separate from macOS Saved Application State). Fix: `.firstMatch` pattern for multi-window tolerance. `-ApplePersistenceIgnoreState YES` breaks SwiftUI entirely on macOS 26.
+
+- **2026-02-28** — Tileboard architecture design session: comprehensive redesign using hybrid navigation reference architecture. SPM-enforced tile isolation, responder closures, socket pattern, provider protocols for DI. Three-level hierarchy: TavernApp (reifier) → TavernProject (document-level board) → WindowBoard (window-level board, née TavernCoordinator). Providers ARE the domain objects (no wrapper layer). @Observable migration from ObservableObject. ClodSession designed as stateful per-servitor translation layer replacing stateless ServitorMessenger. Jake/Mortal duplication map: most code is session lifecycle boilerplate, not domain logic. Nine architecture trees documented (ownership, view hierarchy, SPM graph, data flow, lifecycle, threading, provider scoping, filesystem layout, migration mapping). Core* rename to ADR-008.
+
+- **2026-03-01 (rich streaming gap analysis)** — SDK gap analysis: compared local ClodKit development copy against Tavern consumption patterns, found 17 gaps. Critical discovery: streaming pipeline has two modes — default gives cumulative snapshots, partial messages (`includePartialMessages: true`) gives incremental `content_block_start/delta/stop` events. Produced 10 detailed implementation plans (A–J). Established build strategy: feature branch + local path dependency for working against unpublished SDK APIs.
+
+- **2026-03-01 (rich streaming implementation)** — Implemented Plan A (Rich Streaming Pipeline) on `feature/rich-streaming` branch across 16 files. `StreamEvent` widened from 5 to 12 cases with `ToolUseInfo`, `ToolResultInfo`, `CompletionInfo`, `RateLimitInfo`. Full `ServitorMessenger.queryStreaming()` rewrite using content block state machine. Created ADR-010 (SDK Feature Parity): living matrix tracking ~120 SDK capabilities with statuses (62 implemented, 16 gaps, 36 deferred). SDK currency rules: version bump = feature audit.
+
+- **2026-03-01 (ClodKit lifecycle)** — Designed ClodKit deinit chain for orphaned subprocess cleanup: `ProcessTransport.deinit` → `process.terminate()`, `ClaudeSession.deinit` → `transport.close()`, `ClaudeQuery.deinit` → `Task { await session.close() }`. Established compiler-first safety principle: prefer designs where incorrect code fails at compile time, not code review. Grade 3 testing safety: three-layer defense (environment stripping, permissionMode = .plan, ClodKit deinits). Opened GitHub issue on ClodKit.
+
+- **2026-03-01 (TavernKit consolidation)** — Eliminated Core* indirection: CoreModels + CoreProviders merged into single `TavernKit` module (the compiler-enforced public interface surface). CoreUI dissolved — views moved to owning tiles. 12 modules reduced to 9. "Importing up" vs "peering in" distinction: tiles can import other tiles' public APIs (importing up), but must never access TavernCore concrete implementations (peering in). Fixed infinite recursion bug (WindowBoard → ServitorListTile → responder → WindowBoard). Established "sockets lift up" principle: board communicates with tiles only through sockets in both directions. Added explicit test timeouts to all 116 test functions.
+
+- **2026-03-01 (tileboard addendum)** — Code comment style standard: comments explain "why", not "what". ViewModel elimination: deleted all 6 ViewModel classes (ChatViewModel, ServitorListViewModel, ResourcePanelViewModel, BackgroundTaskViewModel, TodoListViewModel, PermissionSettingsViewModel) and TavernCoordinator. Tiles replace ViewModels as UX domain models. Zero ViewModel references remain.
+
+- **2026-03-01 (verification suite)** — Created unified verification suite (ADR-009) and `/verify` slash command: single-command complete project gap analysis across 10 sections (build health, test health, code coverage, spec conformance, pipeline traceability, provenance, beads state, structural rules, architecture, informational). Dead code reframed as "unwired components" — development gaps, not obsolete code. Agent motivation philosophy: crew accountability framing. Hierarchical code coverage reporting. Removed arbitrary thresholds. `bd -n 0` mandatory for all beads queries.
+
+- **2026-03-01/02 (tiles own all state)** — Live debugging: fixed stale session resume (`ControlProtocolError.timeout`) by disabling resume temporarily. Fixed disappearing messages on servitor switch — root cause: `ChatTileView.task` calling `loadSessionHistory()` on cached tiles, overwriting messages on every SwiftUI view recreation. Fix: moved history load to `ChatSocketPool.tile(for:)` creation site. Established Core Pattern #1: "Tiles Own All State" — views must NEVER trigger state initialization on tiles. Added ChatTile and ChatSocketPool test suites.
+
+- **2026-03-02** — Cleanup orchestrator design: two maintenance commands. `/update-status` (light cycle): audit-transcripts → reader → spec-reader → status. `/update-verifications` (heavy cycle): spec-status → audit-spec → attest-report → verify. Team-based serial orchestration with error gating. Platform constraint discovered: teammates cannot spawn sub-agents (Agent tool is main-context only). `spec-status` and `audit-spec` modified to write reports to disk. `/verify` stripped of attest step (explicit in orchestrator instead).
 
 
 ---
@@ -107,9 +149,9 @@
 
 **Implemented:**
 
-- Jake agent class with ClodKit SDK integration
+- Jake servitor class with ClodKit SDK integration
 
-- System prompt establishing role and personality (restored authentic voice with apostrophes)
+- System prompt establishing role and personality (restored authentic voice with contractions after ClodKit apostrophe bug fix)
 
 - Can receive messages and respond
 
@@ -123,38 +165,40 @@
 
 - Character document extracted to `docs/0-transcripts/jake-character.md`
 
-- MCP tools for agent spawning (`summon_servitor`, `dismiss_servitor`)
+- MCP tools for servitor spawning (`summon_servitor`, `dismiss_servitor`)
 
-- Streaming responses via `AgentMessenger` protocol
+- Streaming responses via `ServitorMessenger` protocol
 
 - Plain text responses (JSON wrapper removed after MCP migration)
+
+- Rich streaming with content block state machine (thinking, tool use, text deltas, system events)
 
 
 **Remaining:**
 
-- Proactive suggestions to zoom into other agents
+- Proactive suggestions to zoom into other servitors
 
 
 ---
 
 
-### 2. Agent Spawning & Registry
+### 2. Servitor Spawning & Registry
 
 **Implemented:**
 
-- `Agent` protocol with common interface (uses `any Agent` existentials, no type erasure)
+- `Servitor` protocol with common interface (uses `any Servitor` existentials, no type erasure)
 
-- `AgentRegistry` for tracking active agents (thread-safe via DispatchQueue)
+- `ServitorRegistry` for tracking active servitors (thread-safe via DispatchQueue)
 
-- `Servitor` class with optional assignment, state tracking (idle/working/waiting/done)
+- `Mortal` class with optional assignment, state tracking (idle/working/waiting/done)
 
-- `Servitor` methods: `addCommitment()`, `markWaiting()`, `markDone()`
+- `Mortal` methods: `addCommitment()`, `markWaiting()`, `markDone()`
 
-- `Servitor` detects both "DONE" and "COMPLETED" signals
+- `Mortal` detects both "DONE" and "COMPLETED" signals
 
-- `Servitor` detects "WAITING" signal for pause state
+- `Mortal` detects "WAITING" signal for pause state
 
-- `ServitorSpawner` coordinating registry and name generator with messenger factory injection
+- `MortalSpawner` coordinating registry and name generator with messenger factory injection
 
 - Naming theme system (LOTR, Rick & Morty, Santa's Reindeer, etc.)
 
@@ -166,24 +210,28 @@
 
 - Instant spawn via toolbar `+` button (no dialog)
 
-- Agent list sidebar with state indicators and context menu (edit/close)
+- Servitor list sidebar with state indicators and context menu (edit/close)
 
-- Agent persistence via UserDefaults (`PersistedAgent` type)
+- Servitor persistence via UserDefaults (`PersistedAgent` type)
 
-- Agent restoration on app restart
+- Servitor restoration on app restart
 
 - Mutable chat description field (visible in sidebar)
 
-- Streaming support for both Jake and Servitor via `sendStreaming()` with cancel closures
+- Streaming support for both Jake and Mortal via `sendStreaming()` with cancel closures
 
 
 **Remaining:**
 
-- Hierarchical spawn trees (agents spawning children)
+- Hierarchical spawn trees (servitors spawning children)
 
 - Perseverance mode ("Ralph Wiggum" auto-continue)
 
-- Agent hibernation/reaping
+- Servitor hibernation/reaping
+
+- Capability delegation (async summon with handle, separate `delegate` command)
+
+- Failure boundaries (Erlang-style supervision within servitor trees)
 
 
 ---
@@ -193,7 +241,7 @@
 
 **Implemented:**
 
-- `ChatView` with message history, input field
+- `ChatTileView` with message history, input field (replaces old `ChatView`)
 
 - "Cogitating" status with verb from vocab list
 
@@ -203,19 +251,17 @@
 
 - Content block parsing from Claude's JSONL
 
-- Agent list sidebar with selection and context menu
+- Servitor list sidebar with selection and context menu
 
-- Multi-chat navigation (switching between agents)
+- Multi-chat navigation (switching between servitors)
 
-- `AgentListViewModel` managing agent list and selection state
+- `ServitorListTile` managing servitor list and selection state (replaces `ServitorListViewModel`)
 
-- Chat view model caching (reused on agent reselection)
+- Chat tile caching via `ChatSocketPool` (reused on servitor reselection, tiles own all state)
 
-- UI module bridging SwiftUI views to TavernCore
+- Session history loading for mortal servitors
 
-- Session history loading for mortal agents
-
-- Streaming responses with partial message updates
+- Rich streaming responses with content block state machine (thinking, text, tool_use deltas, tool results, system events, rate limits)
 
 - Streaming indicator and cancel button
 
@@ -223,15 +269,17 @@
 
 - @ file mention autocomplete
 
-- Agent sidebar status indicators (idle/working/error)
+- Servitor sidebar status indicators (idle/working/error)
 
-- Running cost/token display
+- Running cost/token display with cache token counts
 
 - Per-tool progress indicator with elapsed time
 
 - Scroll-to-bottom button
 
 - Side pane with tabs: background tasks, TODOs, tab switcher
+
+- `#Preview` blocks on all SwiftUI view files (ADR-006)
 
 
 **Remaining:**
@@ -240,11 +288,13 @@
 
 - Thinking/tools as separate panels (not inline)
 
-- Notification badges when agents need attention
+- Notification badges when servitors need attention
 
 - Ephemeral vs kept-open chat distinction
 
-- Cross-agent unified views
+- Cross-servitor unified views
+
+- Per-agent session mode control UI (Plan/Normal/Auto-Edit/YOLO in input bar)
 
 
 ---
@@ -256,7 +306,7 @@
 
 - Project-as-document model (any directory works)
 
-- `TavernProject` model holding root URL
+- `TavernProject` model holding root URL (refactored as document-level board)
 
 - `ProjectManager` for open/recent projects
 
@@ -266,7 +316,7 @@
 
 - Dock menu with recent projects
 
-- Multi-window support (each project = separate window)
+- Multi-window support (each project = separate window, N windows per project)
 
 - Per-project session storage
 
@@ -299,15 +349,17 @@
 
 - `Commitment` struct (description, assertion, status)
 
-- `CommitmentList` for agents
+- `CommitmentList` for servitors
 
 - Verifier that runs assertions and updates status (non-blocking via `Process.terminationHandler`)
 
-- Completion flow: agent says "done" → verification → actual done or continue
+- Completion flow: servitor says "done" → verification → actual done or continue
 
 - Thread-safe helpers (`LockedFlag`, `LockedRef`) for concurrent verification
 
 - Tests for commitment system
+
+- Done vs Complete distinction: Done = servitor says "done" (request to check), Complete = verified commitment met
 
 
 **Remaining:**
@@ -334,16 +386,16 @@
 
 - Frontmatter parsing
 
-- Agent nodes with ID, name, assignment, state
+- Servitor nodes with ID, name, assignment, state
 
-- Agent persistence to files
+- Servitor persistence to files
 
 - Tests for doc store
 
 
 **Remaining:**
 
-- Agents syncing state to doc store continuously
+- Servitors syncing state to doc store continuously
 
 - Work queues
 
@@ -351,25 +403,41 @@
 
 - Workflow templates
 
-- Inter-agent message storage
+- Inter-servitor message storage
 
 
 ---
 
 
-### 7. Dynamic View Architecture
+### 7. Tileboard Architecture
 
 **Implemented:**
 
-- Multi-window support with window restoration
+- SPM-enforced tile isolation: each feature is its own SPM target, leaf tiles cannot import other leaf tiles
 
-- Per-project windows
+- Responder closures for navigation intent (all params required — compiler catches unwired closures)
 
-- Welcome window with recent projects list
+- Socket pattern: sockets live in TavernBoardTile only, wiring responder closures to navigator methods
 
-- Window state persisted across app restarts
+- `WindowBoard` (née `TavernCoordinator`) as window-level board with facets
 
-- GUI instrumentation guide (`docs/4-docs/gui-instrumentation-guide.md`)
+- Three-level hierarchy: TavernApp (reifier) → TavernProject (document-level board) → WindowBoard (window-level board)
+
+- @Observable throughout (migrated from ObservableObject/@Published)
+
+- Provider protocols for dependency injection (tiles depend on protocols, not implementations)
+
+- Six leaf tiles: `ServitorListTile`, `ChatTile`, `ResourcePanelTile`, `ApprovalTile`, `PermissionSettingsTile`, `TavernBoardTile`
+
+- `ChatSocketPool` managing `[ServitorID: ChatTile]` (create on demand, tear down on dismiss)
+
+- `TavernKit` module as compiler-enforced public interface surface (merged CoreModels + CoreProviders)
+
+- CoreUI dissolved — views moved to owning tiles
+
+- "Sockets lift up" principle: board communicates with tiles only through sockets in both directions
+
+- "Tiles Own All State" principle: views are pure renderers, tiles own initialization and state lifecycle
 
 - Resource panel (right-side pane with file tree browser + read-only file viewer)
 
@@ -377,28 +445,26 @@
 
 - File tree with lazy loading, binary detection, size caps, filtered directories
 
+- All ViewModel classes eliminated (replaced by tiles)
+
+- `TavernCoordinator` eliminated (replaced by `WindowBoard`)
+
 
 **Remaining:**
-
-- Composable tiles within windows
 
 - Agent layout mutation tools (with permission)
 
 - Layout suggestion tools
 
-- View modes (unified stream vs split components)
+- View modes / representations (unified stream vs split components)
 
-- Multiple views of same agent
+- Multiple views of same servitor
 
-- Dead agent "bodies" (tiles persist for review)
+- Dead servitor "bodies" (tiles persist for review)
 
 - Saved layout templates vs concrete snapshots
 
 - Tree folding/collapsing
-
-- Template vs concrete view system (from view architecture discussion)
-
-- Component-based chat (thinking blocks, tool logs separate from chat)
 
 
 ---
@@ -421,7 +487,7 @@
 
 - Network access control
 
-- Agent can trash everything and restart
+- Servitor can trash everything and restart
 
 - Changeset application to original files
 
@@ -437,11 +503,15 @@
 
 - Redo build system (build, run, test, test-core, test-integration, test-grade3, test-grade4, test-all, stop, clean, xcodegen)
 
-- 574 Grade 1+2 unit tests across TavernCoreTests and TavernTests
+- `/redo` skill with full `.do` file table and dependency graph
 
-- 32 Grade 3 integration tests (real Claude via ClodKit)
+- Build dependency graph in CLAUDE.md
+
+- ~250 tests (Grade 1+2: 187, wiring+SDK: 31, Grade 3 integration: 32)
 
 - Grade 4 XCUITest infrastructure with launch arguments (`--ui-testing`, `--project-path`)
+
+- Grade 4 fix: `.firstMatch` pattern for multi-window SwiftUI tolerance
 
 - Grade 5 stress tests (8 test files: concurrency, message accumulation, file tree scanning, permissions, command dispatch, session loading, todo/background bulk operations)
 
@@ -451,9 +521,9 @@
 
 - Build output to `~/.local/builds/tavern`
 
-- MockAgent for ViewModel/Coordinator testing
+- MockServitor for Tile/Coordinator testing
 
-- `AgentMessenger` protocol with `LiveMessenger` (production) and `MockMessenger` (test double)
+- `ServitorMessenger` protocol with `MockMessenger` (test double)
 
 - Integration tests for session rehydration
 
@@ -467,12 +537,30 @@
 
 - View instrumentation tests (verify logging fires in SwiftUI views)
 
+- `#Preview` blocks on all SwiftUI views (ADR-006)
+
+- Xcode preview automation loop (Grade 4 pattern: Cmd+Opt+P + DiagnosticReports crash detection)
+
+- Test performance optimized: 13 min → 1.5 sec (SDK tests moved to Grade 3, redo-log Unicode fix, `restoreState` parameter)
+
+- Explicit test timeouts on all 116 test functions across all targets
+
+- ChatTile and ChatSocketPool test suites (tile-owns-state regression tests)
+
+- Grade 3 testing safety: three-layer defense (env stripping, plan mode, ClodKit deinits)
+
 
 **Remaining:**
 
 - Log-based automated verification
 
 - Performance regression baselines
+
+- Grade 2.9 local LLM testing (llama-ish + Apple Intelligence)
+
+- Mutation testing (deliberately inject bugs to verify test coverage)
+
+- 100% code coverage target
 
 
 ---
@@ -486,9 +574,11 @@
 
 - `Clod.query()` static API with `QueryOptions`
 
-- `LiveMessenger` wrapping SDK calls (batch and streaming modes)
+- `ServitorMessenger` wrapping SDK calls (batch and streaming modes)
 
-- Streaming via `AsyncThrowingStream<StreamEvent, Error>` with cancellation support
+- Rich streaming via `includePartialMessages: true` with content block state machine (feature/rich-streaming branch)
+
+- `StreamEvent` widened to 12 cases: textDelta, thinkingDelta, toolUseStarted, toolUseFinished, toolProgress, toolResult, systemMessage, rateLimitInfo, completedTurn, completed, promptSuggestions, error
 
 - `canUseTool` callback integration for permission enforcement
 
@@ -496,10 +586,26 @@
 
 - Content block parsing for tool_use inputs and tool_result error flags
 
+- ADR-010: SDK Feature Parity living matrix (~120 capabilities tracked, 62 implemented, 16 gaps, 36 deferred)
+
+- SDK currency rules: version bump = feature audit (atomic commit with matrix update)
+
+- Session history reading confirmed as Tavern-specific (not SDK functionality)
+
+- ClodSession designed as stateful per-servitor translation layer (absorbs session lifecycle from Jake/Mortal)
+
+- Compiler-first safety principle for isolation boundary design
+
 
 **Remaining:**
 
-- Upstream contributions or fork maintenance
+- ClodKit deinit chain (ProcessTransport, ClaudeSession, ClaudeQuery — GitHub issue open)
+
+- ClodSession implementation (designed but not fully implemented)
+
+- Remaining 16 SDK feature gaps (Plans B–J)
+
+- Session resume re-enablement (disabled due to stale session ControlProtocolError)
 
 
 ---
@@ -521,7 +627,7 @@
 
 - "Always allow" rule persistence via approval responses
 
-- Integration with `LiveMessenger` via `canUseTool` callback
+- Integration with `ServitorMessenger` via `canUseTool` callback
 
 - Mode switching affects subsequent evaluations
 
@@ -530,7 +636,11 @@
 
 **Remaining:**
 
-- Permission rules display/editing UI
+- Per-agent session mode control (Plan/Normal/Auto-Edit/YOLO per servitor)
+
+- ExitPlanMode approval flow (plan presentation → user review → mode transition)
+
+- Permission rules display/editing UI (`PermissionSettingsTile` exists but needs wiring)
 
 - Per-project permission profiles
 
@@ -603,7 +713,7 @@
 
 - Upward bubbling (child → parent → user)
 
-- Lateral messaging (sibling agents)
+- Lateral messaging (sibling servitors)
 
 - Direct-to-user with oversight
 
@@ -613,13 +723,13 @@
 ---
 
 
-### 15. Architecture (ADR-001)
+### 15. Architecture & ADRs
 
 **Implemented:**
 
 - Shape selection complete: Shared Workspace (E) + Supervisor Tree (D) + Reactive Streams (A) + Plugin (I) + Layer (C)
 
-- ADR-001 documenting decision with rationale
+- ADR-001: Architecture shape selection with rationale
 
 - 49 architecture proposals in `docs/3-adr/proposals/`
 
@@ -629,11 +739,21 @@
 
 - ADR-002: Testing Grade System (Grades 1-5)
 
-- ADR-003: Dependency Injection (MockAgent + AgentMessenger two-layer approach)
+- ADR-003: Dependency Injection (MockServitor + ServitorMessenger two-layer approach)
 
 - ADR-004: ViewInspector for SwiftUI wiring tests
 
 - ADR-005: XCUITest for E2E validation
+
+- ADR-006: Preview requirements (every SwiftUI view file must have `#Preview`)
+
+- ADR-007: Provenance tracking (MARK comments for code, `.tags()` for tests, bidirectional traceability)
+
+- ADR-008: Core* rename (CoreModels + CoreProviders → TavernKit, CoreUI dissolved)
+
+- ADR-009: Unified verification suite (10-section complete gap analysis, `/verify` command)
+
+- ADR-010: SDK Feature Parity (living matrix, SDK currency rules, ~120 capabilities tracked)
 
 
 **Remaining:**
@@ -644,7 +764,7 @@
 
 - Message bus over shared workspace
 
-- Plugin system for agent types and spawners
+- Plugin system for servitor types and spawners
 
 
 ---
@@ -665,6 +785,14 @@
 - **Perception-Bounded Performance** — "Fast" defined by user perception; isolation, responsiveness, scale independence
 
 - **App Restart Workflow** — After rebuilding, kill and relaunch the app
+
+- **Compiler-First Safety** — Prefer designs where incorrect code fails at compile time, not code review. Agents can't reliably catch code review problems; compilers always catch type errors.
+
+- **Tiles Own All State** — Views are pure renderers. Tiles own initialization and state lifecycle. View lifecycle events are for view-local behavior only.
+
+- **Sockets Lift Up** — Board communicates with tiles only through sockets in both directions.
+
+- **Self-Verification Principle** — Development process subject to same rigor as the system itself. Provenance tracking makes requirement → code fidelity machine-verifiable.
 
 
 **Testing Principles (added 2026-01-27):**
@@ -691,7 +819,7 @@
 
 - `pipeline.md` defining rules (forward only, traceability, single home per document)
 
-- 18 numbered spec modules (§000–§017) in `docs/2-spec/` with traceability matrix and introduction
+- 25 numbered spec modules (§000–§025) in `docs/2-spec/` with traceability matrix and introduction
 
 - All spec modules filled from transcripts, PRD, and session logs
 
@@ -701,6 +829,24 @@
 
 - 27 cross-reference opportunities identified, 12 duplicated concepts assigned canonical homes
 
+- Dropped requirement convention: `~~strikethrough~~` with visible rationale inline (content preserved for history)
+
+- `/spec-status` — provenance coverage dashboard
+
+- `/audit-spec` — PRD-to-spec coverage verification with top-to-bottom pipeline flow reporting
+
+- `/attest` — semantic conformance analysis (single requirement, prefix, or module)
+
+- `/attest-report` — full attestation report across all modules (swarm-orchestrated)
+
+- `/trace` — single requirement traceability through PRD → spec → code → tests
+
+- Provenance tracking: MARK comments for code, `.tags()` for tests (ADR-007)
+
+- `/verify` — unified verification suite combining all checks into single report (ADR-009)
+
+- Spec review: terminology standardized (servitor, summon, connectors, representations), architecture drops documented, 7 new modules (§019–§025)
+
 
 **Remaining:**
 
@@ -709,6 +855,8 @@
 - External docs updated with new spec file names
 
 - Incremental verification that downstream elements are complete relative to upstream
+
+- `/spec-reader` compiled active specification reader
 
 
 ---
@@ -737,6 +885,18 @@
 - Beads issue tracking for backlog management
 
 - Team-based swarm coordination (multi-worktree parallel development with merge gates)
+
+- `/update-status` — light cleanup cycle orchestrator (audit-transcripts → reader → spec-reader → status)
+
+- `/update-verifications` — heavy verification cycle orchestrator (spec-status → audit-spec → attest-report → verify)
+
+- Error gating principle: structural issues halt execution; "nothing new found" is success
+
+- Agent briefing principle: CLAUDE.md updated incrementally as codebase grows
+
+- Frequency-based placement: 95% info in CLAUDE.md, specialized context in skills, tutorials for humans
+
+- Code comment style: explain "why", not "what"
 
 
 **Remaining:**

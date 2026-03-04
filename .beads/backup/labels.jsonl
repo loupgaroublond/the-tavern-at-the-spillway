@@ -7,6 +7,9 @@
 {"issue_id":"jake-0fi","label":"tavern"}
 {"issue_id":"jake-0kr","label":"agents"}
 {"issue_id":"jake-0kr","label":"concurrency"}
+{"issue_id":"jake-0lnw","label":"agents"}
+{"issue_id":"jake-0lnw","label":"architecture"}
+{"issue_id":"jake-0lnw","label":"lifecycle"}
 {"issue_id":"jake-0ns","label":"core"}
 {"issue_id":"jake-0ns","label":"tavern"}
 {"issue_id":"jake-0ns","label":"ui"}
@@ -82,6 +85,8 @@
 {"issue_id":"jake-462","label":"commands"}
 {"issue_id":"jake-462","label":"infrastructure"}
 {"issue_id":"jake-462","label":"v1"}
+{"issue_id":"jake-4d78","label":"infrastructure"}
+{"issue_id":"jake-4d78","label":"platforms"}
 {"issue_id":"jake-4ic1","label":"spec-pin"}
 {"issue_id":"jake-4ij","label":"pipeline"}
 {"issue_id":"jake-4ij","label":"spec"}

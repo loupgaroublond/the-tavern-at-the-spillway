@@ -15,7 +15,7 @@ Run all project verification checks and produce a combined gap analysis report p
 
 Maximize parallelism. Launch all independent work streams simultaneously, then collect results.
 
-**IMPORTANT:** Use `run_in_background` for long-running bash commands. Execute grep-based checks inline while background tasks run. Use Agent tool for the attestation swarm.
+**IMPORTANT:** Use `run_in_background` for long-running bash commands. Execute grep-based checks inline while background tasks run. Read pre-generated reports from disk when available.
 
 
 ### Phase 1: Launch Background Streams + Inline Checks
@@ -44,13 +44,71 @@ Maximize parallelism. Launch all independent work streams simultaneously, then c
    **MANDATORY:** Always use `-n 0` with `bd list` to retrieve ALL beads. Without it, bd returns a truncated default page.
    Save output for Section 7.
 
-4. **Stream G — Attestation Swarm** (background Agent):
-   Launch a general-purpose agent with prompt: `Run the /attest-report slash command. When complete, read the generated attestation-report file and return the executive summary table and top 10 gaps.`
-   This is the heaviest operation — runs in background.
+4. **Stream G — Attestation** (read from disk, fallback to Agent):
+   Read today's attestation report from `docs/4-docs/attestation-report_{YYYY-MM-DD}.md`.
+   If the file exists, extract the executive summary table and top gaps for Section 4.
+   If the file does not exist, launch a general-purpose Agent subagent with prompt: `Run the /attest-report slash command. When complete, read the generated attestation-report file and return the executive summary table and top 10 gaps.` This is the heaviest operation — runs in background.
+
+5. **Stream I — SDK Feature Parity** (background Agent, sonnet model):
+   Launch a general-purpose Agent subagent to verify every row in the ADR-010 feature matrix. Agent prompt:
+
+   ```
+   Verify every row in the SDK feature matrix at `docs/3-adr/ADR-010-sdk-feature-parity.md` (Part 2).
+
+   Parse all tables in Part 2. Each row has: SDK Capability | Status | Notes.
+
+   For each row, apply the check matching its Status:
+
+   **Implemented rows:**
+   - Search `Tavern/Sources/**/*.swift` for code implementing the capability
+   - Search `Tavern/Tests/**/*.swift` for tests exercising it
+   - Verdict: VERIFIED (code + tests, wired end-to-end), PARTIAL (code exists but incomplete wiring or no tests), or FALSE (no code found)
+
+   **Gap rows:**
+   - Confirm no implementation code exists
+   - Run: bd list -n 0 --json — search output for a bead tracking this capability
+   - Verdict: CONFIRMED (gap is real, bead exists), UNTRACKED (gap but no bead), or RESOLVED (code now exists — matrix status is stale)
+
+   **Deferred rows:** Same checks as Gap.
+
+   **Broken rows:**
+   - Confirm code exists but verify it's still broken
+   - Check for tracking bead via bd list
+   - Verdict: CONFIRMED (still broken, bead exists), UNTRACKED (broken but no bead), or FIXED (code works now — matrix status stale)
+
+   **N/A rows:** Confirm justification still holds. Verdict: CONFIRMED or RECONSIDER.
+
+   Output format — write to `docs/4-docs/sdk-parity-report_{YYYY-MM-DD}.md` (today's date):
+
+   # SDK Feature Parity Report — {date}
+
+   ## Summary
+   | Matrix Status | Count | Verified | Partial | False/Stale | Confirmed | Untracked |
+   |---------------|-------|----------|---------|-------------|-----------|-----------|
+   | Implemented   | N     | N        | N       | N           | —         | —         |
+   | Gap           | N     | —        | —       | —           | N         | N         |
+   | Deferred      | N     | —        | —       | —           | N         | N         |
+   | Broken        | N     | —        | —       | —           | N         | N         |
+   | N/A           | N     | —        | —       | —           | N         | —         |
+
+   **Pass criteria:** Zero FALSE implementations. Zero UNTRACKED violations.
+
+   ## Per-Section Details
+   (One table per ADR-010 section: 2.1 through 2.12)
+
+   | SDK Capability | Matrix Status | Verdict | Evidence |
+   |----------------|---------------|---------|----------|
+   | capability name | Implemented | VERIFIED | code: File.swift, test: FileTests.swift |
+   ...
+
+   Also return the summary statistics line to the caller.
+   ```
+
+   Save output for Section 11.
 
 **While background streams run, execute these inline (they're fast — seconds each):**
 
-5. **Stream C — Structural Rules** (Sections 8, 9):
+6. **Stream C — Structural Rules** (Sections 8, 9):
    Run each check from Section 8 of ADR-009 using Grep and Glob tools:
 
    **8a. Test timeouts:**
@@ -98,13 +156,15 @@ Maximize parallelism. Launch all independent work streams simultaneously, then c
    - Validate against the intended layer model from ADR-009
    - Report any violations
 
-6. **Stream D — Provenance Coverage** (Section 6):
+7. **Stream D — Provenance Coverage** (Section 6, read from disk or inline):
+   If `docs/4-docs/spec-status-report_{YYYY-MM-DD}.md` exists (today's date), read it and extract per-module coverage data for Section 6.
+   If the file does not exist, fall back to inline provenance scanning:
    - Read spec module index `docs/2-spec/000-index.md` to get requirement IDs per module
    - Grep `Tavern/Sources/**/*.swift` for `// MARK: - Provenance:.*REQ-`
    - Grep `Tavern/Tests/**/*.swift` for `.tags(.*\.req` and `// MARK: - Provenance:.*REQ-`
    - Compute per-module implementation% and test%
 
-7. **Stream F — Informational Reports** (Section 10):
+8. **Stream F — Informational Reports** (Section 10):
 
    **10a. TODO/FIXME/HACK:**
    - Grep `Tavern/Sources/` and `Tavern/Tests/` for `TODO|FIXME|HACK` (case-insensitive)
@@ -176,20 +236,26 @@ After Streams A, B, E complete (check with TaskOutput):
    - Extract bead count, status breakdown, priority distribution from JSON
    - Flag any P0 open beads
 
-5. **Run Pipeline Traceability** (Section 5) — depends on provenance data from Stream D:
+5. **Run Pipeline Traceability** (Section 5, read from disk or inline):
+   If `docs/4-docs/audit-spec-report_{YYYY-MM-DD}.md` exists (today's date), read it and extract PRD coverage %, module health, and orphaned provenance data for Section 5.
+   If the file does not exist, fall back to inline computation — depends on provenance data from Stream D:
    - Read `docs/1-prd/prd_2026-01-19.md` and extract section headers
    - Read `docs/2-spec/000-index.md` coverage matrix
    - For each spec module: count actual requirement headers, compare against claimed count
    - Check for orphaned provenance markers
    - Compute PRD coverage %
 
+6. **Parse SDK parity output** (Section 11):
+   - Read the SDK parity report from `docs/4-docs/sdk-parity-report_{YYYY-MM-DD}.md` (written by Stream I agent)
+   - Extract summary statistics table
+   - Flag any FALSE implementations or UNTRACKED violations for Action Items
 
-### Phase 3: Wait for Attestation + Compile Report
 
-1. Wait for Stream G (attestation swarm agent) to complete
-2. Extract attestation summary from agent result
+### Phase 3: Compile Report
 
-3. **Compile the full report** at `docs/4-docs/verification-report_{YYYY-MM-DD}.md` using this template:
+1. If Stream G or Stream I launched background Agents, wait for them to complete and extract their results.
+
+2. **Compile the full report** at `docs/4-docs/verification-report_{YYYY-MM-DD}.md` using this template:
 
 ```markdown
 # Verification Report — {YYYY-MM-DD}
@@ -213,6 +279,7 @@ After Streams A, B, E complete (check with TaskOutput):
 | Structural Rules | {PASS/WARN} | {N/8 pass, N violations} |
 | Architecture | {PASS/WARN} | {N violations} |
 | Informational | — | {N TODOs, N large files, deps current/stale} |
+| SDK Feature Parity | {PASS/WARN/FAIL} | {N verified, N partial, N false, N untracked} |
 
 ---
 
@@ -279,13 +346,29 @@ After Streams A, B, E complete (check with TaskOutput):
 |------|-----------|
 | {path} | {count} |
 
+## Section 11: SDK Feature Parity
+
+**Source:** ADR-010 feature matrix ({N} total capabilities)
+
+| Matrix Status | Count | Verified | Partial | False/Stale | Confirmed | Untracked |
+|---------------|-------|----------|---------|-------------|-----------|-----------|
+| Implemented | {N} | {N} | {N} | {N} | — | — |
+| Gap | {N} | — | — | — | {N} | {N} |
+| Deferred | {N} | — | — | — | {N} | {N} |
+| Broken | {N} | — | — | — | {N} | {N} |
+| N/A | {N} | — | — | — | {N} | — |
+
+**Violation tracking:** {N} gaps/deferred/broken with beads, {N} untracked
+
+{Per-section detail tables from Stream I agent output}
+
 ---
 
 ## Action Items
 
 {Ranked list:}
 1. **CRITICAL** — test failures, build failures
-2. **HIGH** — non-conformant must-have requirements, P0 open beads
+2. **HIGH** — non-conformant must-have requirements, P0 open beads, false SDK implementations, untracked SDK violations
 3. **MEDIUM** — structural rule violations, provenance gaps
 4. **LOW** — informational items
 ```

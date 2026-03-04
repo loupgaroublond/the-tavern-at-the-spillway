@@ -161,12 +161,9 @@ public final class Mortal: Servitor, @unchecked Sendable {
         options.systemPrompt = systemPrompt
         options.permissionMode = clodKitPermissionMode()
         options.workingDirectory = projectURL
-        if let sessionId = currentSessionId {
-            options.resume = sessionId
-            TavernLogger.claude.info("[\(self.name)] resuming session: \(sessionId)")
-        } else {
-            TavernLogger.claude.info("[\(self.name)] starting new conversation")
-        }
+        // Session resume disabled — stale sessions cause ControlProtocolError.timeout
+        // TODO: Re-enable with fallback logic (try resume, catch timeout, start fresh)
+        TavernLogger.claude.info("[\(self.name)] starting new conversation (resume disabled)")
 
         // Run query and collect response
         let response: String
@@ -207,12 +204,9 @@ public final class Mortal: Servitor, @unchecked Sendable {
         options.systemPrompt = systemPrompt
         options.permissionMode = clodKitPermissionMode()
         options.workingDirectory = projectURL
-        if let sessionId = currentSessionId {
-            options.resume = sessionId
-            TavernLogger.claude.info("[\(self.name)] streaming, resuming session: \(sessionId)")
-        } else {
-            TavernLogger.claude.info("[\(self.name)] streaming, starting new conversation")
-        }
+        // Session resume disabled — stale sessions cause ControlProtocolError.timeout
+        // TODO: Re-enable with fallback logic (try resume, catch timeout, start fresh)
+        TavernLogger.claude.info("[\(self.name)] streaming, starting new conversation (resume disabled)")
 
         let (innerStream, innerCancel) = messenger.queryStreaming(prompt: message, options: options)
 
@@ -229,8 +223,8 @@ public final class Mortal: Servitor, @unchecked Sendable {
                             responseAccumulator.value += delta
                             continuation.yield(event)
 
-                        case .completed(let sessionId, _):
-                            if let sessionId, let self {
+                        case .completed(let info):
+                            if let sessionId = info.sessionId, let self {
                                 self.queue.sync { self._sessionId = sessionId }
                                 SessionStore.saveServitorSession(servitorId: self.id, sessionId: sessionId)
                                 TavernLogger.agents.info("[\(self.name)] streaming completed, sessionId: \(sessionId)")
@@ -242,11 +236,11 @@ public final class Mortal: Servitor, @unchecked Sendable {
                             }
                             continuation.yield(event)
 
-                        case .toolUseStarted, .toolUseFinished:
-                            continuation.yield(event)
-
                         case .error:
                             self?.updateStateAfterResponse()
+                            continuation.yield(event)
+
+                        default:
                             continuation.yield(event)
                         }
                     }

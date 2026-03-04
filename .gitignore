@@ -23,3 +23,11 @@ beads_audit.md
 # Attestation artifacts (per-module files are build artifacts; dated reports are committed manually)
 docs/4-docs/attestations/
 attestation-report.md
+
+# Beads dolt runtime state
+.beads/dolt-server*
+.beads/dolt-monitor*
+.beads/dolt/
+
+# Scratch/example directories
+hybrid-nav-example/

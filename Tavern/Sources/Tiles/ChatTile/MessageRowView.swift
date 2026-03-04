@@ -80,7 +80,7 @@ struct MessageRowView: View {
             if case .toolResult = blockType, isDiffContent(message.content) {
                 diffCollapsibleBlock(blockType: blockType)
             } else {
-                CollapsibleBlockView(blockType: blockType, content: message.content)
+                CollapsibleBlockView(blockType: blockType, content: message.content, isStreaming: message.isStreaming)
             }
         }
         .padding(.leading, 44) // Align with text content (avatar width + spacing)

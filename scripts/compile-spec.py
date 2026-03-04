@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Compile all active spec modules into a single markdown file, stripping DROPPED sections."""
+"""Compile all active spec modules into a single markdown file, stripping dropped sections.
+
+Handles two dropped formats:
+1. <!-- DROPPED ... --> HTML comments (legacy)
+2. ~~strikethrough~~ headings (current format per 000-index.md §5)
+"""
 
 import os
 import re
@@ -55,9 +60,8 @@ def compile_spec(spec_dir, output_path=None):
         while i < len(lines):
             line = lines[i]
 
-            # Check if this line has a DROPPED marker
+            # Check for <!-- DROPPED --> HTML comment (legacy format)
             if "<!-- DROPPED" in line:
-                # Determine the heading level of the dropped section
                 heading_match = re.search(r"(#{1,6})\s", line)
                 if heading_match:
                     drop_level = len(heading_match.group(1))
@@ -66,8 +70,6 @@ def compile_spec(spec_dir, output_path=None):
                     i += 1
                     continue
                 else:
-                    # DROPPED comment without heading on same line
-                    # Check if next line is a heading
                     if i + 1 < len(lines):
                         next_line = lines[i + 1]
                         next_heading = re.match(r"^(#{1,6})\s", next_line)
@@ -75,11 +77,20 @@ def compile_spec(spec_dir, output_path=None):
                             drop_level = len(next_heading.group(1))
                             skip_until_level = drop_level
                             dropped_count += 1
-                            i += 2  # skip both lines
+                            i += 2
                             continue
-                    # Just skip the comment line
                     i += 1
                     continue
+
+            # Check for ~~strikethrough~~ heading (current format per 000-index.md §5)
+            # Pattern: ### ~~REQ-XXX-NNN: Title~~
+            strikethrough_heading = re.match(r"^(#{1,6})\s+~~", line)
+            if strikethrough_heading:
+                drop_level = len(strikethrough_heading.group(1))
+                skip_until_level = drop_level
+                dropped_count += 1
+                i += 1
+                continue
 
             # If we're skipping, check if we've reached a heading of equal or higher level
             if skip_until_level is not None:

@@ -4,7 +4,7 @@
 
 A multi-agent orchestrator for macOS. Jake is the top-level coordinating agent — The Proprietor. He talks weird, works perfect.
 
-**Tech Stack:** Swift 6, SwiftUI, macOS 26+ (Tahoe), ClodKit v1.0.0, XcodeGen, SPM
+**Tech Stack:** Swift 6, SwiftUI, macOS 26+ (Tahoe), ClodKit v0.2.63-r0, XcodeGen, SPM
 
 **Platform Policy:** Target only the most recent macOS release. No backwards compatibility cruft.
 
@@ -15,7 +15,7 @@ A multi-agent orchestrator for macOS. Jake is the top-level coordinating agent �
 the-tavern-at-the-spillway/
 ├── clean.do                         # Project-wide clean (redo)
 ├── Tavern/                          # Main Swift package
-│   ├── Package.swift                # SPM manifest (ClodKit v1.0.0, ViewInspector test-only)
+│   ├── Package.swift                # SPM manifest (ClodKit v0.2.63-r0, ViewInspector test-only)
 │   ├── project.yml                  # XcodeGen config (local ClodKit path for dev)
 │   ├── *.do                         # redo build scripts
 │   ├── Sources/
@@ -142,7 +142,7 @@ See `docs/3-adr/ADR-001-shape-selection.md` for full rationale (49 proposals acr
 
 ### Core Patterns
 
-1. **Thin UI / Fat ViewModel** — SwiftUI views are dumb: layout, styling, gestures, bindings. All UX logic lives in ViewModels. Goal: 90%+ of UX workflows testable via ViewModel unit tests without touching SwiftUI.
+1. **Tiles Own All State** — Tiles (`ChatTile`, `ServitorListTile`, etc.) are `@Observable` objects that own all their state and logic. Views are pure renderers — layout, styling, gestures, bindings, nothing else. Views must NEVER trigger state initialization, data loading, or lifecycle management on tiles. Tiles initialize their own state (e.g., loading history) at creation time in the socket/pool, not in response to SwiftUI view lifecycle events (`.task`, `.onAppear`). If a tile needs data, the code that creates the tile is responsible for kicking off the load — not the view that displays it. This ensures tile state survives view destruction/recreation (which SwiftUI does freely via `.id()`, conditional branches, navigation, etc.).
 
 2. **Async/Await for I/O** — Agents call `messenger.query()` directly using Swift concurrency (async/await). Serial `DispatchQueue`s protect mutable state within each agent. A global semaphore limits concurrent Anthropic calls (~10) to prevent thread pool starvation. The original design specified a sidecar actor pattern (separate actors for I/O), but async/await made this unnecessary — agents remain responsive because `await` suspends without blocking.
 
@@ -542,10 +542,10 @@ The **reader document** synthesizes all transcripts into a standalone reference.
 
 | Package | Version | Purpose | Ships in Production? |
 |---------|---------|---------|---------------------|
-| ClodKit | v1.0.0 | Claude SDK wrapper | Yes |
+| ClodKit | v0.2.63-r0 | Claude SDK wrapper | Yes |
 | ViewInspector | v0.10.0+ | SwiftUI view-ViewModel wiring tests | No (test-only) |
 
-**Local development:** `project.yml` points to a local ClodKit path for development. `Package.swift` points to the published v1.0.0 for CI.
+**Local development:** `project.yml` and `Package.swift` both point to local ClodKit path (`../../ClodKit`) for development. Version pin updated at release time.
 
 **No sandbox entitlement** — `com.apple.security.app-sandbox: false` in `Tavern.entitlements`.
 

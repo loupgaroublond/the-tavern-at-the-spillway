@@ -95,10 +95,29 @@ struct ChatTileView: View {
 
             Divider()
 
+            if let status = tile.systemStatus {
+                SystemStatusBanner(status: status)
+            }
+
+            if let limit = tile.rateLimitStatus, limit.status != "ok" {
+                RateLimitBanner(info: limit)
+            }
+
             SessionModeStrip(
                 currentMode: $tile.sessionMode,
                 isEnabled: !tile.isCogitating
             )
+
+            if !tile.promptSuggestions.isEmpty {
+                PromptSuggestionChips(
+                    suggestions: tile.promptSuggestions,
+                    onSelect: { suggestion in
+                        tile.inputText = suggestion
+                        tile.promptSuggestions.removeAll()
+                        Task { await tile.sendMessage() }
+                    }
+                )
+            }
 
             InputBar(
                 agentName: tile.servitorName,
@@ -108,9 +127,6 @@ struct ChatTileView: View {
                 onSend: { Task { await tile.sendMessage() } },
                 onCancel: { tile.cancelStreaming() }
             )
-        }
-        .task {
-            await tile.loadSessionHistory()
         }
         .onChange(of: tile.sessionMode) {
             tile.syncSessionModeToProvider()
@@ -343,6 +359,57 @@ private struct StreamingIndicator: View {
                 try? await Task.sleep(for: .milliseconds(600))
             }
         }
+    }
+}
+
+private struct SystemStatusBanner: View {
+    let status: String
+
+    var body: some View {
+        HStack {
+            ProgressView().controlSize(.small)
+            Text(status.capitalized).font(.caption).foregroundColor(.secondary)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 4)
+    }
+}
+
+private struct RateLimitBanner: View {
+    let info: RateLimitInfo
+
+    var body: some View {
+        HStack {
+            Image(systemName: "exclamationmark.triangle.fill").foregroundColor(.orange)
+            Text("Rate limited").font(.caption)
+            if let util = info.utilization {
+                Text("(\(Int(util * 100))%)").font(.caption).foregroundColor(.secondary)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 4)
+        .background(Color.orange.opacity(0.1))
+    }
+}
+
+private struct PromptSuggestionChips: View {
+    let suggestions: [String]
+    let onSelect: (String) -> Void
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(suggestions, id: \.self) { suggestion in
+                    Button(suggestion) {
+                        onSelect(suggestion)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
+            }
+            .padding(.horizontal, 12)
+        }
+        .padding(.vertical, 4)
     }
 }
 

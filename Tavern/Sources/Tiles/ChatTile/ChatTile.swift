@@ -28,12 +28,37 @@ public final class ChatTile {
 
     // MARK: - Token Tracking
 
-    private var totalInputTokens: Int = 0
-    private var totalOutputTokens: Int = 0
+    private(set) var totalInputTokens: Int = 0
+    private(set) var totalOutputTokens: Int = 0
+
+    // MARK: - Cost Tracking
+
+    var totalCostUsd: Double = 0
+
+    // MARK: - Prompt Suggestions
+
+    var promptSuggestions: [String] = []
+
+    // MARK: - Rate Limit
+
+    var rateLimitStatus: RateLimitInfo?
+
+    // MARK: - System Status
+
+    var systemStatus: String?
 
     // MARK: - Streaming Cancellation
 
     private var cancelStreaming_: (@Sendable () -> Void)?
+
+    // MARK: - Active Block Tracking
+
+    private var activeThinkingMessageId: UUID?
+    private var activeTextMessageId: UUID?
+    private var accumulatedThinking: String = ""
+    private var accumulatedText: String = ""
+    private var activeToolUses: [String: ToolUseInfo] = [:]  // toolUseId → info
+    private var toolUseMessageIds: [String: UUID] = [:]       // toolUseId → ChatMessage.id
 
     // MARK: - Dependencies
 
@@ -49,11 +74,18 @@ public final class ChatTile {
     }
 
     var hasUsageData: Bool {
-        totalInputTokens > 0 || totalOutputTokens > 0
+        totalInputTokens > 0 || totalOutputTokens > 0 || totalCostUsd > 0
     }
 
     var formattedTokens: String {
-        "\(totalInputTokens)↑ \(totalOutputTokens)↓"
+        var parts: [String] = []
+        if totalInputTokens > 0 || totalOutputTokens > 0 {
+            parts.append("\(totalInputTokens)↑ \(totalOutputTokens)↓")
+        }
+        if totalCostUsd > 0 {
+            parts.append(String(format: "$%.2f", totalCostUsd))
+        }
+        return parts.joined(separator: " · ")
     }
 
     var cogitationVerb: String {
@@ -116,60 +148,130 @@ public final class ChatTile {
         isStreaming = false
         currentToolName = nil
         toolStartTime = nil
+        promptSuggestions = []
+        rateLimitStatus = nil
+        systemStatus = nil
         let verb = self.cogitationVerb
         responder.onActivityChanged(.cogitating(verb: verb))
 
         let (stream, cancel) = servitorProvider.sendStreaming(servitorID: servitorID, message: text)
         cancelStreaming_ = cancel
 
-        var accumulatedText = ""
-        var streamingMessageId: UUID?
         var errorEventReceived = false
 
         do {
             for try await event in stream {
                 switch event {
+
+                // ── Thinking ──
+                case .thinkingDelta(let chunk):
+                    if activeThinkingMessageId == nil {
+                        finalizeTextBlock()
+                        let msg = ChatMessage(role: .agent, content: "", messageType: .thinking, isStreaming: true)
+                        activeThinkingMessageId = msg.id
+                        messages.append(msg)
+                    }
+                    accumulatedThinking += chunk
+                    updateMessageContent(id: activeThinkingMessageId!, content: accumulatedThinking, isStreaming: true)
+
+                // ── Text ──
                 case .textDelta(let chunk):
-                    if !isStreaming {
-                        isStreaming = true
+                    if activeTextMessageId == nil {
+                        finalizeThinkingBlock()
+                        if !isStreaming {
+                            isStreaming = true
+                        }
                         let msg = ChatMessage(role: .agent, content: "", isStreaming: true)
-                        streamingMessageId = msg.id
+                        activeTextMessageId = msg.id
                         messages.append(msg)
                     }
                     accumulatedText += chunk
-                    if let msgId = streamingMessageId,
+                    updateMessageContent(id: activeTextMessageId!, content: accumulatedText, isStreaming: true)
+
+                // ── Tool use started ──
+                case .toolUseStarted(let info):
+                    finalizeThinkingBlock()
+                    finalizeTextBlock()
+                    activeToolUses[info.toolUseId] = info
+                    currentToolName = info.toolName
+                    toolStartTime = Date()
+                    let msg = ChatMessage(
+                        role: .agent, content: "", messageType: .toolUse,
+                        toolName: info.toolName, isStreaming: true,
+                        toolUseId: info.toolUseId
+                    )
+                    toolUseMessageIds[info.toolUseId] = msg.id
+                    messages.append(msg)
+
+                // ── Tool input delta ──
+                case .toolInputDelta(let toolUseId, let json):
+                    if let msgId = toolUseMessageIds[toolUseId],
                        let idx = messages.firstIndex(where: { $0.id == msgId }) {
-                        messages[idx] = ChatMessage(
-                            id: msgId,
-                            role: .agent,
-                            content: accumulatedText,
-                            isStreaming: true
-                        )
+                        messages[idx].content += json
                     }
 
-                case .toolUseStarted(let name):
-                    currentToolName = name
-                    toolStartTime = Date()
+                // ── Tool result ──
+                case .toolResult(let info):
+                    if let msgId = toolUseMessageIds[info.toolUseId] {
+                        finalizeMessage(id: msgId)
+                    }
+                    let resultMsg = ChatMessage(
+                        role: .agent,
+                        content: info.content,
+                        messageType: info.isError ? .toolError : .toolResult,
+                        isError: info.isError,
+                        toolUseId: info.toolUseId
+                    )
+                    messages.append(resultMsg)
+                    activeToolUses.removeValue(forKey: info.toolUseId)
+                    if activeToolUses.isEmpty {
+                        currentToolName = nil
+                        toolStartTime = nil
+                    }
 
-                case .toolUseFinished:
-                    currentToolName = nil
-                    toolStartTime = nil
+                // ── Block finished ──
+                case .blockFinished:
+                    break
 
-                case .completed(_, let usage):
+                // ── Tool progress ──
+                case .toolProgress(let info):
+                    currentToolName = info.toolName
+
+                // ── System status ──
+                case .systemStatus(let status):
+                    systemStatus = status
+
+                // ── Prompt suggestion ──
+                case .promptSuggestion(let suggestion):
+                    promptSuggestions.append(suggestion)
+
+                // ── Rate limit ──
+                case .rateLimitWarning(let info):
+                    rateLimitStatus = info
+                    // Invariant #7: failures visible
+                    if info.status != "ok" {
+                        messages.append(ChatMessage(
+                            role: .agent,
+                            content: "Rate limit warning: \(info.status)" +
+                                (info.utilization.map { " (\(Int($0 * 100))% utilized)" } ?? "")
+                        ))
+                    }
+
+                // ── Completion ──
+                case .completed(let info):
                     Self.logger.info("[ChatTile] stream completed")
-                    if let usage {
+                    finalizeThinkingBlock()
+                    finalizeTextBlock()
+                    if let usage = info.usage {
                         totalInputTokens += usage.inputTokens
                         totalOutputTokens += usage.outputTokens
                     }
-                    if let msgId = streamingMessageId,
-                       let idx = messages.firstIndex(where: { $0.id == msgId }) {
-                        messages[idx] = ChatMessage(
-                            id: msgId,
-                            role: .agent,
-                            content: accumulatedText
-                        )
+                    if let cost = info.totalCostUsd {
+                        totalCostUsd = cost
                     }
+                    systemStatus = nil
 
+                // ── Error ──
                 case .error(let errorMessage):
                     Self.logger.error("[ChatTile] stream error: \(errorMessage)")
                     messages.append(ChatMessage(role: .agent, content: "Error: \(errorMessage)"))
@@ -183,11 +285,20 @@ public final class ChatTile {
             }
         }
 
+        // Reset all streaming state
+        activeThinkingMessageId = nil
+        activeTextMessageId = nil
+        accumulatedThinking = ""
+        accumulatedText = ""
+        activeToolUses.removeAll()
+        toolUseMessageIds.removeAll()
         isCogitating = false
         isStreaming = false
         currentToolName = nil
         toolStartTime = nil
         cancelStreaming_ = nil
+        rateLimitStatus = nil
+        systemStatus = nil
         responder.onActivityChanged(.idle)
     }
 
@@ -207,6 +318,10 @@ public final class ChatTile {
         messages.removeAll()
         totalInputTokens = 0
         totalOutputTokens = 0
+        totalCostUsd = 0
+        promptSuggestions = []
+        rateLimitStatus = nil
+        systemStatus = nil
         servitorProvider.clearConversation(servitorID: servitorID)
     }
 
@@ -217,7 +332,12 @@ public final class ChatTile {
         clearConversation()
     }
 
-    func loadSessionHistory() async {
+    public func loadSessionHistory() async {
+        // Only load from disk on first appearance — don't overwrite in-memory messages
+        guard messages.isEmpty else {
+            Self.logger.info("[ChatTile] loadSessionHistory skipped — \(self.messages.count) messages already in memory")
+            return
+        }
         Self.logger.info("[ChatTile] loadSessionHistory")
         isLoadingHistory = true
         let history = await servitorProvider.loadHistory(servitorID: servitorID)
@@ -225,5 +345,34 @@ public final class ChatTile {
         isLoadingHistory = false
         let count = self.messages.count
         Self.logger.info("[ChatTile] loaded \(count) history messages")
+    }
+
+    // MARK: - Private Block Finalization
+
+    private func finalizeThinkingBlock() {
+        guard let id = activeThinkingMessageId else { return }
+        updateMessageContent(id: id, content: accumulatedThinking, isStreaming: false)
+        activeThinkingMessageId = nil
+        accumulatedThinking = ""
+    }
+
+    private func finalizeTextBlock() {
+        guard let id = activeTextMessageId else { return }
+        updateMessageContent(id: id, content: accumulatedText, isStreaming: false)
+        activeTextMessageId = nil
+        accumulatedText = ""
+    }
+
+    private func finalizeMessage(id: UUID) {
+        if let idx = messages.firstIndex(where: { $0.id == id }) {
+            messages[idx].isStreaming = false
+        }
+    }
+
+    private func updateMessageContent(id: UUID, content: String, isStreaming: Bool) {
+        if let idx = messages.firstIndex(where: { $0.id == id }) {
+            messages[idx].content = content
+            messages[idx].isStreaming = isStreaming
+        }
     }
 }

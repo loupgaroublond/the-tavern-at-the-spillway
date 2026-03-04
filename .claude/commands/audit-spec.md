@@ -33,9 +33,11 @@ For each spec module's Downstream References:
 - Check if claimed test directories exist (e.g., `Tavern/Tests/TavernCoreTests/`)
 - Flag missing directories
 
-### 5. Compute Provenance Coverage
+### 5. Load Provenance Coverage
 
-Run the same provenance scanning as `/spec-status`:
+If `docs/4-docs/spec-status-report_{YYYY-MM-DD}.md` exists (today's date), read it and extract the per-module coverage data (implementation% and test%). This avoids redundant provenance scanning when run after `/spec-status` or as part of `/update-verifications`.
+
+If no same-day spec-status report exists, fall back to computing provenance coverage directly:
 
 - Scan `Tavern/Sources/**/*.swift` for `// MARK: - Provenance:.*REQ-[A-Z]+-[0-9]{3}`
 - Scan `Tavern/Tests/**/*.swift` for `.tags(.*\.req([A-Z]+)(\d{3})` and `// MARK: - Provenance:.*REQ-`
@@ -191,4 +193,6 @@ Plus a transition rate table:
 
 ## Output
 
-Display the full audit directly in the conversation. Do not write to a file unless explicitly asked.
+Display the full audit in the conversation.
+
+Additionally, write the complete audit to `docs/4-docs/audit-spec-report_{YYYY-MM-DD}.md` (using today's date, overwriting any same-day report). This file is consumed by downstream commands (`/verify`) to avoid redundant pipeline traceability scanning.

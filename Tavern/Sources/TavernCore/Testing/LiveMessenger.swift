@@ -7,8 +7,8 @@ import os.log
 // MARK: - LiveMessenger
 
 /// Production messenger that calls real Claude via ClodKit SDK.
-/// Extracts response text from the ClaudeQuery stream, handling both
-/// "result" and "assistant" message types.
+/// Parses stream_event messages with includePartialMessages: true
+/// for real-time content block streaming (thinking, tool use, text).
 ///
 /// When a `PermissionManager` is provided, tool execution is gated by
 /// permission checks. Auto-decisions (allow/deny) are applied immediately.
@@ -131,6 +131,8 @@ public struct LiveMessenger: ServitorMessenger {
     public func query(prompt: String, options: QueryOptions) async throws -> (response: String, sessionId: String?) {
         var options = options
         options.canUseTool = buildCanUseToolCallback()
+        // Prevent nested-session detection when Tavern is launched from Claude Code
+        options.environment["CLAUDECODE"] = ""
 
         let query = try await Clod.query(prompt: prompt, options: options)
         var responseText = ""
@@ -163,6 +165,10 @@ public struct LiveMessenger: ServitorMessenger {
     public func queryStreaming(prompt: String, options: QueryOptions) -> (stream: AsyncThrowingStream<StreamEvent, Error>, cancel: @Sendable () -> Void) {
         var opts = options
         opts.canUseTool = buildCanUseToolCallback()
+        // Prevent nested-session detection when Tavern is launched from Claude Code
+        opts.environment["CLAUDECODE"] = ""
+        // Enable partial messages for real-time content block streaming
+        opts.includePartialMessages = true
         let options = opts
 
         // Shared cancellation state
@@ -176,7 +182,9 @@ public struct LiveMessenger: ServitorMessenger {
                     let query = try await Clod.query(prompt: prompt, options: options)
                     queryBox.value = query
 
-                    var lastText = ""
+                    // Track active content blocks by index for start/delta/stop correlation
+                    var activeBlocks: [Int: ContentBlockState] = [:]
+                    var seenToolUseIds: Set<String> = []
 
                     for try await message in query {
                         if cancelled.value {
@@ -185,28 +193,149 @@ public struct LiveMessenger: ServitorMessenger {
                             return
                         }
 
-                        switch message {
-                        case .regular(let sdkMessage):
-                            if sdkMessage.type == "assistant" {
-                                if let content = sdkMessage.content?.stringValue, content.count > lastText.count {
-                                    let delta = String(content.dropFirst(lastText.count))
-                                    lastText = content
-                                    continuation.yield(.textDelta(delta))
+                        guard case .regular(let sdkMessage) = message else { continue }
+
+                        switch sdkMessage.type {
+
+                        // ── stream_event: content blocks ──
+                        case "stream_event":
+                            guard let event = sdkMessage.rawJSON["event"]?.objectValue else { continue }
+                            guard let eventType = event["type"]?.stringValue else { continue }
+                            let index = event["index"]?.intValue ?? 0
+
+                            switch eventType {
+
+                            case "content_block_start":
+                                guard let block = event["content_block"]?.objectValue,
+                                      let blockType = block["type"]?.stringValue else { continue }
+
+                                var state = ContentBlockState(blockType: blockType)
+
+                                if blockType == "tool_use" {
+                                    let id = block["id"]?.stringValue ?? ""
+                                    let name = block["name"]?.stringValue ?? ""
+                                    state.toolUseId = id
+                                    state.toolName = name
+                                    if !seenToolUseIds.contains(id) {
+                                        seenToolUseIds.insert(id)
+                                        continuation.yield(.toolUseStarted(ToolUseInfo(
+                                            toolUseId: id, toolName: name
+                                        )))
+                                    }
                                 }
-                            } else if sdkMessage.type == "result" {
-                                // Result may contain the final complete text
-                                if let content = sdkMessage.content?.stringValue, content.count > lastText.count {
-                                    let delta = String(content.dropFirst(lastText.count))
-                                    continuation.yield(.textDelta(delta))
+
+                                activeBlocks[index] = state
+
+                            case "content_block_delta":
+                                guard let delta = event["delta"]?.objectValue,
+                                      let deltaType = delta["type"]?.stringValue else { continue }
+
+                                switch deltaType {
+                                case "text_delta":
+                                    if let text = delta["text"]?.stringValue {
+                                        continuation.yield(.textDelta(text))
+                                    }
+                                case "thinking_delta":
+                                    if let thinking = delta["thinking"]?.stringValue {
+                                        continuation.yield(.thinkingDelta(thinking))
+                                    }
+                                case "input_json_delta":
+                                    if let json = delta["partial_json"]?.stringValue {
+                                        activeBlocks[index]?.accumulatedInput += json
+                                        if let id = activeBlocks[index]?.toolUseId {
+                                            continuation.yield(.toolInputDelta(toolUseId: id, json: json))
+                                        }
+                                    }
+                                default:
+                                    break
+                                }
+
+                            case "content_block_stop":
+                                if activeBlocks.removeValue(forKey: index) != nil {
+                                    continuation.yield(.blockFinished(index: index))
+                                }
+
+                            default:
+                                break
+                            }
+
+                        // ── user message: tool results ──
+                        case "user":
+                            if let resultValue = sdkMessage.toolUseResult {
+                                if let resultObj = resultValue.objectValue {
+                                    let toolUseId = resultObj["tool_use_id"]?.stringValue ?? ""
+                                    let content = Self.extractToolResultContent(resultObj["content"])
+                                    let isError = resultObj["is_error"]?.boolValue ?? false
+                                    continuation.yield(.toolResult(ToolResultInfo(
+                                        toolUseId: toolUseId, content: content, isError: isError
+                                    )))
+                                }
+                            } else if let msg = sdkMessage.rawJSON["message"]?.objectValue,
+                                      let contentArray = msg["content"]?.arrayValue {
+                                for block in contentArray {
+                                    guard let obj = block.objectValue,
+                                          obj["type"]?.stringValue == "tool_result" else { continue }
+                                    let toolUseId = obj["tool_use_id"]?.stringValue ?? ""
+                                    let content = Self.extractToolResultContent(obj["content"])
+                                    let isError = obj["is_error"]?.boolValue ?? false
+                                    continuation.yield(.toolResult(ToolResultInfo(
+                                        toolUseId: toolUseId, content: content, isError: isError
+                                    )))
                                 }
                             }
-                        case .controlRequest, .controlResponse, .controlCancelRequest, .keepAlive:
+
+                        // ── result message: completion ──
+                        case "result":
+                            let info = Self.parseCompletionInfo(from: sdkMessage)
+                            continuation.yield(.completed(info))
+
+                        // ── system messages ──
+                        case "system":
+                            let subtype = sdkMessage.rawJSON["subtype"]?.stringValue
+                            if subtype == "status",
+                               let status = sdkMessage.rawJSON["status"]?.stringValue {
+                                continuation.yield(.systemStatus(status))
+                            }
+
+                        // ── tool progress ──
+                        case "tool_progress":
+                            let toolUseId = sdkMessage.rawJSON["tool_use_id"]?.stringValue ?? ""
+                            let toolName = sdkMessage.rawJSON["tool_name"]?.stringValue ?? ""
+                            let elapsed = Self.numericDouble(sdkMessage.rawJSON["elapsed_time_seconds"]) ?? 0
+                            continuation.yield(.toolProgress(ToolProgressInfo(
+                                toolUseId: toolUseId, toolName: toolName, elapsedSeconds: elapsed
+                            )))
+
+                        // ── prompt suggestion ──
+                        case "prompt_suggestion":
+                            if let suggestion = sdkMessage.rawJSON["suggestion"]?.stringValue {
+                                continuation.yield(.promptSuggestion(suggestion))
+                            }
+
+                        // ── rate limit ──
+                        case "rate_limit":
+                            if let info = sdkMessage.rawJSON["rate_limit_info"]?.objectValue {
+                                let status = info["status"]?.stringValue ?? "unknown"
+                                let utilization = Self.numericDouble(info["utilization"])
+                                let resetsAt: Date? = Self.numericDouble(info["resetsAt"]).map {
+                                    Date(timeIntervalSince1970: $0)
+                                }
+                                continuation.yield(.rateLimitWarning(RateLimitInfo(
+                                    status: status, utilization: utilization, resetsAt: resetsAt
+                                )))
+                            }
+
+                        // ── assistant (cumulative, fallback if partial messages somehow off) ──
+                        case "assistant":
+                            break
+
+                        default:
                             break
                         }
                     }
 
-                    let sessionId = await query.sessionId
-                    continuation.yield(.completed(sessionId: sessionId, usage: nil))
+                    // The result message handler above should have emitted .completed.
+                    // Ensure the stream finishes cleanly.
                     continuation.finish()
                 } catch {
                     if cancelled.value {
@@ -231,6 +360,68 @@ public struct LiveMessenger: ServitorMessenger {
         }
 
         return (stream: stream, cancel: cancel)
+    }
+
+    // MARK: - Private Helpers
+
+    /// State tracking for an active content block during streaming
+    private struct ContentBlockState {
+        let blockType: String       // "text", "thinking", "tool_use"
+        var toolUseId: String?      // for tool_use blocks
+        var toolName: String?       // for tool_use blocks
+        var accumulatedInput: String = ""  // for tool_use JSON input
+    }
+
+    /// Extract numeric double from JSONValue that might be .int or .double
+    /// ClodKit's JSONValue has no doubleValue accessor; .int and .double are separate cases
+    private static func numericDouble(_ value: JSONValue?) -> Double? {
+        guard let value else { return nil }
+        switch value {
+        case .double(let d): return d
+        case .int(let i): return Double(i)
+        default: return nil
+        }
+    }
+
+    /// Extract tool result content — can be a string or array of content blocks
+    private static func extractToolResultContent(_ value: JSONValue?) -> String {
+        guard let value else { return "" }
+        switch value {
+        case .string(let s):
+            return s
+        case .array(let blocks):
+            return blocks.compactMap { block -> String? in
+                guard let obj = block.objectValue,
+                      let text = obj["text"]?.stringValue else { return nil }
+                return text
+            }.joined(separator: "\n")
+        default:
+            return ""
+        }
+    }
+
+    /// Parse a result SDKMessage into CompletionInfo
+    private static func parseCompletionInfo(from msg: SDKMessage) -> CompletionInfo {
+        let json = msg.rawJSON
+        let usageObj = json["usage"]?.objectValue
+        let usage: SessionUsage? = usageObj.map { u in
+            SessionUsage(
+                inputTokens: u["input_tokens"]?.intValue ?? 0,
+                outputTokens: u["output_tokens"]?.intValue ?? 0,
+                cacheReadInputTokens: u["cache_read_input_tokens"]?.intValue ?? 0,
+                cacheCreationInputTokens: u["cache_creation_input_tokens"]?.intValue ?? 0,
+                costUsd: numericDouble(u["cost_usd"]) ?? 0
+            )
+        }
+        return CompletionInfo(
+            sessionId: json["session_id"]?.stringValue,
+            usage: usage,
+            costUsd: numericDouble(json["total_cost_usd"]),
+            totalCostUsd: numericDouble(json["total_cost_usd"]),
+            durationMs: json["duration_ms"]?.intValue,
+            stopReason: json["stop_reason"]?.stringValue,
+            numTurns: json["num_turns"]?.intValue
+        )
     }
 }
 

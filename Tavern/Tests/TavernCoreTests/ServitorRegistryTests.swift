@@ -26,7 +26,7 @@ final class TestServitor: Servitor, @unchecked Sendable {
         let response = "Response to: \(message)"
         let stream = AsyncThrowingStream<StreamEvent, Error> { continuation in
             continuation.yield(.textDelta(response))
-            continuation.yield(.completed(sessionId: nil, usage: nil))
+            continuation.yield(.completed(CompletionInfo()))
             continuation.finish()
         }
         return (stream: stream, cancel: {})

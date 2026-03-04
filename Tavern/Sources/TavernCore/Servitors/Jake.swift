@@ -165,12 +165,9 @@ public final class Jake: Servitor, @unchecked Sendable {
         options.systemPrompt = Self.systemPrompt
         options.permissionMode = clodKitPermissionMode()
         options.workingDirectory = projectURL
-        if let sessionId = currentSessionId {
-            options.resume = sessionId
-            TavernLogger.claude.info("Jake resuming session: \(sessionId)")
-        } else {
-            TavernLogger.claude.info("Jake starting new conversation")
-        }
+        // Session resume disabled — stale sessions cause ControlProtocolError.timeout
+        // TODO: Re-enable with fallback logic (try resume, catch timeout, start fresh)
+        TavernLogger.claude.info("Jake starting new conversation (resume disabled)")
 
         // Add MCP server if available
         if let server = currentMcpServer {
@@ -224,12 +221,9 @@ public final class Jake: Servitor, @unchecked Sendable {
         options.systemPrompt = Self.systemPrompt
         options.permissionMode = clodKitPermissionMode()
         options.workingDirectory = projectURL
-        if let sessionId = currentSessionId {
-            options.resume = sessionId
-            TavernLogger.claude.info("Jake streaming, resuming session: \(sessionId)")
-        } else {
-            TavernLogger.claude.info("Jake streaming, starting new conversation")
-        }
+        // Session resume disabled — stale sessions cause ControlProtocolError.timeout
+        // TODO: Re-enable with fallback logic (try resume, catch timeout, start fresh)
+        TavernLogger.claude.info("Jake streaming, starting new conversation (resume disabled)")
 
         // Add MCP server if available
         if let server = currentMcpServer {
@@ -245,14 +239,17 @@ public final class Jake: Servitor, @unchecked Sendable {
                 do {
                     for try await event in innerStream {
                         switch event {
-                        case .completed(let sessionId, _):
-                            if let sessionId, let self {
+                        case .completed(let info):
+                            if let sessionId = info.sessionId, let self {
                                 self.queue.sync { self._sessionId = sessionId }
                                 SessionStore.saveJakeSession(sessionId, projectPath: self.projectURL.path)
                                 TavernLogger.agents.info("Jake streaming completed, sessionId: \(sessionId)")
                             }
                             self?.queue.sync { self?._isCogitating = false }
                             TavernLogger.agents.debug("Jake state: working -> idle")
+                            continuation.yield(event)
+                        case .error:
+                            self?.queue.sync { self?._isCogitating = false }
                             continuation.yield(event)
                         default:
                             continuation.yield(event)

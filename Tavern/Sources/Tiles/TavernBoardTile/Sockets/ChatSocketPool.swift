@@ -1,11 +1,14 @@
 import Foundation
 import TavernKit
 import ChatTile
+import os.log
 
 // MARK: - Provenance: REQ-ARCH-003, REQ-ARCH-004
 
 @MainActor
 final class ChatSocketPool {
+    private static let logger = Logger(subsystem: "com.tavern.spillway", category: "pool")
+
     private var tiles: [UUID: ChatTile] = [:]
     private let servitorProvider: any ServitorProvider
     private let commandProvider: any CommandProvider
@@ -23,8 +26,10 @@ final class ChatSocketPool {
 
     func tile(for servitorID: UUID) -> ChatTile {
         if let existing = tiles[servitorID] {
+            Self.logger.info("[ChatSocketPool] cache hit for \(servitorID)")
             return existing
         }
+        Self.logger.info("[ChatSocketPool] cache miss for \(servitorID) — creating new tile")
 
         let nav = navigator
 
@@ -55,6 +60,7 @@ final class ChatSocketPool {
             responder: responder
         )
         tiles[servitorID] = tile
+        Task { await tile.loadSessionHistory() }
         return tile
     }
 

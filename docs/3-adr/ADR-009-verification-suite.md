@@ -301,6 +301,55 @@ In practice, most findings in an actively developed project will be development 
 **Output:** Large files table (path, line count), function count table (path, function count). Sorted by count descending.
 
 
+### Section 11: SDK Feature Parity
+
+**Purpose:** Verify every SDK capability in the ADR-010 feature matrix. For `Implemented` rows, confirm the implementation is real and wired end-to-end. For violation rows (`Gap`, `Deferred`, `Broken`), confirm the violation status is accurate and a bead exists.
+
+**Method:**
+
+This is an exhaustive, per-row verification. Every row in ADR-010 Part 2 is checked individually.
+
+1. **Parse the feature matrix** from `docs/3-adr/ADR-010-sdk-feature-parity.md`:
+   - Extract every row: SDK capability, status, notes
+   - Group by status category
+
+2. **For each `Implemented` row**, verify in depth:
+   - **Code exists**: Grep `Tavern/Sources/` for the specific API usage (e.g., `options.systemPrompt`, `ClaudeQuery.interrupt`, `SDKMCPServer`)
+   - **Code is wired**: Trace from the API call site through to the consumer. A declaration that exists but isn't called from a reachable code path is not implemented — it's unwired.
+   - **Tests exist**: Grep `Tavern/Tests/` for test coverage of this capability. At minimum, a Grade 1+2 test must exercise the feature through mocks/stubs.
+   - **Verdict**: `VERIFIED` (code exists, wired, tested), `PARTIAL` (code exists but incomplete wiring or no tests), `FALSE` (claimed implemented but evidence insufficient)
+
+3. **For each `Gap` row**, verify:
+   - **Still a gap**: Confirm no code exists for this capability in `Tavern/Sources/`
+   - **Bead exists**: Check `bd list -n 0 --json` for an open bead tracking this gap
+   - **Verdict**: `CONFIRMED` (gap is real, bead exists), `UNTRACKED` (gap is real, no bead — ADR violation), `RESOLVED` (code found — matrix needs updating)
+
+4. **For each `Deferred` row**, verify:
+   - **Still deferred**: Confirm no code exists
+   - **Bead exists**: Check for tracking bead
+   - **Verdict**: Same as Gap
+
+5. **For each `Broken` row**, verify:
+   - **Code exists**: Confirm implementation code is present
+   - **Still broken**: Check for disabled/commented-out code, error handling that swallows the feature, or test failures
+   - **Bead exists**: Check for tracking bead
+   - **Verdict**: `CONFIRMED` (broken, bead exists), `UNTRACKED` (broken, no bead), `FIXED` (appears to work now — matrix needs updating)
+
+6. **For each `N/A` row**, verify:
+   - **Still N/A**: Confirm the justification in the Notes column still holds given current architecture
+   - **Verdict**: `CONFIRMED` or `RECONSIDER` (architecture changed, may now apply)
+
+7. **Summary statistics**:
+   - Total rows, rows per status
+   - Violation count (`Gap` + `Deferred` + `Broken`)
+   - Untracked violations (violations without beads)
+   - False implementations (claimed `Implemented` but verification failed)
+
+**Pass criteria:** Zero false implementations. Zero untracked violations. All `Implemented` rows verified with wiring and tests.
+
+**Output:** Per-row verification table with verdict, evidence (file:line references), and any discrepancies. Summary statistics. List of matrix rows that need updating.
+
+
 ## Execution Strategy
 
 All independent streams launch in parallel to minimize wall-clock time:
@@ -313,7 +362,8 @@ Phase 1 — Launch all independent work streams:
   ├─ Stream D: Provenance scan (grep-based, inline)         → Section 6
   ├─ Stream E: Beads audit (background)                     → Section 7
   ├─ Stream F: Informational reports (grep + gh, inline)    → Section 10
-  └─ Stream G: Attestation swarm (background agent)         → Section 4
+  ├─ Stream G: Attestation swarm (background agent)         → Section 4
+  └─ Stream I: SDK parity verification (background agent)   → Section 11
 
 Phase 2 — After Streams A-F complete:
   └─ Stream H: Pipeline traceability (inline)               → Section 5
@@ -345,6 +395,7 @@ Phase 3 — After all streams complete:
 | Beads | INFO | N total, N open, N critical |
 | Structural Rules | PASS/WARN | N/8 pass, N violations |
 | Architecture | PASS/WARN | N violations |
+| SDK Feature Parity | PASS/FAIL | N implemented (N verified), N violations (N tracked) |
 | Informational | — | N TODOs, N large files, deps current/stale |
 
 ## Section 1: Build Health
@@ -376,6 +427,9 @@ Phase 3 — After all streams complete:
 
 ## Section 10: Informational
 (TODO/FIXME/HACK list, dead code candidates, dependency freshness, file complexity)
+
+## Section 11: SDK Feature Parity
+(per-row verification table, violation tracking, false implementation detection)
 
 ## Action Items
 
@@ -417,5 +471,6 @@ Rejected. Coverage targets vary by module — deferred modules, UI code, and inf
 - ADR-006 (Preview Requirements) — preview block check (8b)
 - ADR-007 (Provenance Tracking) — provenance checks (Sections 5, 6, 8d)
 - ADR-008 (Tileboard Architecture) — layer model for tile isolation (8h, Section 9)
+- ADR-010 (SDK Feature Parity) — feature matrix verification (Section 11)
 - CLAUDE.md Honor System — logging (8c), @MainActor (8e), blocking calls (8g)
 - PRD §19.4 (Completeness and Correctness Standards) — pipeline traceability (Section 5)

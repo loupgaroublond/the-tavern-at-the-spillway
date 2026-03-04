@@ -154,7 +154,7 @@ public final class MockServitor: Servitor, @unchecked Sendable {
                     await Task.yield()
                 }
 
-                continuation.yield(.completed(sessionId: nil, usage: nil))
+                continuation.yield(.completed(CompletionInfo()))
                 continuation.finish()
             }
 

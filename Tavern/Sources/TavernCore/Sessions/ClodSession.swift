@@ -98,8 +98,8 @@ final class ClodSession: @unchecked Sendable {
                 do {
                     for try await event in innerStream {
                         switch event {
-                        case .completed(let sessionId, _):
-                            if let sessionId, let self {
+                        case .completed(let info):
+                            if let sessionId = info.sessionId, let self {
                                 self.persistSession(sessionId)
                             }
                             continuation.yield(event)
@@ -155,9 +155,11 @@ final class ClodSession: @unchecked Sendable {
         options.permissionMode = Self.mapPermissionMode(mode)
         options.workingDirectory = config.workingDirectory
 
-        if let sessionId {
-            options.resume = sessionId
-        }
+        // Session resume disabled — stale sessions cause ControlProtocolError.timeout
+        // TODO: Re-enable with fallback logic (try resume, catch timeout, start fresh)
+        // if let sessionId {
+        //     options.resume = sessionId
+        // }
 
         for (key, server) in mcpServers {
             options.sdkMcpServers[key] = server

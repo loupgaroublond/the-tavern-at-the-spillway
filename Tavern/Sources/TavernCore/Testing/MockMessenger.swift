@@ -129,7 +129,7 @@ public final class MockMessenger: ServitorMessenger, @unchecked Sendable {
                     await Task.yield()
                 }
 
-                continuation.yield(.completed(sessionId: sid, usage: nil))
+                continuation.yield(.completed(CompletionInfo(sessionId: sid)))
                 continuation.finish()
             }
 

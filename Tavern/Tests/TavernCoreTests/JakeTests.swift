@@ -125,9 +125,11 @@ struct JakeTests {
         let _ = try await jake.send("Message 2")
         #expect(jake.sessionId == sessionId)
 
-        // Verify session ID was passed to second query via options.resume
+        // Session resume disabled — stale sessions cause ControlProtocolError.timeout
+        // Session ID is persisted locally but not passed via options.resume
+        // TODO: Re-enable resume assertion after ClodKit SDK update
         #expect(mock.queryOptions.count == 2)
-        #expect(mock.queryOptions[1].resume == sessionId)
+        #expect(mock.queryOptions[1].resume == nil)
     }
 
     @Test("Jake handles text response fallback")

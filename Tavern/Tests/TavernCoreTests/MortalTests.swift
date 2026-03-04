@@ -268,7 +268,9 @@ struct MortalTests {
         #expect(mortal.sessionId == sessionId)
 
         let _ = try await mortal.send("Message 2")
-        #expect(mock.queryOptions[1].resume == sessionId)
+        // Session resume disabled — stale sessions cause ControlProtocolError.timeout
+        // TODO: Re-enable resume assertion after ClodKit SDK update
+        #expect(mock.queryOptions[1].resume == nil)
     }
 
     @Test("Mortal propagates errors")
