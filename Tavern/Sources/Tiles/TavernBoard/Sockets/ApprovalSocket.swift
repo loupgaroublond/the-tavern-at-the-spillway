@@ -1,6 +1,7 @@
 import Foundation
 import TavernKit
-import ApprovalTile
+import ToolApprovalTile
+import PlanApprovalTile
 
 // MARK: - Provenance: REQ-OPM-001, REQ-OPM-002
 

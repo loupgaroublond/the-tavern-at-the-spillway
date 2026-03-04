@@ -1,7 +1,7 @@
 import Testing
 import Foundation
 import TavernKit
-@testable import TavernBoardTile
+@testable import TavernBoard
 @testable import ChatTile
 
 // MARK: - Provenance: REQ-ARCH-003, REQ-ARCH-004

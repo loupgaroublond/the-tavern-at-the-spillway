@@ -2,7 +2,8 @@ import Foundation
 import TavernKit
 import SwiftUI
 import os.log
-import ApprovalTile
+import ToolApprovalTile
+import PlanApprovalTile
 import ChatTile
 import ServitorListTile
 import ResourcePanelTile

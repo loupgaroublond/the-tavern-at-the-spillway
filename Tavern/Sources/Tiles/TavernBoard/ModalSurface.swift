@@ -1,6 +1,7 @@
 import SwiftUI
 import TavernKit
-import ApprovalTile
+import ToolApprovalTile
+import PlanApprovalTile
 import PermissionSettingsTile
 
 // MARK: - Provenance: REQ-OPM-001, REQ-OPM-002, REQ-OPM-003

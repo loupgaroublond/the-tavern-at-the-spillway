@@ -68,12 +68,13 @@ Core Layer (zero or single Core dependency):
 └── CoreUI/              Reusable views (depends: CoreModels)
 
 Tile Layer (depends only on Core*):
-├── ApprovalTile/        Tool/plan approval UI
+├── ToolApprovalTile/    Tool execution approval UI
+├── PlanApprovalTile/    Plan approval UI
 ├── PermissionSettingsTile/
 ├── ServitorListTile/    Sidebar agent list
 ├── ResourcePanelTile/   File tree, tasks, TODOs
 ├── ChatTile/            Conversation view (the complex one)
-└── TavernBoardTile/     Root tile — composes all leaf tiles
+└── TavernBoard/         Root board — composes all leaf tiles
 
 App Layer:
 ├── TavernCore/          Business logic + ClodKit SDK (depends: CoreModels, CoreProviders)
@@ -123,6 +124,8 @@ Surface views use exhaustive switches (no `default:`). Adding a new facet case b
 
 
 ## Tile Anatomy
+
+**One tile per module.** Each SPM tile target contains exactly one tile class. If a module needs two distinct tile types (e.g., tool approval and plan approval), split them into separate modules. This keeps dependency graphs precise — consumers import only the tile they need — and eliminates empty module-marker files that exist solely to satisfy SPM's "at least one source file" requirement.
 
 Each tile module contains:
 

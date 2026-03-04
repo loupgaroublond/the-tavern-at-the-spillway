@@ -36,15 +36,28 @@ targets:
       GENERATE_INFOPLIST_FILE: YES
       INFOPLIST_KEY_NSHumanReadableCopyright: ""
 
-  ApprovalTile:
+  ToolApprovalTile:
     type: framework
     platform: macOS
     sources:
-      - path: Sources/Tiles/ApprovalTile
+      - path: Sources/Tiles/ToolApprovalTile
     dependencies:
       - target: TavernKit
     settings:
-      PRODUCT_BUNDLE_IDENTIFIER: com.tavern.approvaltile
+      PRODUCT_BUNDLE_IDENTIFIER: com.tavern.toolapprovaltile
+      SWIFT_VERSION: "6.0"
+      GENERATE_INFOPLIST_FILE: YES
+      INFOPLIST_KEY_NSHumanReadableCopyright: ""
+
+  PlanApprovalTile:
+    type: framework
+    platform: macOS
+    sources:
+      - path: Sources/Tiles/PlanApprovalTile
+    dependencies:
+      - target: TavernKit
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.tavern.planapprovaltile
       SWIFT_VERSION: "6.0"
       GENERATE_INFOPLIST_FILE: YES
       INFOPLIST_KEY_NSHumanReadableCopyright: ""
@@ -101,20 +114,21 @@ targets:
       GENERATE_INFOPLIST_FILE: YES
       INFOPLIST_KEY_NSHumanReadableCopyright: ""
 
-  TavernBoardTile:
+  TavernBoard:
     type: framework
     platform: macOS
     sources:
-      - path: Sources/Tiles/TavernBoardTile
+      - path: Sources/Tiles/TavernBoard
     dependencies:
       - target: TavernKit
-      - target: ApprovalTile
+      - target: ToolApprovalTile
+      - target: PlanApprovalTile
       - target: PermissionSettingsTile
       - target: ServitorListTile
       - target: ResourcePanelTile
       - target: ChatTile
     settings:
-      PRODUCT_BUNDLE_IDENTIFIER: com.tavern.tavernboardtile
+      PRODUCT_BUNDLE_IDENTIFIER: com.tavern.tavernboard
       SWIFT_VERSION: "6.0"
       GENERATE_INFOPLIST_FILE: YES
       INFOPLIST_KEY_NSHumanReadableCopyright: ""
@@ -144,9 +158,11 @@ targets:
         embed: true
       - target: TavernKit
         embed: true
-      - target: TavernBoardTile
+      - target: TavernBoard
         embed: true
-      - target: ApprovalTile
+      - target: ToolApprovalTile
+        embed: true
+      - target: PlanApprovalTile
         embed: true
       - target: PermissionSettingsTile
         embed: true

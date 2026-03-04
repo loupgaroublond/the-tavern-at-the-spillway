@@ -28,9 +28,14 @@ let package = Package(
 
         // Leaf tiles (depend only on TavernKit)
         .target(
-            name: "ApprovalTile",
+            name: "ToolApprovalTile",
             dependencies: ["TavernKit"],
-            path: "Sources/Tiles/ApprovalTile"
+            path: "Sources/Tiles/ToolApprovalTile"
+        ),
+        .target(
+            name: "PlanApprovalTile",
+            dependencies: ["TavernKit"],
+            path: "Sources/Tiles/PlanApprovalTile"
         ),
         .target(
             name: "PermissionSettingsTile",
@@ -53,15 +58,15 @@ let package = Package(
             path: "Sources/Tiles/ChatTile"
         ),
 
-        // Board tile (composes all leaf tiles)
+        // Board (composes all leaf tiles)
         .target(
-            name: "TavernBoardTile",
+            name: "TavernBoard",
             dependencies: [
                 "TavernKit",
-                "ApprovalTile", "PermissionSettingsTile",
+                "ToolApprovalTile", "PlanApprovalTile", "PermissionSettingsTile",
                 "ServitorListTile", "ResourcePanelTile", "ChatTile",
             ],
-            path: "Sources/Tiles/TavernBoardTile"
+            path: "Sources/Tiles/TavernBoard"
         ),
 
         // Core library — private implementation, imports ClodKit
@@ -76,7 +81,7 @@ let package = Package(
         // SwiftUI App
         .executableTarget(
             name: "Tavern",
-            dependencies: ["TavernCore", "TavernKit", "TavernBoardTile"],
+            dependencies: ["TavernCore", "TavernKit", "TavernBoard"],
             resources: [
                 .process("Assets.xcassets"),
                 .copy("AppIcon.icon")

@@ -1,6 +1,6 @@
 import SwiftUI
 import TavernCore
-import TavernBoardTile
+import TavernBoard
 import TavernKit
 import os.log
 

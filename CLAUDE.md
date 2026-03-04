@@ -22,8 +22,16 @@ the-tavern-at-the-spillway/
 │   │   ├── Tavern/                  # App target (SwiftUI)
 │   │   │   ├── TavernApp.swift      # Entry point, multi-window orchestration
 │   │   │   └── Views/               # SwiftUI views
+│   │   ├── Tiles/                   # Tile modules (one tile per module)
+│   │   │   ├── ChatTile/            # Conversation tile
+│   │   │   ├── ServitorListTile/    # Sidebar agent list tile
+│   │   │   ├── ResourcePanelTile/   # File tree, tasks, TODOs tile
+│   │   │   ├── ToolApprovalTile/    # Tool execution approval tile
+│   │   │   ├── PlanApprovalTile/    # Plan approval tile
+│   │   │   ├── PermissionSettingsTile/ # Permission settings tile
+│   │   │   └── TavernBoard/         # Root board (composes all leaf tiles)
 │   │   └── TavernCore/              # Framework target (all business logic)
-│   │       ├── Servitors/              # Jake, Mortal, Servitor protocol, MortalSpawner
+│   │       ├── Servitors/           # Jake, Mortal, Servitor protocol, MortalSpawner
 │   │       ├── Chat/                # ChatViewModel, ChatMessage
 │   │       ├── Commitments/         # Commitment, CommitmentList, CommitmentVerifier
 │   │       ├── Coordination/        # TavernCoordinator
@@ -142,7 +150,7 @@ See `docs/3-adr/ADR-001-shape-selection.md` for full rationale (49 proposals acr
 
 ### Core Patterns
 
-1. **Tiles Own All State** — Tiles (`ChatTile`, `ServitorListTile`, etc.) are `@Observable` objects that own all their state and logic. Views are pure renderers — layout, styling, gestures, bindings, nothing else. Views must NEVER trigger state initialization, data loading, or lifecycle management on tiles. Tiles initialize their own state (e.g., loading history) at creation time in the socket/pool, not in response to SwiftUI view lifecycle events (`.task`, `.onAppear`). If a tile needs data, the code that creates the tile is responsible for kicking off the load — not the view that displays it. This ensures tile state survives view destruction/recreation (which SwiftUI does freely via `.id()`, conditional branches, navigation, etc.).
+1. **Tiles Own All State** — Tiles (`ChatTile`, `ServitorListTile`, etc.) are `@Observable` objects that own all their state and logic. Views are pure renderers — layout, styling, gestures, bindings, nothing else. Views must NEVER trigger state initialization, data loading, or lifecycle management on tiles. Tiles initialize their own state (e.g., loading history) at creation time in the socket/pool, not in response to SwiftUI view lifecycle events (`.task`, `.onAppear`). If a tile needs data, the code that creates the tile is responsible for kicking off the load — not the view that displays it. This ensures tile state survives view destruction/recreation (which SwiftUI does freely via `.id()`, conditional branches, navigation, etc.). **One tile per SPM module** — each tile target contains exactly one tile class. Two distinct tile types in one module means the module should be split.
 
 2. **Async/Await for I/O** — Agents call `messenger.query()` directly using Swift concurrency (async/await). Serial `DispatchQueue`s protect mutable state within each agent. A global semaphore limits concurrent Anthropic calls (~10) to prevent thread pool starvation. The original design specified a sidecar actor pattern (separate actors for I/O), but async/await made this unnecessary — agents remain responsive because `await` suspends without blocking.
 
@@ -566,6 +574,7 @@ Claude must adhere to development standards:
 - New entity types require equivalent test coverage to existing types
 - No silent failures — every error logged with context
 - New servitor types accept `ServitorMessenger` for testability
+- One tile per SPM module — if a module needs two tile types, split them into separate targets (ADR-008)
 - Every SwiftUI view file must include at least one `#Preview` block (ADR-006)
 - New code implementing a specified requirement includes `// MARK: - Provenance: REQ-PREFIX-NNN` (ADR-007)
 - New tests for specified requirements include `.tags()` with requirement-derived tags (ADR-007)
