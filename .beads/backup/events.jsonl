@@ -1542,3 +1542,8 @@
 {"actor":"Yaakov M Nemoy","comment":"Added label: platforms","created_at":"2026-03-01T17:05:09Z","event_type":"label_added","id":1542,"issue_id":"jake-4d78","new_value":null,"old_value":null}
 {"actor":"Yaakov M Nemoy","comment":null,"created_at":"2026-03-01T17:05:44Z","event_type":"closed","id":1543,"issue_id":"jake-azu","new_value":"All 46 children reparented to focused epics or closed. Backlog triage complete.","old_value":""}
 {"actor":"Yaakov M Nemoy","comment":null,"created_at":"2026-03-04T17:38:54Z","event_type":"closed","id":1544,"issue_id":"jake-pf80","new_value":"Fixed upstream in ClodKit v0.2.63-r0 — deinit chains on ProcessTransport, ClaudeSession, ClaudeQuery prevent orphaned subprocesses","old_value":""}
+{"actor":"Yaakov M Nemoy","comment":null,"created_at":"2026-03-04T17:39:01Z","event_type":"closed","id":1545,"issue_id":"jake-pf80","new_value":"Fixed upstream in ClodKit v0.2.63-r0 — deinit chains on ProcessTransport, ClaudeSession, ClaudeQuery prevent orphaned subprocesses","old_value":""}
+{"actor":"Yaakov M Nemoy","comment":null,"created_at":"2026-03-05T00:16:43Z","event_type":"created","id":1546,"issue_id":"jake-o9a1","new_value":"","old_value":""}
+{"actor":"Yaakov M Nemoy","comment":"Added label: session","created_at":"2026-03-05T00:16:43Z","event_type":"label_added","id":1547,"issue_id":"jake-o9a1","new_value":null,"old_value":null}
+{"actor":"Yaakov M Nemoy","comment":"Added label: design","created_at":"2026-03-05T00:16:43Z","event_type":"label_added","id":1548,"issue_id":"jake-o9a1","new_value":null,"old_value":null}
+{"actor":"Yaakov M Nemoy","comment":"Added label: servitor","created_at":"2026-03-05T00:16:43Z","event_type":"label_added","id":1549,"issue_id":"jake-o9a1","new_value":null,"old_value":null}
