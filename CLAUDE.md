@@ -158,6 +158,8 @@ See `docs/3-adr/ADR-001-shape-selection.md` for full rationale (49 proposals acr
 
 4. **AsyncStream over Combine** — Long-term direction is language-level concurrency (async/await, actors, AsyncSequence). Combine used only as transitional bridge at ViewModel boundary.
 
+5. **`@Observable` Only** — All observable types use the `@Observable` macro. `ObservableObject`, `@Published`, `@StateObject`, `@ObservedObject`, and `@EnvironmentObject` are banned. Use `@State`, `@Bindable`, and `@Environment(Type.self)` on the view side.
+
 
 ### Concurrency Rules
 

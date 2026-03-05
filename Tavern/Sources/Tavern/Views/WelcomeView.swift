@@ -6,7 +6,7 @@ import AppKit
 
 /// Shown when no project is open
 struct WelcomeView: View {
-    @EnvironmentObject var projectManager: ProjectManager
+    @Environment(ProjectManager.self) var projectManager
 
     var body: some View {
         VStack(spacing: 24) {
@@ -103,5 +103,5 @@ struct WelcomeView: View {
 
 #Preview("Welcome") {
     WelcomeView()
-        .environmentObject(ProjectManager.shared)
+        .environment(ProjectManager.shared)
 }

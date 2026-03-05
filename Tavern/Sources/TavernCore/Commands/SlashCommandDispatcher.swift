@@ -1,15 +1,16 @@
 import Foundation
+import Observation
 import os.log
 
 /// Registry and dispatcher for slash commands
 ///
 /// Manages the set of available commands and routes parsed input to the correct handler.
 /// Thread-safe via @MainActor (commands are UI operations).
-@MainActor
-public final class SlashCommandDispatcher: ObservableObject {
+@Observable @MainActor
+public final class SlashCommandDispatcher {
 
     /// All registered commands, sorted by name for autocomplete
-    @Published public private(set) var commands: [any SlashCommand] = []
+    public private(set) var commands: [any SlashCommand] = []
 
     public init() {}
 

@@ -9,8 +9,8 @@ import os.log
 
 /// Shared service that bridges AppKit → SwiftUI window opening
 /// Views register their openWindow environment action here
-@MainActor
-final class WindowOpeningService: ObservableObject {
+@Observable @MainActor
+final class WindowOpeningService {
     static let shared = WindowOpeningService()
     private static let logger = Logger(subsystem: "com.tavern.spillway", category: "window")
 
@@ -20,7 +20,7 @@ final class WindowOpeningService: ObservableObject {
     var dismissWelcomeWindow: (() -> Void)?
 
     /// Track which project URLs have open windows
-    @Published private(set) var openProjectURLs: Set<URL> = []
+    private(set) var openProjectURLs: Set<URL> = []
 
     /// Open a project window
     /// - Parameters:

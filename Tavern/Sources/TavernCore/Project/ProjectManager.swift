@@ -1,11 +1,12 @@
 import Foundation
+import Observation
 import os.log
 
 // MARK: - Provenance: REQ-ARCH-005, REQ-UX-007
 
 /// Manages open projects across the application
-@MainActor
-public final class ProjectManager: ObservableObject {
+@Observable @MainActor
+public final class ProjectManager {
 
     // MARK: - Singleton
 
@@ -15,10 +16,10 @@ public final class ProjectManager: ObservableObject {
     // MARK: - Properties
 
     /// All currently open projects
-    @Published public private(set) var openProjects: [TavernProject] = []
+    public private(set) var openProjects: [TavernProject] = []
 
     /// Recently opened project paths (for "Open Recent" menu)
-    @Published public private(set) var recentProjectPaths: [URL] = []
+    public private(set) var recentProjectPaths: [URL] = []
 
     /// Maximum number of recent projects to remember
     private let maxRecentProjects = 10

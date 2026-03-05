@@ -15,7 +15,7 @@ let package = Package(
     ],
     dependencies: [
         // ClodKit SDK
-        .package(path: "../../ClodKit"),
+        .package(url: "https://github.com/loupgaroublond/ClodKit", exact: "0.2.63-r0"),
         // ViewInspector for SwiftUI view-ViewModel wiring tests
         .package(url: "https://github.com/nalexn/ViewInspector", from: "0.10.0")
     ],

@@ -11,7 +11,7 @@ import os.log
 /// View for a project window
 struct ProjectWindowView: View {
     let config: ProjectWindowConfig?
-    @EnvironmentObject var projectManager: ProjectManager
+    @Environment(ProjectManager.self) var projectManager
     @State private var project: TavernProject?
 
     private static let logger = Logger(subsystem: "com.tavern.spillway", category: "window")
@@ -73,7 +73,7 @@ struct ProjectWindowView: View {
 
 /// Shows an open project via its WindowBoard (tileboard architecture)
 struct ProjectView: View {
-    @ObservedObject var project: TavernProject
+    var project: TavernProject
     @State private var windowBoard: WindowBoard?
 
     private static let logger = Logger(subsystem: "com.tavern.spillway", category: "window")

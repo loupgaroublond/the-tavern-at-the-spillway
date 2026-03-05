@@ -22,7 +22,7 @@ private var uiTestProjectPath: String? {
 @main
 struct TavernApp: App {
     @NSApplicationDelegateAdaptor(TavernAppDelegate.self) var appDelegate
-    @StateObject private var projectManager = ProjectManager.shared
+    @State private var projectManager = ProjectManager.shared
 
     var body: some Scene {
         // Welcome window (no project) — skipped in UI testing mode
@@ -37,10 +37,10 @@ struct TavernApp: App {
                         WindowOpeningService.shared.openProjectWindow(url: url)
                     }
                     .registerWelcomeWindow()
-                    .environmentObject(projectManager)
+                    .environment(projectManager)
             } else {
                 WelcomeView()
-                    .environmentObject(projectManager)
+                    .environment(projectManager)
                     .registerWelcomeWindow()
             }
         }
@@ -77,7 +77,7 @@ struct TavernApp: App {
         // Project windows
         WindowGroup(for: ProjectWindowConfig.self) { $config in
             ProjectWindowView(config: config)
-                .environmentObject(projectManager)
+                .environment(projectManager)
                 .registerWindowOpener()
         }
         .windowStyle(.hiddenTitleBar)

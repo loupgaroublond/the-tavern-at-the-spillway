@@ -225,6 +225,12 @@ Eight checks, each producing PASS or WARN:
 **Source:** ADR-001 (layer structure), ADR-008 (tileboard architecture).
 **Method:** Grep `import` statements in each layer's source files. Report any that violate the dependency direction.
 
+#### 8i. No ObservableObject
+
+**Rule:** No `ObservableObject` conformance, `@Published` properties, `@StateObject`, `@ObservedObject`, or `@EnvironmentObject` in production source code. Use `@Observable` macro with `@State`, `@Bindable`, and `@Environment` instead.
+**Source:** Project convention — Observation framework over Combine for all observation.
+**Method:** Grep `Tavern/Sources/` for `ObservableObject`, `@Published`, `@StateObject`, `@ObservedObject`, `@EnvironmentObject`. Report any matches with file:line.
+
 
 ### Section 9: Architecture
 
@@ -393,7 +399,7 @@ Phase 3 — After all streams complete:
 | Pipeline Traceability | PASS/WARN | N% PRD covered, N discrepancies |
 | Provenance Coverage | INFO | N% code, N% test |
 | Beads | INFO | N total, N open, N critical |
-| Structural Rules | PASS/WARN | N/8 pass, N violations |
+| Structural Rules | PASS/WARN | N/9 pass, N violations |
 | Architecture | PASS/WARN | N violations |
 | SDK Feature Parity | PASS/FAIL | N implemented (N verified), N violations (N tracked) |
 | Informational | — | N TODOs, N large files, deps current/stale |

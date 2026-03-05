@@ -1,4 +1,5 @@
 import Foundation
+import Observation
 import TavernKit
 import os.log
 
@@ -6,8 +7,8 @@ import os.log
 
 /// Represents an open project in the Tavern
 /// A project is simply a directory that serves as the working context for agents
-@MainActor
-public final class TavernProject: ObservableObject, Identifiable {
+@Observable @MainActor
+public final class TavernProject: Identifiable {
 
     // MARK: - Properties
 
@@ -23,10 +24,10 @@ public final class TavernProject: ObservableObject, Identifiable {
     }
 
     /// Whether the project is fully initialized
-    @Published public private(set) var isReady: Bool = false
+    public private(set) var isReady: Bool = false
 
     /// Any error that occurred during initialization
-    @Published public private(set) var initializationError: Error?
+    public private(set) var initializationError: Error?
 
     // MARK: - Providers (for tileboard architecture)
 

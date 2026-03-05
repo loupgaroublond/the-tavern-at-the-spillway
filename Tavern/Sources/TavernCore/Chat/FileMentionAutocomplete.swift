@@ -1,5 +1,5 @@
 import Foundation
-import Combine
+import Observation
 import os.log
 
 /// View model for @ file mention autocomplete behavior
@@ -7,17 +7,17 @@ import os.log
 /// Observes the chat input text and produces a filtered list of matching file paths
 /// when the user types "@" followed by a partial path. Uses FileTreeScanner to
 /// list files from the project directory.
-@MainActor
-public final class FileMentionAutocomplete: ObservableObject {
+@Observable @MainActor
+public final class FileMentionAutocomplete {
 
     /// Filtered file suggestions matching the current input
-    @Published public private(set) var suggestions: [FileMentionSuggestion] = []
+    public private(set) var suggestions: [FileMentionSuggestion] = []
 
     /// Whether the autocomplete popup should be visible
-    @Published public private(set) var isVisible: Bool = false
+    public private(set) var isVisible: Bool = false
 
     /// Index of the currently highlighted suggestion (for keyboard navigation)
-    @Published public var selectedIndex: Int = 0
+    public var selectedIndex: Int = 0
 
     /// The project root URL for scanning files
     private let projectRoot: URL

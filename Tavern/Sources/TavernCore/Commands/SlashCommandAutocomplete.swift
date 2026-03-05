@@ -1,5 +1,5 @@
 import Foundation
-import Combine
+import Observation
 import os.log
 
 /// View model for slash command autocomplete behavior
@@ -7,20 +7,19 @@ import os.log
 /// Observes the chat input text and produces a filtered list of matching commands
 /// when the user types a "/" prefix. The autocomplete popup appears when there
 /// are matches and disappears when the input is not a command prefix.
-@MainActor
-public final class SlashCommandAutocomplete: ObservableObject {
+@Observable @MainActor
+public final class SlashCommandAutocomplete {
 
     /// Filtered commands matching the current input
-    @Published public private(set) var suggestions: [any SlashCommand] = []
+    public private(set) var suggestions: [any SlashCommand] = []
 
     /// Whether the autocomplete popup should be visible
-    @Published public private(set) var isVisible: Bool = false
+    public private(set) var isVisible: Bool = false
 
     /// Index of the currently highlighted suggestion (for keyboard navigation)
-    @Published public var selectedIndex: Int = 0
+    public var selectedIndex: Int = 0
 
     private let dispatcher: SlashCommandDispatcher
-    private var cancellables = Set<AnyCancellable>()
 
     /// Create an autocomplete model bound to a dispatcher
     /// - Parameter dispatcher: The command dispatcher to query for matches

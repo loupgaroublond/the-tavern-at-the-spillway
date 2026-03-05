@@ -22,7 +22,8 @@ settings:
 
 packages:
   ClodKit:
-    path: ../../ClodKit
+    url: https://github.com/loupgaroublond/ClodKit
+    exactVersion: 0.2.63-r0
 
 targets:
   TavernKit:
