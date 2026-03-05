@@ -13,8 +13,8 @@ struct ChatViewModelTests {
 
     @Test("ViewModel initializes with empty state", .tags(.reqARCH003))
     @MainActor
-    func viewModelInitializesEmpty() {
-        let jake = Jake(projectURL: Self.testProjectURL(), loadSavedSession: false)
+    func viewModelInitializesEmpty() throws {
+        let jake = Jake(projectURL: Self.testProjectURL(), store: try TestFixtures.createTestStore())
         let viewModel = ChatViewModel(jake: jake, loadHistory: false)
 
         #expect(viewModel.messages.isEmpty)
@@ -26,8 +26,8 @@ struct ChatViewModelTests {
 
     @Test("Empty input does not send message")
     @MainActor
-    func emptyInputDoesNotSend() async {
-        let jake = Jake(projectURL: Self.testProjectURL(), loadSavedSession: false)
+    func emptyInputDoesNotSend() async throws {
+        let jake = Jake(projectURL: Self.testProjectURL(), store: try TestFixtures.createTestStore())
         let viewModel = ChatViewModel(jake: jake, loadHistory: false)
 
         viewModel.inputText = "   " // Whitespace only
@@ -38,8 +38,8 @@ struct ChatViewModelTests {
 
     @Test("Clear conversation removes all messages")
     @MainActor
-    func clearConversationRemovesMessages() {
-        let jake = Jake(projectURL: Self.testProjectURL(), loadSavedSession: false)
+    func clearConversationRemovesMessages() throws {
+        let jake = Jake(projectURL: Self.testProjectURL(), store: try TestFixtures.createTestStore())
         let viewModel = ChatViewModel(jake: jake, loadHistory: false)
 
         // Manually add a message to test clearing
@@ -55,12 +55,12 @@ struct ChatViewModelTests {
 
     @Test("ChatViewModel for mortal servitor accepts projectPath parameter")
     @MainActor
-    func mortalServitorViewModelAcceptsProjectPath() {
+    func mortalServitorViewModelAcceptsProjectPath() throws {
         let mortal = Mortal(
             name: "Worker",
             assignment: "Test task",
             projectURL: Self.testProjectURL(),
-            loadSavedSession: false
+            store: try TestFixtures.createTestStore()
         )
 
         // This should compile and work - the bug was that this parameter didn't exist
@@ -72,11 +72,11 @@ struct ChatViewModelTests {
 
     @Test("ChatViewModel for mortal servitor without assignment works")
     @MainActor
-    func mortalServitorViewModelWithoutAssignment() {
+    func mortalServitorViewModelWithoutAssignment() throws {
         let mortal = Mortal(
             name: "User-Spawned",
             projectURL: Self.testProjectURL(),
-            loadSavedSession: false
+            store: try TestFixtures.createTestStore()
         )
 
         let viewModel = ChatViewModel(servitor: mortal, projectPath: "/test/path", loadHistory: false)
@@ -87,11 +87,11 @@ struct ChatViewModelTests {
 
     @Test("Both initializers have loadHistory parameter - symmetry check")
     @MainActor
-    func initializerSymmetry() {
+    func initializerSymmetry() throws {
         let projectURL = Self.testProjectURL()
 
-        let jake = Jake(projectURL: projectURL, loadSavedSession: false)
-        let mortal = Mortal(name: "Worker", projectURL: projectURL, loadSavedSession: false)
+        let jake = Jake(projectURL: projectURL, store: try TestFixtures.createTestStore())
+        let mortal = Mortal(name: "Worker", projectURL: projectURL, store: try TestFixtures.createTestStore())
 
         // Jake initializer with loadHistory
         let jakeVM = ChatViewModel(jake: jake, loadHistory: false)
@@ -105,9 +105,9 @@ struct ChatViewModelTests {
 
     @Test("Servitor ID and name are accessible")
     @MainActor
-    func servitorIdAndNameAccessible() {
+    func servitorIdAndNameAccessible() throws {
         let projectURL = Self.testProjectURL()
-        let jake = Jake(projectURL: projectURL, loadSavedSession: false)
+        let jake = Jake(projectURL: projectURL, store: try TestFixtures.createTestStore())
         let viewModel = ChatViewModel(jake: jake, loadHistory: false)
 
         #expect(viewModel.servitorId == jake.id)
@@ -270,8 +270,8 @@ struct ChatViewModelTests {
 
     @Test("ChatViewModel mode initialized from Jake agent")
     @MainActor
-    func chatViewModelModeInitializedFromJake() {
-        let jake = Jake(projectURL: Self.testProjectURL(), loadSavedSession: false)
+    func chatViewModelModeInitializedFromJake() throws {
+        let jake = Jake(projectURL: Self.testProjectURL(), store: try TestFixtures.createTestStore())
         jake.sessionMode = .normal
         let viewModel = ChatViewModel(jake: jake, loadHistory: false)
         #expect(viewModel.sessionMode == .normal)

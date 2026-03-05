@@ -103,7 +103,7 @@ final class ConcurrencyStressTests: XCTestCase {
                 name: "ReadTest-\(i)",
                 assignment: "Test \(i)",
                 projectURL: projectURL,
-                loadSavedSession: false
+                store: try TestFixtures.createTestStore()
             )
             try registry.register(mortal)
             mortals.append(mortal)
@@ -227,7 +227,7 @@ final class ConcurrencyStressTests: XCTestCase {
                 name: "Remove-\(i)",
                 assignment: nil,
                 projectURL: projectURL,
-                loadSavedSession: false
+                store: try TestFixtures.createTestStore()
             )
             try registry.register(mortal)
             mortalsToRemove.append(mortal)
@@ -241,7 +241,7 @@ final class ConcurrencyStressTests: XCTestCase {
                 name: "Add-\(i)",
                 assignment: nil,
                 projectURL: projectURL,
-                loadSavedSession: false
+                store: try TestFixtures.createTestStore()
             ))
         }
 

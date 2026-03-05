@@ -103,7 +103,6 @@ public final class TavernCoordinator: ObservableObject {
                 guard let coordinator = self else { return }
                 await MainActor.run {
                     coordinator.chatViewModels.removeValue(forKey: servitorId)
-                    SessionStore.removeServitor(id: servitorId)
                     coordinator.servitorListViewModel.servitorsDidChange()
                     coordinator.updateActiveChatViewModel()
                 }
@@ -117,31 +116,36 @@ public final class TavernCoordinator: ObservableObject {
 
     // MARK: - Servitor Restoration
 
-    /// Restore servitors from UserDefaults on app launch
+    /// Restore servitors from ServitorStore on app launch
     private func restoreServitors() {
-        let persistedServitors = SessionStore.loadServitorList()
-        TavernLogger.coordination.info("Restoring \(persistedServitors.count) persisted servitors")
+        let store = ServitorStore(rootURL: projectURL)
+        do {
+            let records = try store.listAll()
+            TavernLogger.coordination.info("Restoring \(records.count) persisted servitors")
 
-        for persisted in persistedServitors {
-            let mortal = Mortal(
-                id: persisted.id,
-                name: persisted.name,
-                assignment: nil,  // Restored mortals don't have original assignment
-                chatDescription: persisted.chatDescription,
-                projectURL: projectURL,
-                messenger: LiveMessenger(
-                    permissionManager: permissionManager,
-                    agentName: persisted.name
-                ),
-                loadSavedSession: true  // Will load session from SessionStore
-            )
+            for record in records where record.name.lowercased() != "jake" {
+                let mortal = Mortal(
+                    id: record.id,
+                    name: record.name,
+                    assignment: record.assignment,
+                    chatDescription: record.description,
+                    projectURL: projectURL,
+                    store: store,
+                    messenger: LiveMessenger(
+                        permissionManager: permissionManager,
+                        agentName: record.name
+                    )
+                )
 
-            do {
-                try spawner.register(mortal)
-                TavernLogger.coordination.info("Restored mortal: \(persisted.name) (id: \(persisted.id))")
-            } catch {
-                TavernLogger.coordination.error("Failed to restore mortal \(persisted.name): \(error.localizedDescription)")
+                do {
+                    try spawner.register(mortal)
+                    TavernLogger.coordination.info("Restored mortal: \(record.name) (id: \(record.id))")
+                } catch {
+                    TavernLogger.coordination.error("Failed to restore mortal \(record.name): \(error.localizedDescription)")
+                }
             }
+        } catch {
+            TavernLogger.coordination.error("Failed to list persisted servitors: \(error.localizedDescription)")
         }
 
         // Refresh UI
@@ -253,8 +257,10 @@ public final class TavernCoordinator: ObservableObject {
         // Remove the chat view model
         chatViewModels.removeValue(forKey: servitorId)
 
-        // Remove from persistence (doesn't delete Claude session)
-        SessionStore.removeServitor(id: servitorId)
+        // Remove from file-system store
+        if let servitorName = spawner.activeMortals.first(where: { $0.id == servitorId })?.name {
+            try? ServitorStore(rootURL: projectURL).remove(name: servitorName)
+        }
 
         // Dismiss from spawner
         try spawner.dismiss(id: servitorId)
@@ -275,15 +281,20 @@ public final class TavernCoordinator: ObservableObject {
 
     // MARK: - Servitor Persistence
 
-    /// Persist a servitor to UserDefaults
+    /// Persist a servitor to the file-system store
     private func persistServitor(_ mortal: Mortal) {
-        let persisted = SessionStore.PersistedServitor(
-            id: mortal.id,
+        let record = ServitorRecord(
             name: mortal.name,
+            id: mortal.id,
+            assignment: mortal.assignment,
             sessionId: mortal.sessionId,
-            chatDescription: mortal.chatDescription
+            description: mortal.chatDescription
         )
-        SessionStore.addServitor(persisted)
+        do {
+            try ServitorStore(rootURL: projectURL).save(record)
+        } catch {
+            TavernLogger.coordination.error("Failed to persist mortal \(mortal.name): \(error.localizedDescription)")
+        }
         TavernLogger.coordination.debug("Persisted mortal: \(mortal.name) (id: \(mortal.id))")
     }
 

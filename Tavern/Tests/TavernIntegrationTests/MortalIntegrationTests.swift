@@ -33,7 +33,7 @@ final class MortalIntegrationTests: XCTestCase {
             name: "TestWorker",
             assignment: "Respond to test messages",
             projectURL: projectURL,
-            loadSavedSession: false
+            store: try TestFixtures.createTestStore()
         )
 
         let response = try await mortal.send("Say MORTAL_OK in one word")
@@ -46,7 +46,7 @@ final class MortalIntegrationTests: XCTestCase {
             name: "StateWorker",
             assignment: "Track state transitions",
             projectURL: projectURL,
-            loadSavedSession: false
+            store: try TestFixtures.createTestStore()
         )
         XCTAssertEqual(mortal.state, .idle, "Mortal should start idle")
 
@@ -75,7 +75,7 @@ final class MortalIntegrationTests: XCTestCase {
             name: "DoneWorker",
             assignment: "Say DONE when complete",
             projectURL: projectURL,
-            loadSavedSession: false
+            store: try TestFixtures.createTestStore()
         )
 
         let _ = try await mortal.send(
@@ -91,7 +91,7 @@ final class MortalIntegrationTests: XCTestCase {
             name: "WaitWorker",
             assignment: "Wait for input",
             projectURL: projectURL,
-            loadSavedSession: false
+            store: try TestFixtures.createTestStore()
         )
 
         let _ = try await mortal.send(
@@ -112,7 +112,7 @@ final class MortalIntegrationTests: XCTestCase {
             name: "ConversationWorker",
             assignment: "Remember context across messages",
             projectURL: projectURL,
-            loadSavedSession: false
+            store: try TestFixtures.createTestStore()
         )
 
         XCTAssertNil(mortal.sessionId, "Session should be nil before first message")
@@ -127,18 +127,18 @@ final class MortalIntegrationTests: XCTestCase {
 
     /// Mortal propagates errors
     func testMortalPropagatesErrors() async throws {
-        // Create a mortal with a bad session ID to trigger error
-        SessionStore.saveServitorSession(servitorId: UUID(), sessionId: "bogus-session")
-
+        // Create a mortal with a bad session ID via ServitorStore
         let badId = UUID()
-        SessionStore.saveServitorSession(servitorId: badId, sessionId: "invalid-session-id-bogus")
+        let store = try TestFixtures.createTestStore()
+        let record = ServitorRecord(name: "ErrorWorker", id: badId, sessionId: "invalid-session-id-bogus")
+        try store.save(record)
 
         let mortal = Mortal(
             id: badId,
             name: "ErrorWorker",
             assignment: "Fail gracefully",
             projectURL: projectURL,
-            loadSavedSession: true
+            store: store
         )
 
         do {
@@ -147,9 +147,6 @@ final class MortalIntegrationTests: XCTestCase {
         } catch {
             XCTAssertNotNil(error, "Error should propagate from mortal")
         }
-
-        // Cleanup
-        SessionStore.clearServitorSession(servitorId: badId)
     }
 
     // MARK: - Completion and Verification
@@ -160,8 +157,8 @@ final class MortalIntegrationTests: XCTestCase {
             name: "NoPledgeWorker",
             assignment: "Complete immediately",
             projectURL: projectURL,
-            commitments: CommitmentList(),
-            loadSavedSession: false
+            store: try TestFixtures.createTestStore(),
+            commitments: CommitmentList()
         )
 
         XCTAssertEqual(mortal.commitments.count, 0, "Should have no commitments")
@@ -180,8 +177,8 @@ final class MortalIntegrationTests: XCTestCase {
             name: "VerifyWorker",
             assignment: "Verify commitments",
             projectURL: projectURL,
-            commitments: commitments,
-            loadSavedSession: false
+            store: try TestFixtures.createTestStore(),
+            commitments: commitments
         )
 
         // Add a commitment that will pass (true always exits 0)
@@ -206,8 +203,8 @@ final class MortalIntegrationTests: XCTestCase {
             name: "PassWorker",
             assignment: "Pass verification",
             projectURL: projectURL,
-            commitments: commitments,
-            loadSavedSession: false
+            store: try TestFixtures.createTestStore(),
+            commitments: commitments
         )
 
         commitments.add(description: "Always passes", assertion: "true")
@@ -230,8 +227,8 @@ final class MortalIntegrationTests: XCTestCase {
             name: "FailWorker",
             assignment: "Fail verification",
             projectURL: projectURL,
-            commitments: commitments,
-            loadSavedSession: false
+            store: try TestFixtures.createTestStore(),
+            commitments: commitments
         )
 
         // Add a commitment that will fail (false always exits 1)
@@ -256,8 +253,8 @@ final class MortalIntegrationTests: XCTestCase {
             name: "PartialWorker",
             assignment: "Partial verification",
             projectURL: projectURL,
-            commitments: commitments,
-            loadSavedSession: false
+            store: try TestFixtures.createTestStore(),
+            commitments: commitments
         )
 
         // One passes, one fails

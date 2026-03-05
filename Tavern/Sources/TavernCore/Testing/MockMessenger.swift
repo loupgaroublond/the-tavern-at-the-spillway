@@ -34,6 +34,14 @@ public final class MockMessenger: ServitorMessenger, @unchecked Sendable {
     /// Delay before returning response.
     public var responseDelay: Duration?
 
+    /// If set, the first call where options.resume is non-nil will throw this error.
+    /// Simulates a stale session that fails on resume attempt.
+    public var staleSessionError: (any Error)?
+
+    /// Whether the stale session error has already been triggered.
+    /// Reset to false to simulate another stale session.
+    public var hasSimulatedStaleSession = false
+
     /// Every prompt passed to `query()`, in order.
     public private(set) var queryCalls: [String] = []
 
@@ -71,6 +79,18 @@ public final class MockMessenger: ServitorMessenger, @unchecked Sendable {
             try await Task.sleep(for: delay)
         }
 
+        // Simulate stale session failure on resume attempt
+        let shouldSimulateStale: Bool = queue.sync {
+            if staleSessionError != nil && !hasSimulatedStaleSession && options.resume != nil {
+                hasSimulatedStaleSession = true
+                return true
+            }
+            return false
+        }
+        if shouldSimulateStale, let staleError = staleSessionError {
+            throw staleError
+        }
+
         if let error = errorToThrow {
             throw error
         }
@@ -101,11 +121,25 @@ public final class MockMessenger: ServitorMessenger, @unchecked Sendable {
         let error = errorToThrow
         let sid = sessionId
         let chunkSize = streamingChunkSize
+        let staleError = staleSessionError
 
         let stream = AsyncThrowingStream<StreamEvent, Error> { continuation in
             let task = Task {
                 if let delay {
                     try await Task.sleep(for: delay)
+                }
+
+                // Simulate stale session failure on resume attempt
+                let shouldSimulateStale: Bool = self.queue.sync {
+                    if staleError != nil && !self.hasSimulatedStaleSession && options.resume != nil {
+                        self.hasSimulatedStaleSession = true
+                        return true
+                    }
+                    return false
+                }
+                if shouldSimulateStale, let staleError {
+                    continuation.finish(throwing: staleError)
+                    return
                 }
 
                 if let error {

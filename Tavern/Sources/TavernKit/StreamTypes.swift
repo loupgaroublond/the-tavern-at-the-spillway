@@ -156,6 +156,10 @@ public enum StreamEvent: Sendable, Equatable {
     /// Rate limit warning
     case rateLimitWarning(RateLimitInfo)
 
+    /// A session break occurred — the previous session could not be resumed
+    /// and a new session was started. The stale session ID is provided.
+    case sessionBreak(staleSessionId: String)
+
     // Terminal events
 
     /// The stream completed successfully

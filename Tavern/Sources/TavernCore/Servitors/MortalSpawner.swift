@@ -17,6 +17,7 @@ public final class MortalSpawner: @unchecked Sendable {
     private let registry: ServitorRegistry
     private let nameGenerator: NameGenerator
     private let projectURL: URL
+    private let store: ServitorStore
     private let messengerFactory: MessengerFactory
 
     // MARK: - Initialization
@@ -26,16 +27,19 @@ public final class MortalSpawner: @unchecked Sendable {
     ///   - registry: The servitor registry to add spawned mortals to
     ///   - nameGenerator: The name generator for themed names
     ///   - projectURL: The project directory URL for spawned mortals
+    ///   - store: File-system persistence store for servitor state
     ///   - messengerFactory: Factory for creating messengers for spawned mortals (default: LiveMessenger)
     public init(
         registry: ServitorRegistry,
         nameGenerator: NameGenerator,
         projectURL: URL,
+        store: ServitorStore = ServitorStore(rootURL: URL(fileURLWithPath: NSTemporaryDirectory())),
         messengerFactory: @escaping MessengerFactory = { _ in LiveMessenger() }
     ) {
         self.registry = registry
         self.nameGenerator = nameGenerator
         self.projectURL = projectURL
+        self.store = store
         self.messengerFactory = messengerFactory
     }
 
@@ -56,6 +60,7 @@ public final class MortalSpawner: @unchecked Sendable {
             name: name,
             assignment: nil,
             projectURL: projectURL,
+            store: store,
             messenger: messengerFactory(name)
         )
 
@@ -80,6 +85,7 @@ public final class MortalSpawner: @unchecked Sendable {
             name: name,
             assignment: assignment,
             projectURL: projectURL,
+            store: store,
             messenger: messengerFactory(name)
         )
 
@@ -109,6 +115,7 @@ public final class MortalSpawner: @unchecked Sendable {
             name: name,
             assignment: assignment,
             projectURL: projectURL,
+            store: store,
             messenger: messengerFactory(name)
         )
 

@@ -48,8 +48,7 @@ public final class ServitorListViewModel: ObservableObject {
 
         // Add all active servitors
         for anyAgent in spawner.activeMortals {
-            // Get chatDescription from persisted storage
-            let chatDescription = SessionStore.getServitor(id: anyAgent.id)?.chatDescription
+            let chatDescription = (anyAgent as? Mortal)?.chatDescription
             newItems.append(ServitorListItem(
                 id: anyAgent.id,
                 name: anyAgent.name,

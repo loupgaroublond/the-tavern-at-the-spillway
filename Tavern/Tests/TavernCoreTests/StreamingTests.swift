@@ -288,8 +288,8 @@ struct StreamingTests {
 
         let jake = Jake(
             projectURL: Self.testProjectURL(),
-            messenger: mock,
-            loadSavedSession: false
+            store: try TestFixtures.createTestStore(),
+            messenger: mock
         )
 
         let (stream, cancel) = jake.sendStreaming("Test")
@@ -319,8 +319,8 @@ struct StreamingTests {
             name: "CancelTest",
             assignment: "Test",
             projectURL: Self.testProjectURL(),
-            messenger: mock,
-            loadSavedSession: false
+            store: try TestFixtures.createTestStore(),
+            messenger: mock
         )
 
         let (stream, cancel) = mortal.sendStreaming("Test")
@@ -347,8 +347,8 @@ struct StreamingTests {
 
             let jake = Jake(
                 projectURL: Self.testProjectURL(),
-                messenger: mock,
-                loadSavedSession: false
+                store: try TestFixtures.createTestStore(),
+                messenger: mock
             )
 
             let (stream, cancel) = jake.sendStreaming("Test")
@@ -379,8 +379,8 @@ struct StreamingTests {
             let mortal = Mortal(
                 name: "RaceTest-\(UUID().uuidString.prefix(4))",
                 projectURL: Self.testProjectURL(),
-                messenger: mock,
-                loadSavedSession: false
+                store: try TestFixtures.createTestStore(),
+                messenger: mock
             )
 
             let (stream, cancel) = mortal.sendStreaming("Test")

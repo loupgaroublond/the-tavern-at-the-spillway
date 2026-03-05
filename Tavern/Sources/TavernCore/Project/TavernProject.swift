@@ -61,8 +61,10 @@ public final class TavernProject: ObservableObject, Identifiable {
         let permissionManager = PermissionManager(store: PermissionStore())
         TavernLogger.coordination.debug("[\(self.name)] PermissionManager created, mode=\(permissionManager.mode.rawValue)")
 
+        let servitorStore = ServitorStore(rootURL: rootURL)
+
         TavernLogger.coordination.debug("[\(self.name)] Creating Jake...")
-        let jake = Jake(projectURL: rootURL, permissionManager: permissionManager)
+        let jake = Jake(projectURL: rootURL, store: servitorStore, permissionManager: permissionManager)
         TavernLogger.coordination.debug("[\(self.name)] Jake created")
 
         let registry = ServitorRegistry()
@@ -72,6 +74,7 @@ public final class TavernProject: ObservableObject, Identifiable {
             registry: registry,
             nameGenerator: nameGenerator,
             projectURL: rootURL,
+            store: servitorStore,
             messengerFactory: { agentName in
                 LiveMessenger(
                     permissionManager: permissionManager,
@@ -86,28 +89,30 @@ public final class TavernProject: ObservableObject, Identifiable {
             jake: jake,
             spawner: spawner,
             permissionManager: permissionManager,
-            projectURL: rootURL
+            projectURL: rootURL,
+            store: servitorStore
         )
 
         // Setup MCP server for Jake
         let mcpServer = createTavernMCPServer(
             spawner: spawner,
-            onSummon: { servitor in
-                await MainActor.run {
-                    let persisted = SessionStore.PersistedServitor(
-                        id: servitor.id,
-                        name: servitor.name,
-                        sessionId: servitor.sessionId,
-                        chatDescription: servitor.chatDescription
-                    )
-                    SessionStore.addServitor(persisted)
+            onSummon: { [servitorStore] servitor in
+                let record = ServitorRecord(
+                    name: servitor.name,
+                    id: servitor.id,
+                    assignment: (servitor as? Mortal)?.assignment,
+                    sessionId: servitor.sessionId,
+                    description: servitor.chatDescription
+                )
+                do {
+                    try servitorStore.save(record)
+                } catch {
+                    TavernLogger.coordination.error("Failed to persist summoned servitor \(servitor.name): \(error.localizedDescription)")
                 }
                 TavernLogger.coordination.info("Jake summoned servitor: \(servitor.name)")
             },
-            onDismiss: { servitorId in
-                await MainActor.run {
-                    SessionStore.removeServitor(id: servitorId)
-                }
+            onDismiss: { [servitorStore] servitorId in
+                // Removal is handled by ClodSessionManager.closeServitor
                 TavernLogger.coordination.info("Jake dismissed servitor: \(servitorId)")
             }
         )
@@ -136,30 +141,34 @@ public final class TavernProject: ObservableObject, Identifiable {
         commandDispatcher.registerAll(customCommands)
         TavernLogger.coordination.info("[\(self.name)] Registered \(commandDispatcher.commands.count) slash commands (\(customCommands.count) custom)")
 
-        // Restore persisted servitors
-        let persistedServitors = SessionStore.loadServitorList()
-        for persisted in persistedServitors {
-            let mortal = Mortal(
-                id: persisted.id,
-                name: persisted.name,
-                assignment: nil,
-                chatDescription: persisted.chatDescription,
-                projectURL: rootURL,
-                messenger: LiveMessenger(
-                    permissionManager: permissionManager,
-                    agentName: persisted.name
-                ),
-                loadSavedSession: true
-            )
-            do {
-                try spawner.register(mortal)
-                TavernLogger.coordination.info("[\(self.name)] Restored mortal: \(persisted.name)")
-            } catch {
-                TavernLogger.coordination.error("[\(self.name)] Failed to restore mortal \(persisted.name): \(error.localizedDescription)")
+        // Restore persisted servitors from file-system store
+        do {
+            let records = try servitorStore.listAll()
+            for record in records where record.name.lowercased() != "jake" {
+                let mortal = Mortal(
+                    id: record.id,
+                    name: record.name,
+                    assignment: record.assignment,
+                    chatDescription: record.description,
+                    projectURL: rootURL,
+                    store: servitorStore,
+                    messenger: LiveMessenger(
+                        permissionManager: permissionManager,
+                        agentName: record.name
+                    )
+                )
+                do {
+                    try spawner.register(mortal)
+                    TavernLogger.coordination.info("[\(self.name)] Restored mortal: \(record.name)")
+                } catch {
+                    TavernLogger.coordination.error("[\(self.name)] Failed to restore mortal \(record.name): \(error.localizedDescription)")
+                }
             }
+        } catch {
+            TavernLogger.coordination.error("[\(self.name)] Failed to list persisted servitors: \(error.localizedDescription)")
         }
-        if !persistedServitors.isEmpty {
-            TavernLogger.coordination.info("[\(self.name)] Restored \(persistedServitors.count) persisted servitors")
+        if spawner.mortalCount > 0 {
+            TavernLogger.coordination.info("[\(self.name)] Restored \(spawner.mortalCount) persisted servitors")
         }
 
         // Wire up providers

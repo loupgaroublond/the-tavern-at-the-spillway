@@ -11,9 +11,9 @@ struct TavernCoordinatorTests {
     }
 
     @MainActor
-    func createCoordinator() -> TavernCoordinator {
+    func createCoordinator() throws -> TavernCoordinator {
         let projectURL = Self.testProjectURL()
-        let jake = Jake(projectURL: projectURL, loadSavedSession: false)
+        let jake = Jake(projectURL: projectURL, store: try TestFixtures.createTestStore())
         let registry = ServitorRegistry()
         let nameGenerator = NameGenerator(theme: .lotr)
         let spawner = MortalSpawner(
@@ -29,8 +29,8 @@ struct TavernCoordinatorTests {
 
     @Test("Coordinator starts with Jake selected")
     @MainActor
-    func coordinatorStartsWithJakeSelected() {
-        let coordinator = createCoordinator()
+    func coordinatorStartsWithJakeSelected() throws {
+        let coordinator = try createCoordinator()
 
         #expect(coordinator.servitorListViewModel.selectedServitorId == coordinator.jake.id)
         #expect(coordinator.activeChatViewModel.servitorId == coordinator.jake.id)
@@ -38,8 +38,8 @@ struct TavernCoordinatorTests {
 
     @Test("Jake is always in the list")
     @MainActor
-    func jakeAlwaysInList() {
-        let coordinator = createCoordinator()
+    func jakeAlwaysInList() throws {
+        let coordinator = try createCoordinator()
 
         let items = coordinator.servitorListViewModel.items
         #expect(items.contains { $0.isJake })
@@ -51,7 +51,7 @@ struct TavernCoordinatorTests {
     @Test("Switching servitors switches chat view")
     @MainActor
     func switchingServitorsSwitchesChatView() throws {
-        let coordinator = createCoordinator()
+        let coordinator = try createCoordinator()
 
         let mortal = try coordinator.summonServitor(assignment: "Test task", selectAfterSummon: false)
         coordinator.selectServitor(id: mortal.id)
@@ -63,7 +63,7 @@ struct TavernCoordinatorTests {
     @Test("Selecting Jake returns to Jake's chat")
     @MainActor
     func selectingJakeReturnsToJakesChat() throws {
-        let coordinator = createCoordinator()
+        let coordinator = try createCoordinator()
 
         let mortal = try coordinator.summonServitor(assignment: "Task", selectAfterSummon: true)
         #expect(coordinator.activeChatViewModel.servitorId == mortal.id)
@@ -77,7 +77,7 @@ struct TavernCoordinatorTests {
     @Test("Spawn mortal updates list")
     @MainActor
     func spawnMortalUpdatesList() throws {
-        let coordinator = createCoordinator()
+        let coordinator = try createCoordinator()
 
         let initialCount = coordinator.servitorListViewModel.items.count
         _ = try coordinator.summonServitor(assignment: "Task", selectAfterSummon: false)
@@ -88,7 +88,7 @@ struct TavernCoordinatorTests {
     @Test("Spawn mortal with selectAfterSpawn selects new mortal")
     @MainActor
     func spawnMortalWithSelectAfterSpawn() throws {
-        let coordinator = createCoordinator()
+        let coordinator = try createCoordinator()
 
         let mortal = try coordinator.summonServitor(assignment: "Task", selectAfterSummon: true)
 
@@ -101,7 +101,7 @@ struct TavernCoordinatorTests {
     @Test("Dismiss mortal removes from list")
     @MainActor
     func dismissMortalRemovesFromList() throws {
-        let coordinator = createCoordinator()
+        let coordinator = try createCoordinator()
 
         let mortal = try coordinator.summonServitor(assignment: "Task", selectAfterSummon: false)
         let countAfterSpawn = coordinator.servitorListViewModel.items.count
@@ -114,7 +114,7 @@ struct TavernCoordinatorTests {
     @Test("Dismiss selected mortal switches to Jake")
     @MainActor
     func dismissSelectedMortalSwitchesToJake() throws {
-        let coordinator = createCoordinator()
+        let coordinator = try createCoordinator()
 
         let mortal = try coordinator.summonServitor(assignment: "Task", selectAfterSummon: true)
         #expect(coordinator.activeChatViewModel.servitorId == mortal.id)
@@ -128,7 +128,7 @@ struct TavernCoordinatorTests {
     @Test("Dismiss non-selected mortal keeps current selection")
     @MainActor
     func dismissNonSelectedMortalKeepsSelection() throws {
-        let coordinator = createCoordinator()
+        let coordinator = try createCoordinator()
 
         let mortal1 = try coordinator.summonServitor(assignment: "Task 1", selectAfterSummon: true)
         let mortal2 = try coordinator.summonServitor(assignment: "Task 2", selectAfterSummon: false)
@@ -147,7 +147,7 @@ struct TavernCoordinatorTests {
     @Test("User-spawned mortal gets ChatViewModel when selected")
     @MainActor
     func userSpawnedMortalGetsChatViewModel() throws {
-        let coordinator = createCoordinator()
+        let coordinator = try createCoordinator()
 
         // User spawns a mortal (no assignment)
         let mortal = try coordinator.summonServitor(selectAfterSummon: true)
@@ -160,8 +160,8 @@ struct TavernCoordinatorTests {
 
     @Test("Jake MCP server is configured on coordinator init", .tags(.reqCOM008))
     @MainActor
-    func jakeMCPServerConfigured() {
-        let coordinator = createCoordinator()
+    func jakeMCPServerConfigured() throws {
+        let coordinator = try createCoordinator()
 
         // Jake should have an MCP server after coordinator init
         #expect(coordinator.jake.mcpServer != nil)
@@ -175,7 +175,7 @@ struct TavernCoordinatorTests {
     @Test("Chat history preserved when switching servitors")
     @MainActor
     func chatHistoryPreservedWhenSwitching() async throws {
-        let coordinator = createCoordinator()
+        let coordinator = try createCoordinator()
 
         // Manually add messages to Jake's chat (avoids real Claude call)
         // We do this by getting the active chat view model and using MockServitor
@@ -198,7 +198,7 @@ struct TavernCoordinatorTests {
     @Test("Mortal ChatViewModel is created on selection")
     @MainActor
     func mortalChatViewModelCanReceiveMessages() throws {
-        let coordinator = createCoordinator()
+        let coordinator = try createCoordinator()
 
         let mortal = try coordinator.summonServitor(selectAfterSummon: true)
         let vm = coordinator.activeChatViewModel
@@ -211,10 +211,10 @@ struct TavernCoordinatorTests {
     // MARK: - Grade 2 Mock Tests (using MockMessenger for servitor communication)
 
     @MainActor
-    func createCoordinatorWithMockJake(responses: [String] = ["OK"]) -> TavernCoordinator {
+    func createCoordinatorWithMockJake(responses: [String] = ["OK"]) throws -> TavernCoordinator {
         let projectURL = Self.testProjectURL()
         let mock = MockMessenger(responses: responses)
-        let jake = Jake(projectURL: projectURL, messenger: mock, loadSavedSession: false)
+        let jake = Jake(projectURL: projectURL, store: try TestFixtures.createTestStore(), messenger: mock)
         let registry = ServitorRegistry()
         let nameGenerator = NameGenerator(theme: .lotr)
         let spawner = MortalSpawner(
@@ -228,7 +228,7 @@ struct TavernCoordinatorTests {
     @Test("Switching preserves both chat histories")
     @MainActor
     func switchingPreservesBothHistories() async throws {
-        let coordinator = createCoordinatorWithMockJake(responses: ["Jake response"])
+        let coordinator = try createCoordinatorWithMockJake(responses: ["Jake response"])
 
         // Send message to Jake via mock
         coordinator.activeChatViewModel.inputText = "Hello Jake"
@@ -260,7 +260,7 @@ struct TavernCoordinatorTests {
     @Test("Jake summon action creates mortal via coordinator")
     @MainActor
     func jakeSummonActionCreatesMortal() throws {
-        let coordinator = createCoordinator()
+        let coordinator = try createCoordinator()
 
         let initialCount = coordinator.spawner.mortalCount
 
@@ -275,7 +275,7 @@ struct TavernCoordinatorTests {
     @Test("Jake summon action with name creates named mortal")
     @MainActor
     func jakeSummonActionWithName() throws {
-        let coordinator = createCoordinator()
+        let coordinator = try createCoordinator()
 
         // Summon with specific name via spawner (simulating MCP handler path)
         let mortal = try coordinator.spawner.summon(name: "SpecialMortal", assignment: "Named task")
@@ -286,11 +286,11 @@ struct TavernCoordinatorTests {
 
     @Test("Jake summon failure reports error via ChatViewModel")
     @MainActor
-    func jakeSummonFailureReportsError() async {
+    func jakeSummonFailureReportsError() async throws {
         let mock = MockMessenger()
         mock.errorToThrow = TavernError.internalError("Summon failed")
         let projectURL = Self.testProjectURL()
-        let jake = Jake(projectURL: projectURL, messenger: mock, loadSavedSession: false)
+        let jake = Jake(projectURL: projectURL, store: try TestFixtures.createTestStore(), messenger: mock)
         let registry = ServitorRegistry()
         let nameGenerator = NameGenerator(theme: .lotr)
         let spawner = MortalSpawner(

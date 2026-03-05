@@ -19,6 +19,9 @@ public protocol Servitor: AnyObject, Identifiable, Sendable {
     /// The servitor's current session mode (plan, normal, acceptEdits, etc.)
     var sessionMode: TavernKit.PermissionMode { get set }
 
+    /// The current Claude session ID (for conversation continuity)
+    var sessionId: String? { get }
+
     /// Send a message to this servitor and get a response (batch mode)
     /// - Parameter message: The message to send
     /// - Returns: The servitor's response

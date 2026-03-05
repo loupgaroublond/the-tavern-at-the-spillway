@@ -27,7 +27,7 @@ struct ServitorNodeTests {
     }
 
     @Test("ServitorNode creates from Mortal")
-    func servitorNodeCreatesFromMortal() {
+    func servitorNodeCreatesFromMortal() throws {
         let commitments = CommitmentList()
         commitments.add(description: "Tests pass", assertion: "swift test")
 
@@ -35,8 +35,8 @@ struct ServitorNodeTests {
             name: "Worker",
             assignment: "Build the thing",
             projectURL: Self.testProjectURL(),
-            commitments: commitments,
-            loadSavedSession: false
+            store: try TestFixtures.createTestStore(),
+            commitments: commitments
         )
 
         let node = ServitorNode(from: mortal)
@@ -237,7 +237,7 @@ struct ServitorPersistenceTests {
             name: "Saveable",
             assignment: "Test saving",
             projectURL: Self.testProjectURL(),
-            loadSavedSession: false
+            store: try TestFixtures.createTestStore()
         )
 
         try persistence.save(mortal)
@@ -256,7 +256,7 @@ struct ServitorPersistenceTests {
             name: "Stateful",
             assignment: "Track state",
             projectURL: Self.testProjectURL(),
-            loadSavedSession: false
+            store: try TestFixtures.createTestStore()
         )
         mortal.markWaiting()
 
@@ -285,15 +285,15 @@ struct ServitorPersistenceTests {
             name: "Restorable",
             assignment: "Test restoration",
             projectURL: projectURL,
-            commitments: commitments,
-            loadSavedSession: false
+            store: try TestFixtures.createTestStore(),
+            commitments: commitments
         )
         original.markDone()
 
         try persistence.save(original)
 
         // Restore from file
-        let restored = try persistence.restore(name: "Restorable", projectURL: projectURL)
+        let restored = try persistence.restore(name: "Restorable", projectURL: projectURL, store: try TestFixtures.createTestStore())
 
         #expect(restored.id == originalId)
         #expect(restored.name == "Restorable")
@@ -318,8 +318,8 @@ struct ServitorPersistenceTests {
             name: "Committed",
             assignment: "Task with commitments",
             projectURL: Self.testProjectURL(),
-            commitments: commitments,
-            loadSavedSession: false
+            store: try TestFixtures.createTestStore(),
+            commitments: commitments
         )
 
         try persistence.save(mortal)
@@ -341,7 +341,7 @@ struct ServitorPersistenceTests {
             name: "Deletable",
             assignment: "To be deleted",
             projectURL: Self.testProjectURL(),
-            loadSavedSession: false
+            store: try TestFixtures.createTestStore()
         )
 
         try persistence.save(mortal)
@@ -359,9 +359,9 @@ struct ServitorPersistenceTests {
         let persistence = ServitorPersistence(docStore: store)
         let projectURL = Self.testProjectURL()
 
-        let mortal1 = Mortal(name: "Alpha", assignment: "A", projectURL: projectURL, loadSavedSession: false)
-        let mortal2 = Mortal(name: "Beta", assignment: "B", projectURL: projectURL, loadSavedSession: false)
-        let mortal3 = Mortal(name: "Gamma", assignment: "C", projectURL: projectURL, loadSavedSession: false)
+        let mortal1 = Mortal(name: "Alpha", assignment: "A", projectURL: projectURL, store: try TestFixtures.createTestStore())
+        let mortal2 = Mortal(name: "Beta", assignment: "B", projectURL: projectURL, store: try TestFixtures.createTestStore())
+        let mortal3 = Mortal(name: "Gamma", assignment: "C", projectURL: projectURL, store: try TestFixtures.createTestStore())
 
         try persistence.save(mortal1)
         try persistence.save(mortal2)
@@ -383,8 +383,8 @@ struct ServitorPersistenceTests {
         let persistence = ServitorPersistence(docStore: store)
         let projectURL = Self.testProjectURL()
 
-        let mortal1 = Mortal(name: "First", assignment: "Task 1", projectURL: projectURL, loadSavedSession: false)
-        let mortal2 = Mortal(name: "Second", assignment: "Task 2", projectURL: projectURL, loadSavedSession: false)
+        let mortal1 = Mortal(name: "First", assignment: "Task 1", projectURL: projectURL, store: try TestFixtures.createTestStore())
+        let mortal2 = Mortal(name: "Second", assignment: "Task 2", projectURL: projectURL, store: try TestFixtures.createTestStore())
 
         try persistence.save(mortal1)
         try persistence.save(mortal2)
@@ -407,7 +407,7 @@ struct ServitorPersistenceTests {
             name: "Updatable",
             assignment: "Initial task",
             projectURL: Self.testProjectURL(),
-            loadSavedSession: false
+            store: try TestFixtures.createTestStore()
         )
 
         try persistence.save(mortal)

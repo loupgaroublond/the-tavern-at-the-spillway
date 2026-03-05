@@ -42,4 +42,11 @@ extension TestFixtures {
     public static func cleanupTempDirectory(_ url: URL) {
         try? FileManager.default.removeItem(at: url)
     }
+
+    /// Create a ServitorStore backed by a temporary directory (no pre-existing data).
+    /// Equivalent to the old `loadSavedSession: false` pattern.
+    public static func createTestStore() throws -> ServitorStore {
+        let tempDir = try createTempDirectory()
+        return ServitorStore(rootURL: tempDir)
+    }
 }

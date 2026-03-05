@@ -10,6 +10,7 @@ final class TestServitor: Servitor, @unchecked Sendable {
     let name: String
     private(set) var state: ServitorState = .idle
     var sessionMode: PermissionMode = .plan
+    var sessionId: String?
 
     init(id: UUID = UUID(), name: String) {
         self.id = id

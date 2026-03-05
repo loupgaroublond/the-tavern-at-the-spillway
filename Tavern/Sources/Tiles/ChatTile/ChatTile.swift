@@ -245,6 +245,13 @@ public final class ChatTile {
                 case .promptSuggestion(let suggestion):
                     promptSuggestions.append(suggestion)
 
+                // ── Session break ──
+                case .sessionBreak(let staleSessionId):
+                    Self.logger.warning("[ChatTile] session break — '\(staleSessionId)' expired")
+                    finalizeThinkingBlock()
+                    finalizeTextBlock()
+                    messages.append(.sessionBreak(staleSessionId: staleSessionId))
+
                 // ── Rate limit ──
                 case .rateLimitWarning(let info):
                     rateLimitStatus = info

@@ -13,6 +13,7 @@ public final class ClodSessionManager: ServitorProvider {
     let spawner: MortalSpawner
     private let permissionManager: PermissionManager
     private let projectURL: URL
+    private let store: ServitorStore
 
     var jakeMCPServer: SDKMCPServer? {
         get { jake.mcpServer }
@@ -25,12 +26,14 @@ public final class ClodSessionManager: ServitorProvider {
         jake: Jake,
         spawner: MortalSpawner,
         permissionManager: PermissionManager,
-        projectURL: URL
+        projectURL: URL,
+        store: ServitorStore
     ) {
         self.jake = jake
         self.spawner = spawner
         self.permissionManager = permissionManager
         self.projectURL = projectURL
+        self.store = store
 
         Self.logger.info("[ClodSessionManager] initialized for project: \(projectURL.lastPathComponent)")
     }
@@ -55,15 +58,27 @@ public final class ClodSessionManager: ServitorProvider {
         let projectPath = projectURL.path
 
         if servitorID == jake.id {
-            let stored = await SessionStore.loadJakeSessionHistory(projectPath: projectPath)
+            let stored = await SessionStore.loadJakeSessionHistory(projectPath: projectPath, sessionId: jake.sessionId)
             return stored.compactMap { Self.convertStoredMessage($0) }
         }
 
-        let stored = await SessionStore.loadServitorSessionHistory(
-            servitorId: servitorID,
-            projectPath: projectPath
-        )
-        return stored.compactMap { Self.convertStoredMessage($0) }
+        // Look up the session ID from our file-system store
+        let servitorName = servitorName(for: servitorID)
+        guard servitorName != "Unknown",
+              let record = try? store.load(name: servitorName),
+              let sessionId = record.sessionId else {
+            Self.logger.info("[ClodSessionManager] no session ID for servitor \(servitorID), skipping history load")
+            return []
+        }
+
+        let storage = ClaudeNativeSessionStorage()
+        do {
+            let messages = try await storage.getMessages(sessionId: sessionId, projectPath: projectPath)
+            return messages.compactMap { Self.convertStoredMessage($0) }
+        } catch {
+            Self.logger.error("[ClodSessionManager] failed to load history for \(servitorName): \(error.localizedDescription)")
+            return []
+        }
     }
 
     public func clearConversation(servitorID: UUID) {
@@ -111,7 +126,7 @@ public final class ClodSessionManager: ServitorProvider {
     @discardableResult
     public func spawnServitor() throws -> UUID {
         let mortal = try spawner.summon()
-        persistServitor(mortal)
+        persistServitorRecord(mortal)
         Self.logger.info("[ClodSessionManager] spawned servitor: \(mortal.name) (\(mortal.id))")
         return mortal.id
     }
@@ -119,45 +134,60 @@ public final class ClodSessionManager: ServitorProvider {
     @discardableResult
     public func spawnServitor(assignment: String) throws -> UUID {
         let mortal = try spawner.summon(assignment: assignment)
-        persistServitor(mortal)
+        persistServitorRecord(mortal)
         Self.logger.info("[ClodSessionManager] spawned servitor with assignment: \(mortal.name) (\(mortal.id))")
         return mortal.id
     }
 
     public func closeServitor(id: UUID) throws {
-        let persisted = SessionStore.getServitor(id: id)
-        SessionStore.removeServitor(id: id)
+        // Find the servitor name before removing
+        let servitorName = spawner.activeMortals.first(where: { $0.id == id })?.name
         try spawner.dismiss(id: id)
-        Self.logger.info("[ClodSessionManager] closed servitor: \(persisted?.name ?? id.uuidString)")
+
+        // Remove from file-system store
+        if let name = servitorName {
+            do {
+                try store.remove(name: name)
+            } catch {
+                Self.logger.error("[ClodSessionManager] failed to remove store for \(name): \(error.localizedDescription)")
+            }
+        }
+
+        Self.logger.info("[ClodSessionManager] closed servitor: \(servitorName ?? id.uuidString)")
     }
 
     public func updateDescription(id: UUID, description: String?) {
-        SessionStore.updateServitor(id: id, chatDescription: description)
         if let mortal = spawner.activeMortals.first(where: { $0.id == id }) as? Mortal {
             mortal.chatDescription = description
+
+            // Update in file-system store
+            do {
+                if var record = try store.load(name: mortal.name) {
+                    record.description = description
+                    record.updatedAt = Date()
+                    try store.save(record)
+                }
+            } catch {
+                Self.logger.error("[ClodSessionManager] failed to update description for \(mortal.name): \(error.localizedDescription)")
+            }
         }
-    }
-
-    // MARK: - Bulk Operations
-
-    /// Reset all persisted session data (sessions + servitor list).
-    /// Use for project teardown or debug reset.
-    public func resetAllSessions() {
-        SessionStore.clearAllSessions()
-        SessionStore.clearServitorList()
-        Self.logger.info("[ClodSessionManager] all sessions and servitor list cleared")
     }
 
     // MARK: - Private Helpers
 
-    private func persistServitor(_ mortal: Mortal) {
-        let persisted = SessionStore.PersistedServitor(
-            id: mortal.id,
+    private func persistServitorRecord(_ mortal: Mortal) {
+        let record = ServitorRecord(
             name: mortal.name,
+            id: mortal.id,
+            assignment: mortal.assignment,
             sessionId: mortal.sessionId,
-            chatDescription: mortal.chatDescription
+            description: mortal.chatDescription
         )
-        SessionStore.addServitor(persisted)
+        do {
+            try store.save(record)
+        } catch {
+            Self.logger.error("[ClodSessionManager] failed to persist record for \(mortal.name): \(error.localizedDescription)")
+        }
     }
 
     private static func convertStoredMessage(_ stored: ClaudeStoredMessage) -> ChatMessage? {

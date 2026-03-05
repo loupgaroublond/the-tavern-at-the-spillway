@@ -78,6 +78,7 @@ public final class ServitorPersistence: @unchecked Sendable {
     public func restore(
         name: String,
         projectURL: URL,
+        store: ServitorStore,
         verifier: CommitmentVerifier = CommitmentVerifier()
     ) throws -> Mortal {
         let node = try load(name: name)
@@ -95,6 +96,7 @@ public final class ServitorPersistence: @unchecked Sendable {
             name: node.name,
             assignment: node.assignment,
             projectURL: projectURL,
+            store: store,
             commitments: commitmentList,
             verifier: verifier
         )

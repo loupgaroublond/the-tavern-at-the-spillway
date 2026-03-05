@@ -35,7 +35,7 @@ final class ChatStressTests: XCTestCase {
         mock.streamingChunkSize = 20
 
         let projectURL = testProjectURL()
-        let jake = Jake(projectURL: projectURL, loadSavedSession: false)
+        let jake = Jake(projectURL: projectURL, store: try TestFixtures.createTestStore())
         let vm = ChatViewModel(servitor: mock, loadHistory: false)
 
         let startTime = Date()
@@ -136,7 +136,7 @@ final class ChatStressTests: XCTestCase {
         var viewModels: [ChatViewModel] = []
 
         for _ in 0..<count {
-            let jake = Jake(projectURL: projectURL, loadSavedSession: false)
+            let jake = Jake(projectURL: projectURL, store: try TestFixtures.createTestStore())
             let vm = ChatViewModel(jake: jake, loadHistory: false)
             viewModels.append(vm)
         }

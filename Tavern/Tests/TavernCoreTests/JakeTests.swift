@@ -25,8 +25,8 @@ struct JakeTests {
     }
 
     @Test("Jake initializes with correct state", .tags(.reqAGT001, .reqV1001))
-    func jakeInitializesCorrectly() {
-        let jake = Jake(projectURL: Self.testProjectURL(), loadSavedSession: false)
+    func jakeInitializesCorrectly() throws {
+        let jake = Jake(projectURL: Self.testProjectURL(), store: try TestFixtures.createTestStore())
 
         #expect(jake.state == .idle)
         #expect(jake.sessionId == nil)
@@ -34,7 +34,7 @@ struct JakeTests {
 
     @Test("Jake can reset conversation")
     func jakeResetsConversation() async throws {
-        let jake = Jake(projectURL: Self.testProjectURL(), loadSavedSession: false)
+        let jake = Jake(projectURL: Self.testProjectURL(), store: try TestFixtures.createTestStore())
 
         // Set a session ID manually for testing
         // Note: This would normally be set by send(), but we're testing reset behavior
@@ -43,16 +43,16 @@ struct JakeTests {
     }
 
     @Test("Jake has project path")
-    func jakeHasProjectPath() {
+    func jakeHasProjectPath() throws {
         let projectURL = Self.testProjectURL()
-        let jake = Jake(projectURL: projectURL, loadSavedSession: false)
+        let jake = Jake(projectURL: projectURL, store: try TestFixtures.createTestStore())
 
         #expect(jake.projectPath == projectURL.path)
     }
 
     @Test("Jake MCP server can be set", .tags(.reqCOM008))
     func jakeMCPServerCanBeSet() async throws {
-        let jake = Jake(projectURL: Self.testProjectURL(), loadSavedSession: false)
+        let jake = Jake(projectURL: Self.testProjectURL(), store: try TestFixtures.createTestStore())
 
         // Initially no MCP server
         #expect(jake.mcpServer == nil)
@@ -82,7 +82,7 @@ struct JakeTests {
     @Test("Jake responds to message", .tags(.reqAGT008, .reqARCH009, .reqV1001, .reqQA005))
     func jakeRespondsToMessage() async throws {
         let mock = MockMessenger(responses: ["Well WELL, look who showed up!"])
-        let jake = Jake(projectURL: Self.testProjectURL(), messenger: mock, loadSavedSession: false)
+        let jake = Jake(projectURL: Self.testProjectURL(), store: try TestFixtures.createTestStore(), messenger: mock)
 
         let response = try await jake.send("Hello Jake")
 
@@ -95,7 +95,7 @@ struct JakeTests {
     func jakeStateChangesToWorkingDuringResponse() async throws {
         let mock = MockMessenger(responses: ["OK"])
         mock.responseDelay = .milliseconds(100)
-        let jake = Jake(projectURL: Self.testProjectURL(), messenger: mock, loadSavedSession: false)
+        let jake = Jake(projectURL: Self.testProjectURL(), store: try TestFixtures.createTestStore(), messenger: mock)
 
         #expect(jake.state == .idle)
 
@@ -115,7 +115,7 @@ struct JakeTests {
     func jakeMaintainsConversationViaSessionId() async throws {
         let sessionId = UUID().uuidString
         let mock = MockMessenger(responses: ["First", "Second"], sessionId: sessionId)
-        let jake = Jake(projectURL: Self.testProjectURL(), messenger: mock, loadSavedSession: false)
+        let jake = Jake(projectURL: Self.testProjectURL(), store: try TestFixtures.createTestStore(), messenger: mock)
 
         #expect(jake.sessionId == nil)
 
@@ -125,11 +125,9 @@ struct JakeTests {
         let _ = try await jake.send("Message 2")
         #expect(jake.sessionId == sessionId)
 
-        // Session resume disabled — stale sessions cause ControlProtocolError.timeout
-        // Session ID is persisted locally but not passed via options.resume
-        // TODO: Re-enable resume assertion after ClodKit SDK update
+        // Resume is now enabled — second message should include the session ID
         #expect(mock.queryOptions.count == 2)
-        #expect(mock.queryOptions[1].resume == nil)
+        #expect(mock.queryOptions[1].resume == sessionId)
     }
 
     @Test("Jake handles text response fallback")
@@ -137,7 +135,7 @@ struct JakeTests {
         // LiveMessenger handles both "result" and "assistant" message types
         // MockMessenger just returns the response directly — verify Jake still works
         let mock = MockMessenger(responses: ["Fallback response"])
-        let jake = Jake(projectURL: Self.testProjectURL(), messenger: mock, loadSavedSession: false)
+        let jake = Jake(projectURL: Self.testProjectURL(), store: try TestFixtures.createTestStore(), messenger: mock)
 
         let response = try await jake.send("Test")
         #expect(response == "Fallback response")
@@ -147,7 +145,7 @@ struct JakeTests {
     func jakePropagatesErrors() async throws {
         let mock = MockMessenger()
         mock.errorToThrow = TavernError.internalError("Test error")
-        let jake = Jake(projectURL: Self.testProjectURL(), messenger: mock, loadSavedSession: false)
+        let jake = Jake(projectURL: Self.testProjectURL(), store: try TestFixtures.createTestStore(), messenger: mock)
 
         do {
             let _ = try await jake.send("This should fail")
@@ -168,9 +166,12 @@ struct JakeTests {
         mock.errorToThrow = NSError(domain: "test", code: 1)
 
         let sessionId = "test-session-123"
-        SessionStore.saveJakeSession(sessionId, projectPath: projectURL.path)
+        let store = try TestFixtures.createTestStore()
+        // Pre-populate the store with a Jake record that has a session ID
+        let record = ServitorRecord(name: "jake", sessionId: sessionId)
+        try store.save(record)
 
-        let jake = Jake(projectURL: projectURL, messenger: mock, loadSavedSession: true)
+        let jake = Jake(projectURL: projectURL, store: store, messenger: mock)
         #expect(jake.sessionId == sessionId)
 
         do {
@@ -183,14 +184,12 @@ struct JakeTests {
                 Issue.record("Expected sessionCorrupt, got: \(error)")
             }
         }
-
-        SessionStore.clearJakeSession(projectPath: projectURL.path)
     }
 
     @Test("Jake with tool handler passes through when no feedback", .tags(.reqCOM008))
     func jakeWithToolHandlerPassesThroughWhenNoFeedback() async throws {
         let mock = MockMessenger(responses: ["Response with MCP registered"])
-        let jake = Jake(projectURL: Self.testProjectURL(), messenger: mock, loadSavedSession: false)
+        let jake = Jake(projectURL: Self.testProjectURL(), store: try TestFixtures.createTestStore(), messenger: mock)
 
         // Register MCP server (tools available but not called by mock)
         let registry = ServitorRegistry()
@@ -214,7 +213,7 @@ struct JakeTests {
     @Test("Jake system prompt is included in query options")
     func jakeSystemPromptInQueryOptions() async throws {
         let mock = MockMessenger(responses: ["OK"])
-        let jake = Jake(projectURL: Self.testProjectURL(), messenger: mock, loadSavedSession: false)
+        let jake = Jake(projectURL: Self.testProjectURL(), store: try TestFixtures.createTestStore(), messenger: mock)
 
         let _ = try await jake.send("Test")
 
@@ -225,14 +224,14 @@ struct JakeTests {
     // MARK: - Session Mode Tests
 
     @Test("Jake defaults to plan mode")
-    func jakeDefaultsToPlanMode() {
-        let jake = Jake(projectURL: Self.testProjectURL(), loadSavedSession: false)
+    func jakeDefaultsToPlanMode() throws {
+        let jake = Jake(projectURL: Self.testProjectURL(), store: try TestFixtures.createTestStore())
         #expect(jake.sessionMode == .plan)
     }
 
     @Test("Jake session mode can be changed")
-    func jakeSessionModeCanBeChanged() {
-        let jake = Jake(projectURL: Self.testProjectURL(), loadSavedSession: false)
+    func jakeSessionModeCanBeChanged() throws {
+        let jake = Jake(projectURL: Self.testProjectURL(), store: try TestFixtures.createTestStore())
         #expect(jake.sessionMode == .plan)
 
         jake.sessionMode = .normal
@@ -245,7 +244,7 @@ struct JakeTests {
     @Test("Jake includes permission mode in query options")
     func jakeIncludesPermissionModeInQueryOptions() async throws {
         let mock = MockMessenger(responses: ["OK", "OK"])
-        let jake = Jake(projectURL: Self.testProjectURL(), messenger: mock, loadSavedSession: false)
+        let jake = Jake(projectURL: Self.testProjectURL(), store: try TestFixtures.createTestStore(), messenger: mock)
 
         // Default plan mode
         let _ = try await jake.send("Test plan")

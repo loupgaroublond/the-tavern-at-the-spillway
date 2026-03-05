@@ -8,6 +8,7 @@ public enum MessageType: String, Equatable, Sendable {
     case toolError
     case thinking
     case webSearch
+    case sessionBreak
 }
 
 /// A message in a chat conversation
@@ -17,6 +18,7 @@ public struct ChatMessage: Identifiable, Equatable, Sendable {
     public enum Role: String, Equatable, Sendable {
         case user
         case agent
+        case system
     }
 
     public let id: UUID
@@ -89,5 +91,10 @@ public struct ChatMessage: Identifiable, Equatable, Sendable {
     /// Convenience initializer for thinking messages
     public static func thinking(content: String) -> ChatMessage {
         ChatMessage(role: .agent, content: content, messageType: .thinking)
+    }
+
+    /// Convenience initializer for session break messages
+    public static func sessionBreak(staleSessionId: String) -> ChatMessage {
+        ChatMessage(role: .system, content: "Session expired. Starting fresh.", messageType: .sessionBreak)
     }
 }

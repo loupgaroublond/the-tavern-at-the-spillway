@@ -28,6 +28,9 @@ public final class MockServitor: Servitor, @unchecked Sendable {
         set { queue.sync { _sessionMode = newValue } }
     }
 
+    /// Mock session ID (always nil by default)
+    public var sessionId: String?
+
     // MARK: - Mock Configuration
 
     /// Responses to return, popped from front on each `send()` call.

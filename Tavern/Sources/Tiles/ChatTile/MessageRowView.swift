@@ -41,6 +41,9 @@ struct MessageRowView: View {
 
             case .webSearch:
                 webSearchRow
+
+            case .sessionBreak:
+                sessionBreakRow
             }
         }
         .onAppear {
@@ -105,6 +108,19 @@ struct MessageRowView: View {
         .padding(.leading, 44)
     }
 
+    // MARK: - Session Break
+
+    private var sessionBreakRow: some View {
+        VStack(spacing: 4) {
+            Divider()
+            Text("Session expired — starting fresh")
+                .font(.caption)
+                .foregroundColor(.secondary)
+            Divider()
+        }
+        .padding(.vertical, 8)
+    }
+
     // MARK: - Avatar
 
     @ViewBuilder
@@ -128,6 +144,7 @@ struct MessageRowView: View {
         case .toolError: return .red
         case .thinking: return .gray
         case .webSearch: return .cyan
+        case .sessionBreak: return .secondary
         }
     }
 
@@ -140,6 +157,7 @@ struct MessageRowView: View {
         case .toolError: return "exclamationmark.triangle.fill"
         case .thinking: return "brain"
         case .webSearch: return "globe"
+        case .sessionBreak: return "arrow.clockwise"
         }
     }
 

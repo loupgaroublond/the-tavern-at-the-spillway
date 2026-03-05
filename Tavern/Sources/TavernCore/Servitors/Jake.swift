@@ -22,24 +22,30 @@ public final class Jake: Servitor, @unchecked Sendable {
     // MARK: - Properties
 
     private let projectURL: URL
-    private let messenger: ServitorMessenger
     private let queue = DispatchQueue(label: "com.tavern.Jake")
+    private let session: ClodSession
 
-    private var _sessionId: String?
     private var _isCogitating: Bool = false
     private var _mcpServer: SDKMCPServer?
-    private var _sessionMode: TavernKit.PermissionMode = .plan
 
     /// MCP server for Jake's tools (summon, dismiss, etc.)
     /// Injected after init to break circular dependency with spawner
     public var mcpServer: SDKMCPServer? {
         get { queue.sync { _mcpServer } }
-        set { queue.sync { _mcpServer = newValue } }
+        set {
+            queue.sync { _mcpServer = newValue }
+            // Sync MCP servers to the session
+            if let server = newValue {
+                session.mcpServers["tavern"] = server
+            } else {
+                session.mcpServers.removeValue(forKey: "tavern")
+            }
+        }
     }
 
     /// The current session ID (for conversation continuity)
     public var sessionId: String? {
-        queue.sync { _sessionId }
+        session.sessionId
     }
 
     /// The project path where sessions are stored
@@ -54,8 +60,8 @@ public final class Jake: Servitor, @unchecked Sendable {
 
     /// The current session mode (plan, normal, acceptEdits, etc.)
     public var sessionMode: TavernKit.PermissionMode {
-        get { queue.sync { _sessionMode } }
-        set { queue.sync { _sessionMode = newValue } }
+        get { session.permissionMode }
+        set { session.permissionMode = newValue }
     }
 
     /// Jake's system prompt - establishes his character and dispatcher role
@@ -114,39 +120,52 @@ public final class Jake: Servitor, @unchecked Sendable {
     /// - Parameters:
     ///   - id: Unique identifier (auto-generated if not provided)
     ///   - projectURL: The project directory URL
+    ///   - store: File-system persistence store for servitor state
     ///   - permissionManager: Permission manager for tool checks (nil disables checks)
     ///   - approvalHandler: Async callback for user prompting when permission is needed
+    ///   - planApprovalHandler: Async callback for plan approval
     ///   - messenger: The messenger for Claude communication (overrides permission-based default)
-    ///   - loadSavedSession: Whether to load a saved session from SessionStore (default true)
     public init(
         id: UUID = UUID(),
         projectURL: URL,
+        store: ServitorStore,
         permissionManager: PermissionManager? = nil,
         approvalHandler: ToolApprovalHandler? = nil,
-        messenger: ServitorMessenger? = nil,
-        loadSavedSession: Bool = true
+        planApprovalHandler: PlanApprovalHandler? = nil,
+        messenger: ServitorMessenger? = nil
     ) {
         self.id = id
         self.projectURL = projectURL
-        self.messenger = messenger ?? LiveMessenger(
-            permissionManager: permissionManager,
+
+        let config = ClodSession.Config(
+            systemPrompt: Self.systemPrompt,
+            permissionMode: .plan,
+            workingDirectory: projectURL,
             approvalHandler: approvalHandler,
-            agentName: "Jake"
+            planApprovalHandler: planApprovalHandler,
+            servitorName: "jake"
         )
 
-        // Restore session from previous run (per-project)
-        if loadSavedSession, let savedSession = SessionStore.loadJakeSession(projectPath: projectURL.path) {
-            self._sessionId = savedSession
-            TavernLogger.agents.info("Jake restored session: \(savedSession) for project: \(projectURL.path)")
-        }
+        // If a custom messenger is provided, pass it through.
+        // Otherwise ClodSession creates a LiveMessenger from the config.
+        // But if we have a permissionManager, we need to create the LiveMessenger ourselves.
+        let resolvedMessenger: ServitorMessenger? = messenger ?? {
+            if permissionManager != nil || approvalHandler != nil {
+                return LiveMessenger(
+                    permissionManager: permissionManager,
+                    approvalHandler: approvalHandler,
+                    agentName: "Jake"
+                )
+            }
+            return nil
+        }()
+
+        self.session = ClodSession(config: config, store: store, messenger: resolvedMessenger)
     }
 
     // MARK: - Communication
 
     /// Send a message to Jake and get a response
-    /// - Parameter message: The user's message
-    /// - Returns: Jake's response text
-    /// - Throws: QueryError if communication fails
     public func send(_ message: String) async throws -> String {
         TavernLogger.agents.info("Jake.send called, prompt length: \(message.count)")
         TavernLogger.agents.debug("Jake state: idle -> working")
@@ -157,94 +176,35 @@ public final class Jake: Servitor, @unchecked Sendable {
             TavernLogger.agents.debug("Jake state: working -> idle")
         }
 
-        let currentSessionId: String? = queue.sync { _sessionId }
-        let currentMcpServer: SDKMCPServer? = queue.sync { _mcpServer }
+        syncMcpServers()
 
-        // Build query options
-        var options = QueryOptions()
-        options.systemPrompt = Self.systemPrompt
-        options.permissionMode = clodKitPermissionMode()
-        options.workingDirectory = projectURL
-        // Session resume disabled — stale sessions cause ControlProtocolError.timeout
-        // TODO: Re-enable with fallback logic (try resume, catch timeout, start fresh)
-        TavernLogger.claude.info("Jake starting new conversation (resume disabled)")
+        let result = try await session.send(message)
 
-        // Add MCP server if available
-        if let server = currentMcpServer {
-            options.sdkMcpServers["tavern"] = server
-            TavernLogger.claude.debug("Jake using MCP server 'tavern' with \(server.toolCount) tools")
+        if result.didFallback {
+            TavernLogger.agents.warning("Jake session fell back to fresh (stale session)")
         }
 
-        // Run query and collect response
-        let response: String
-        do {
-            TavernLogger.claude.info("Jake calling messenger.query...")
-            let result = try await messenger.query(prompt: message, options: options)
-            response = result.response
-            TavernLogger.claude.info("Jake collected response successfully, length=\(response.count)")
-
-            // Save session ID
-            if let newSessionId = result.sessionId {
-                queue.sync { _sessionId = newSessionId }
-                SessionStore.saveJakeSession(newSessionId, projectPath: projectURL.path)
-                TavernLogger.agents.info("Jake received response, sessionId: \(newSessionId)")
-            } else {
-                TavernLogger.agents.info("Jake received response, no sessionId")
-            }
-        } catch {
-            // If resuming failed with a session ID, it's likely corrupt/stale
-            if let sessionId = currentSessionId {
-                TavernLogger.agents.debugError("Session '\(sessionId)' appears corrupt: \(error.localizedDescription)")
-                throw TavernError.sessionCorrupt(sessionId: sessionId, underlyingError: error)
-            }
-            TavernLogger.agents.debugError("Jake.send failed: \(error.localizedDescription)")
-            throw error
-        }
-
-        return response
+        TavernLogger.agents.info("Jake received response, length=\(result.response.count)")
+        return result.response
     }
 
     /// Send a message to Jake and receive a stream of events
-    /// - Parameter message: The user's message
-    /// - Returns: Tuple of (event stream, cancel closure)
     public func sendStreaming(_ message: String) -> (stream: AsyncThrowingStream<StreamEvent, Error>, cancel: @Sendable () -> Void) {
         TavernLogger.agents.info("Jake.sendStreaming called, prompt length: \(message.count)")
         TavernLogger.agents.debug("Jake state: idle -> working")
 
         queue.sync { _isCogitating = true }
+        syncMcpServers()
 
-        let currentSessionId: String? = queue.sync { _sessionId }
-        let currentMcpServer: SDKMCPServer? = queue.sync { _mcpServer }
+        let (innerStream, innerCancel) = session.sendStreaming(message)
 
-        // Build query options
-        var options = QueryOptions()
-        options.systemPrompt = Self.systemPrompt
-        options.permissionMode = clodKitPermissionMode()
-        options.workingDirectory = projectURL
-        // Session resume disabled — stale sessions cause ControlProtocolError.timeout
-        // TODO: Re-enable with fallback logic (try resume, catch timeout, start fresh)
-        TavernLogger.claude.info("Jake streaming, starting new conversation (resume disabled)")
-
-        // Add MCP server if available
-        if let server = currentMcpServer {
-            options.sdkMcpServers["tavern"] = server
-            TavernLogger.claude.debug("Jake streaming with MCP server 'tavern'")
-        }
-
-        let (innerStream, innerCancel) = messenger.queryStreaming(prompt: message, options: options)
-
-        // Wrap the stream to handle session persistence and state cleanup
+        // Wrap to manage cogitating state
         let wrappedStream = AsyncThrowingStream<StreamEvent, Error> { continuation in
             let task = Task { [weak self] in
                 do {
                     for try await event in innerStream {
                         switch event {
-                        case .completed(let info):
-                            if let sessionId = info.sessionId, let self {
-                                self.queue.sync { self._sessionId = sessionId }
-                                SessionStore.saveJakeSession(sessionId, projectPath: self.projectURL.path)
-                                TavernLogger.agents.info("Jake streaming completed, sessionId: \(sessionId)")
-                            }
+                        case .completed:
                             self?.queue.sync { self?._isCogitating = false }
                             TavernLogger.agents.debug("Jake state: working -> idle")
                             continuation.yield(event)
@@ -259,13 +219,7 @@ public final class Jake: Servitor, @unchecked Sendable {
                 } catch {
                     self?.queue.sync { self?._isCogitating = false }
                     TavernLogger.agents.debug("Jake state: working -> idle (error)")
-
-                    if let sessionId = currentSessionId {
-                        TavernLogger.agents.debugError("Jake streaming session '\(sessionId)' error: \(error.localizedDescription)")
-                        continuation.finish(throwing: TavernError.sessionCorrupt(sessionId: sessionId, underlyingError: error))
-                    } else {
-                        continuation.finish(throwing: error)
-                    }
+                    continuation.finish(throwing: error)
                 }
             }
 
@@ -283,24 +237,18 @@ public final class Jake: Servitor, @unchecked Sendable {
         return (stream: wrappedStream, cancel: cancel)
     }
 
-    /// Map Tavern's PermissionMode to ClodKit's PermissionMode for QueryOptions
-    private func clodKitPermissionMode() -> ClodKit.PermissionMode {
-        let mode: TavernKit.PermissionMode = queue.sync { _sessionMode }
-        switch mode {
-        case .normal: return .default
-        case .acceptEdits: return .acceptEdits
-        case .plan: return .plan
-        case .bypassPermissions: return .bypassPermissions
-        case .dontAsk: return .dontAsk
-        }
-    }
-
     /// Reset Jake's conversation (start fresh)
     public func resetConversation() {
         TavernLogger.agents.info("Jake conversation reset")
-        queue.sync { _sessionId = nil }
+        session.resetConversation()
+    }
 
-        // Clear persisted session for this project
-        SessionStore.clearJakeSession(projectPath: projectURL.path)
+    // MARK: - Private
+
+    /// Sync the current MCP server to the session before each call
+    private func syncMcpServers() {
+        if let server: SDKMCPServer = queue.sync(execute: { _mcpServer }) {
+            session.mcpServers["tavern"] = server
+        }
     }
 }

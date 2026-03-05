@@ -15,12 +15,12 @@ struct MortalTests {
     // MARK: - Grade 1 Property Tests (no mocks needed)
 
     @Test("Mortal has assignment", .tags(.reqAGT002, .reqSPN009))
-    func mortalHasAssignment() {
+    func mortalHasAssignment() throws {
         let mortal = Mortal(
             name: "TestWorker",
             assignment: "Parse the input file and extract data",
             projectURL: Self.testProjectURL(),
-            loadSavedSession: false
+            store: try TestFixtures.createTestStore()
         )
 
         #expect(mortal.assignment == "Parse the input file and extract data")
@@ -28,12 +28,12 @@ struct MortalTests {
     }
 
     @Test("Mortal initializes with idle state", .tags(.reqAGT002, .reqAGT005))
-    func mortalInitializesIdle() {
+    func mortalInitializesIdle() throws {
         let mortal = Mortal(
             name: "IdleWorker",
             assignment: "Do something",
             projectURL: Self.testProjectURL(),
-            loadSavedSession: false
+            store: try TestFixtures.createTestStore()
         )
 
         #expect(mortal.state == .idle)
@@ -41,12 +41,12 @@ struct MortalTests {
     }
 
     @Test("Mortal can be explicitly marked waiting")
-    func mortalExplicitlyMarkedWaiting() {
+    func mortalExplicitlyMarkedWaiting() throws {
         let mortal = Mortal(
             name: "ExplicitWorker",
             assignment: "Task",
             projectURL: Self.testProjectURL(),
-            loadSavedSession: false
+            store: try TestFixtures.createTestStore()
         )
 
         #expect(mortal.state == .idle)
@@ -57,12 +57,12 @@ struct MortalTests {
     }
 
     @Test("Mortal can be explicitly marked done")
-    func mortalExplicitlyMarkedDone() {
+    func mortalExplicitlyMarkedDone() throws {
         let mortal = Mortal(
             name: "DoneWorker",
             assignment: "Task",
             projectURL: Self.testProjectURL(),
-            loadSavedSession: false
+            store: try TestFixtures.createTestStore()
         )
 
         mortal.markDone()
@@ -71,12 +71,12 @@ struct MortalTests {
     }
 
     @Test("Mortal done state is terminal", .tags(.reqAGT009))
-    func mortalDoneStateIsTerminal() {
+    func mortalDoneStateIsTerminal() throws {
         let mortal = Mortal(
             name: "TerminalWorker",
             assignment: "Task",
             projectURL: Self.testProjectURL(),
-            loadSavedSession: false
+            store: try TestFixtures.createTestStore()
         )
 
         mortal.markDone()
@@ -97,7 +97,7 @@ struct MortalTests {
             name: "ResetWorker",
             assignment: "Task",
             projectURL: Self.testProjectURL(),
-            loadSavedSession: false
+            store: try TestFixtures.createTestStore()
         )
 
         // Session starts nil
@@ -110,12 +110,12 @@ struct MortalTests {
     }
 
     @Test("Add commitment helper works")
-    func addCommitmentHelperWorks() {
+    func addCommitmentHelperWorks() throws {
         let mortal = Mortal(
             name: "CommitHelper",
             assignment: "Task",
             projectURL: Self.testProjectURL(),
-            loadSavedSession: false
+            store: try TestFixtures.createTestStore()
         )
 
         #expect(mortal.commitments.count == 0)
@@ -129,15 +129,15 @@ struct MortalTests {
     }
 
     @Test("AllCommitmentsPassed returns correct value")
-    func allCommitmentsPassedWorks() {
+    func allCommitmentsPassedWorks() throws {
         let commitments = CommitmentList()
 
         let mortal = Mortal(
             name: "PassCheckWorker",
             assignment: "Task",
             projectURL: Self.testProjectURL(),
-            commitments: commitments,
-            loadSavedSession: false
+            store: try TestFixtures.createTestStore(),
+            commitments: commitments
         )
 
         // Empty commitments = vacuously true
@@ -153,15 +153,15 @@ struct MortalTests {
     }
 
     @Test("HasFailedCommitments returns correct value")
-    func hasFailedCommitmentsWorks() {
+    func hasFailedCommitmentsWorks() throws {
         let commitments = CommitmentList()
 
         let mortal = Mortal(
             name: "FailCheckWorker",
             assignment: "Task",
             projectURL: Self.testProjectURL(),
-            commitments: commitments,
-            loadSavedSession: false
+            store: try TestFixtures.createTestStore(),
+            commitments: commitments
         )
 
         #expect(mortal.hasFailedCommitments == false)
@@ -182,8 +182,8 @@ struct MortalTests {
             name: "ResponseWorker",
             assignment: "Handle messages",
             projectURL: Self.testProjectURL(),
-            messenger: mock,
-            loadSavedSession: false
+            store: try TestFixtures.createTestStore(),
+            messenger: mock
         )
 
         let response = try await mortal.send("Do the thing")
@@ -201,8 +201,8 @@ struct MortalTests {
             name: "StateWorker",
             assignment: "Task",
             projectURL: Self.testProjectURL(),
-            messenger: mock,
-            loadSavedSession: false
+            store: try TestFixtures.createTestStore(),
+            messenger: mock
         )
 
         #expect(mortal.state == .idle)
@@ -225,8 +225,8 @@ struct MortalTests {
             name: "DoneViaResponse",
             assignment: "Finish up",
             projectURL: Self.testProjectURL(),
-            messenger: mock,
-            loadSavedSession: false
+            store: try TestFixtures.createTestStore(),
+            messenger: mock
         )
 
         let _ = try await mortal.send("Finish it")
@@ -241,8 +241,8 @@ struct MortalTests {
             name: "WaitViaResponse",
             assignment: "Need info",
             projectURL: Self.testProjectURL(),
-            messenger: mock,
-            loadSavedSession: false
+            store: try TestFixtures.createTestStore(),
+            messenger: mock
         )
 
         let _ = try await mortal.send("Do the ambiguous thing")
@@ -258,8 +258,8 @@ struct MortalTests {
             name: "ConvoWorker",
             assignment: "Chat",
             projectURL: Self.testProjectURL(),
-            messenger: mock,
-            loadSavedSession: false
+            store: try TestFixtures.createTestStore(),
+            messenger: mock
         )
 
         #expect(mortal.sessionId == nil)
@@ -268,9 +268,8 @@ struct MortalTests {
         #expect(mortal.sessionId == sessionId)
 
         let _ = try await mortal.send("Message 2")
-        // Session resume disabled — stale sessions cause ControlProtocolError.timeout
-        // TODO: Re-enable resume assertion after ClodKit SDK update
-        #expect(mock.queryOptions[1].resume == nil)
+        // Resume is now enabled — second message should include the session ID
+        #expect(mock.queryOptions[1].resume == sessionId)
     }
 
     @Test("Mortal propagates errors")
@@ -281,8 +280,8 @@ struct MortalTests {
             name: "ErrorWorker",
             assignment: "Fail",
             projectURL: Self.testProjectURL(),
-            messenger: mock,
-            loadSavedSession: false
+            store: try TestFixtures.createTestStore(),
+            messenger: mock
         )
 
         do {
@@ -304,9 +303,9 @@ struct MortalTests {
             name: "NoPledgeWorker",
             assignment: "Quick task",
             projectURL: Self.testProjectURL(),
+            store: try TestFixtures.createTestStore(),
             commitments: CommitmentList(),
-            messenger: mock,
-            loadSavedSession: false
+            messenger: mock
         )
 
         #expect(mortal.commitments.count == 0)
@@ -326,9 +325,9 @@ struct MortalTests {
             name: "VerifyWorker",
             assignment: "Verify task",
             projectURL: Self.testProjectURL(),
+            store: try TestFixtures.createTestStore(),
             commitments: commitments,
-            messenger: mock,
-            loadSavedSession: false
+            messenger: mock
         )
 
         let _ = try await mortal.send("Complete the task")
@@ -349,9 +348,9 @@ struct MortalTests {
             name: "PassVerifyWorker",
             assignment: "Pass all checks",
             projectURL: Self.testProjectURL(),
+            store: try TestFixtures.createTestStore(),
             commitments: commitments,
-            messenger: mock,
-            loadSavedSession: false
+            messenger: mock
         )
 
         let _ = try await mortal.send("Verify")
@@ -369,9 +368,9 @@ struct MortalTests {
             name: "FailVerifyWorker",
             assignment: "Fail checks",
             projectURL: Self.testProjectURL(),
+            store: try TestFixtures.createTestStore(),
             commitments: commitments,
-            messenger: mock,
-            loadSavedSession: false
+            messenger: mock
         )
 
         let _ = try await mortal.send("Try to finish")
@@ -391,9 +390,9 @@ struct MortalTests {
             name: "PartialVerifyWorker",
             assignment: "Partial verification",
             projectURL: Self.testProjectURL(),
+            store: try TestFixtures.createTestStore(),
             commitments: commitments,
-            messenger: mock,
-            loadSavedSession: false
+            messenger: mock
         )
 
         let _ = try await mortal.send("Complete")
@@ -406,21 +405,21 @@ struct MortalTests {
     // MARK: - Session Mode Tests
 
     @Test("Mortal defaults to plan mode")
-    func mortalDefaultsToPlanMode() {
+    func mortalDefaultsToPlanMode() throws {
         let mortal = Mortal(
             name: "ModeWorker",
             projectURL: Self.testProjectURL(),
-            loadSavedSession: false
+            store: try TestFixtures.createTestStore()
         )
         #expect(mortal.sessionMode == .plan)
     }
 
     @Test("Mortal session mode can be changed")
-    func mortalSessionModeCanBeChanged() {
+    func mortalSessionModeCanBeChanged() throws {
         let mortal = Mortal(
             name: "ModeWorker",
             projectURL: Self.testProjectURL(),
-            loadSavedSession: false
+            store: try TestFixtures.createTestStore()
         )
         #expect(mortal.sessionMode == .plan)
 
@@ -435,8 +434,8 @@ struct MortalTests {
             name: "ModeQueryWorker",
             assignment: "Test modes",
             projectURL: Self.testProjectURL(),
-            messenger: mock,
-            loadSavedSession: false
+            store: try TestFixtures.createTestStore(),
+            messenger: mock
         )
 
         // Default plan mode

@@ -41,22 +41,20 @@ public final class Mortal: Servitor, @unchecked Sendable {
     // MARK: - Private State
 
     private let projectURL: URL
-    private let messenger: ServitorMessenger
+    private let session: ClodSession
     private let queue = DispatchQueue(label: "com.tavern.Mortal")
 
     private var _state: ServitorState = .idle
-    private var _sessionId: String?
-    private var _sessionMode: TavernKit.PermissionMode = .plan
 
     /// The current session ID (for conversation continuity)
     public var sessionId: String? {
-        queue.sync { _sessionId }
+        session.sessionId
     }
 
     /// The current session mode (plan, normal, acceptEdits, etc.)
     public var sessionMode: TavernKit.PermissionMode {
-        get { queue.sync { _sessionMode } }
-        set { queue.sync { _sessionMode = newValue } }
+        get { session.permissionMode }
+        set { session.permissionMode = newValue }
     }
 
     // MARK: - System Prompt
@@ -113,20 +111,20 @@ public final class Mortal: Servitor, @unchecked Sendable {
     ///   - assignment: The assignment this mortal is responsible for (nil for user-spawned mortals)
     ///   - chatDescription: User-editable description shown in sidebar
     ///   - projectURL: The project directory URL
+    ///   - store: File-system persistence store for servitor state
     ///   - commitments: List of commitments to verify before completion (defaults to empty)
     ///   - verifier: Verifier for checking commitments (defaults to shell-based)
     ///   - messenger: The messenger for Claude communication (default: LiveMessenger)
-    ///   - loadSavedSession: Whether to load a saved session from SessionStore (default true)
     public init(
         id: UUID = UUID(),
         name: String,
         assignment: String? = nil,
         chatDescription: String? = nil,
         projectURL: URL,
+        store: ServitorStore,
         commitments: CommitmentList = CommitmentList(),
         verifier: CommitmentVerifier = CommitmentVerifier(),
-        messenger: ServitorMessenger = LiveMessenger(),
-        loadSavedSession: Bool = true
+        messenger: ServitorMessenger? = nil
     ) {
         self.id = id
         self.name = name
@@ -135,13 +133,17 @@ public final class Mortal: Servitor, @unchecked Sendable {
         self.projectURL = projectURL
         self.commitments = commitments
         self.verifier = verifier
-        self.messenger = messenger
 
-        // Restore session from previous run (useful if servitor was persisted)
-        if loadSavedSession, let savedSession = SessionStore.loadServitorSession(servitorId: id) {
-            self._sessionId = savedSession
-            TavernLogger.agents.info("[\(name)] restored session: \(savedSession)")
-        }
+        let config = ClodSession.Config(
+            systemPrompt: "", // Will be set below via session.systemPrompt
+            permissionMode: .plan,
+            workingDirectory: projectURL,
+            servitorName: name.lowercased()
+        )
+
+        self.session = ClodSession(config: config, store: store, messenger: messenger)
+        // Set the actual system prompt (depends on self.name and self.assignment)
+        self.session.systemPrompt = systemPrompt
     }
 
     // MARK: - Agent Protocol Implementation
@@ -154,66 +156,31 @@ public final class Mortal: Servitor, @unchecked Sendable {
         queue.sync { _state = .working }
         defer { updateStateAfterResponse() }
 
-        let currentSessionId: String? = queue.sync { _sessionId }
+        let result = try await session.send(message)
 
-        // Build query options
-        var options = QueryOptions()
-        options.systemPrompt = systemPrompt
-        options.permissionMode = clodKitPermissionMode()
-        options.workingDirectory = projectURL
-        // Session resume disabled — stale sessions cause ControlProtocolError.timeout
-        // TODO: Re-enable with fallback logic (try resume, catch timeout, start fresh)
-        TavernLogger.claude.info("[\(self.name)] starting new conversation (resume disabled)")
-
-        // Run query and collect response
-        let response: String
-        do {
-            let result = try await messenger.query(prompt: message, options: options)
-            response = result.response
-
-            // Save session ID
-            if let newSessionId = result.sessionId {
-                queue.sync { _sessionId = newSessionId }
-                SessionStore.saveServitorSession(servitorId: id, sessionId: newSessionId)
-                TavernLogger.agents.info("[\(self.name)] received response, length: \(response.count), sessionId: \(newSessionId)")
-            } else {
-                TavernLogger.agents.info("[\(self.name)] received response, length: \(response.count), no sessionId")
-            }
-        } catch {
-            TavernLogger.agents.error("[\(self.name)] send failed: \(error.localizedDescription)")
-            throw error
+        if result.didFallback {
+            TavernLogger.agents.warning("[\(self.name)] session fell back to fresh (stale session)")
         }
 
-        await checkForCompletionSignal(in: response)
-        return response
+        TavernLogger.agents.info("[\(self.name)] received response, length: \(result.response.count)")
+
+        await checkForCompletionSignal(in: result.response)
+        return result.response
     }
 
     /// Send a message and receive a stream of events (streaming mode)
-    /// - Parameter message: The message to send
-    /// - Returns: Tuple of (event stream, cancel closure)
     public func sendStreaming(_ message: String) -> (stream: AsyncThrowingStream<StreamEvent, Error>, cancel: @Sendable () -> Void) {
         TavernLogger.agents.info("[\(self.name)] sendStreaming called, prompt length: \(message.count)")
         TavernLogger.agents.debug("[\(self.name)] state: \(self._state.rawValue) -> working")
 
         queue.sync { _state = .working }
 
-        let currentSessionId: String? = queue.sync { _sessionId }
-
-        // Build query options
-        var options = QueryOptions()
-        options.systemPrompt = systemPrompt
-        options.permissionMode = clodKitPermissionMode()
-        options.workingDirectory = projectURL
-        // Session resume disabled — stale sessions cause ControlProtocolError.timeout
-        // TODO: Re-enable with fallback logic (try resume, catch timeout, start fresh)
-        TavernLogger.claude.info("[\(self.name)] streaming, starting new conversation (resume disabled)")
-
-        let (innerStream, innerCancel) = messenger.queryStreaming(prompt: message, options: options)
+        let (innerStream, innerCancel) = session.sendStreaming(message)
 
         // Accumulate full response text for completion signal detection
         let responseAccumulator = UnsafeSendableBox("")
 
-        // Wrap the stream to handle session persistence and state cleanup
+        // Wrap the stream to manage Mortal-specific state
         let wrappedStream = AsyncThrowingStream<StreamEvent, Error> { continuation in
             let task = Task { [weak self] in
                 do {
@@ -223,12 +190,7 @@ public final class Mortal: Servitor, @unchecked Sendable {
                             responseAccumulator.value += delta
                             continuation.yield(event)
 
-                        case .completed(let info):
-                            if let sessionId = info.sessionId, let self {
-                                self.queue.sync { self._sessionId = sessionId }
-                                SessionStore.saveServitorSession(servitorId: self.id, sessionId: sessionId)
-                                TavernLogger.agents.info("[\(self.name)] streaming completed, sessionId: \(sessionId)")
-                            }
+                        case .completed:
                             self?.updateStateAfterResponse()
                             // Check for done/waiting signals in accumulated response
                             if let self {
@@ -270,22 +232,20 @@ public final class Mortal: Servitor, @unchecked Sendable {
     public func resetConversation() {
         TavernLogger.agents.info("[\(self.name)] conversation reset")
         queue.sync {
-            _sessionId = nil
             // Don't reset state to idle if done - done is terminal
             if _state != .done {
                 _state = .idle
             }
         }
 
-        // Clear persisted session
-        SessionStore.clearServitorSession(servitorId: id)
+        session.resetConversation()
     }
 
-    /// Update the chat description and persist it
+    /// Update the chat description
     /// - Parameter description: The new description (nil to clear)
+    /// Note: Persistence is handled by ClodSessionManager.updateDescription()
     public func updateChatDescription(_ description: String?) {
         self.chatDescription = description
-        SessionStore.updateServitor(id: id, chatDescription: description)
         TavernLogger.agents.debug("[\(self.name)] chat description updated: \(description ?? "nil")")
     }
 
@@ -306,18 +266,6 @@ public final class Mortal: Servitor, @unchecked Sendable {
     }
 
     // MARK: - Private Helpers
-
-    /// Map Tavern's PermissionMode to ClodKit's PermissionMode for QueryOptions
-    private func clodKitPermissionMode() -> ClodKit.PermissionMode {
-        let mode: TavernKit.PermissionMode = queue.sync { _sessionMode }
-        switch mode {
-        case .normal: return .default
-        case .acceptEdits: return .acceptEdits
-        case .plan: return .plan
-        case .bypassPermissions: return .bypassPermissions
-        case .dontAsk: return .dontAsk
-        }
-    }
 
     private func updateStateAfterResponse() {
         queue.sync {
@@ -374,10 +322,6 @@ public final class Mortal: Servitor, @unchecked Sendable {
     }
 
     /// Add a commitment that must be verified before completion
-    /// - Parameters:
-    ///   - description: What is being committed
-    ///   - assertion: Command to verify the commitment
-    /// - Returns: The created commitment
     @discardableResult
     public func addCommitment(description: String, assertion: String) -> Commitment {
         commitments.add(description: description, assertion: assertion)

@@ -202,9 +202,22 @@ public final class ChatViewModel: ObservableObject {
 
         let storedMessages: [ClaudeStoredMessage]
         if isJake {
-            storedMessages = await SessionStore.loadJakeSessionHistory(projectPath: projectPath)
+            storedMessages = await SessionStore.loadJakeSessionHistory(projectPath: projectPath, sessionId: servitor.sessionId)
         } else {
-            storedMessages = await SessionStore.loadServitorSessionHistory(servitorId: servitorId, projectPath: projectPath)
+            // Get session ID from the servitor (stored in ServitorStore on disk)
+            guard let sessionId = servitor.sessionId else {
+                TavernLogger.chat.info("loadSessionHistory: no session ID for \(self.servitorName), skipping")
+                isLoadingHistory = false
+                return
+            }
+            let storage = ClaudeNativeSessionStorage()
+            do {
+                storedMessages = try await storage.getMessages(sessionId: sessionId, projectPath: projectPath)
+            } catch {
+                TavernLogger.chat.error("loadSessionHistory: failed to load for \(self.servitorName): \(error.localizedDescription)")
+                isLoadingHistory = false
+                return
+            }
         }
         TavernLogger.chat.info("Got \(storedMessages.count) stored messages for agent \(self.servitorName)")
 

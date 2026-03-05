@@ -24,8 +24,8 @@ final class CoordinatorIntegrationTests: XCTestCase {
         try? FileManager.default.removeItem(at: projectURL)
     }
 
-    private func createCoordinator() -> TavernCoordinator {
-        let jake = Jake(projectURL: projectURL, loadSavedSession: false)
+    private func createCoordinator() throws -> TavernCoordinator {
+        let jake = Jake(projectURL: projectURL, store: try TestFixtures.createTestStore())
         let registry = ServitorRegistry()
         let nameGenerator = NameGenerator(theme: .lotr)
         let spawner = MortalSpawner(
@@ -40,7 +40,7 @@ final class CoordinatorIntegrationTests: XCTestCase {
 
     /// Chat history is preserved when switching between servitors
     func testChatHistoryPreservedWhenSwitching() async throws {
-        let coordinator = createCoordinator()
+        let coordinator = try createCoordinator()
 
         // Send a message to Jake
         coordinator.activeChatViewModel.inputText = "Say JAKE_HISTORY in one word"
@@ -62,7 +62,7 @@ final class CoordinatorIntegrationTests: XCTestCase {
 
     /// Mortal's ChatViewModel can receive messages
     func testMortalChatViewModelCanReceiveMessages() async throws {
-        let coordinator = createCoordinator()
+        let coordinator = try createCoordinator()
 
         let mortal = try coordinator.summonServitor(selectAfterSummon: true)
         XCTAssertEqual(coordinator.activeChatViewModel.servitorId, mortal.id)
@@ -76,7 +76,7 @@ final class CoordinatorIntegrationTests: XCTestCase {
 
     /// Switching between servitors preserves both chat histories
     func testSwitchingPreservesBothHistories() async throws {
-        let coordinator = createCoordinator()
+        let coordinator = try createCoordinator()
 
         // Message Jake
         coordinator.activeChatViewModel.inputText = "Say JAKE_MSG"
@@ -102,7 +102,7 @@ final class CoordinatorIntegrationTests: XCTestCase {
 
     /// Jake's summon MCP action creates a mortal
     func testJakeSummonActionCreatesMortal() async throws {
-        let coordinator = createCoordinator()
+        let coordinator = try createCoordinator()
 
         let initialCount = coordinator.spawner.mortalCount
 
@@ -124,7 +124,7 @@ final class CoordinatorIntegrationTests: XCTestCase {
 
     /// Jake's summon action can specify a name
     func testJakeSummonActionWithName() async throws {
-        let coordinator = createCoordinator()
+        let coordinator = try createCoordinator()
 
         coordinator.activeChatViewModel.inputText = "Use summon_servitor with name: TestMortal and assignment: named test"
         await coordinator.activeChatViewModel.sendMessage()
@@ -136,7 +136,7 @@ final class CoordinatorIntegrationTests: XCTestCase {
 
     /// Jake's summon failure reports error correctly
     func testJakeSummonFailureReportsError() async throws {
-        let coordinator = createCoordinator()
+        let coordinator = try createCoordinator()
 
         // Jake should handle this gracefully — the MCP handler has error handling
         coordinator.activeChatViewModel.inputText = "Say FAILURE_TEST in one word. Do not use any tools."
