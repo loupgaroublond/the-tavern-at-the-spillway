@@ -12,7 +12,7 @@ import PermissionSettingsTile
 // MARK: - Provenance: REQ-ARCH-003, REQ-ARCH-004, REQ-ARCH-008
 
 @Observable @MainActor
-public final class WindowBoard: TavernNavigator {
+public final class WindowBoard {
     private static let logger = Logger(subsystem: "com.tavern.spillway", category: "board")
 
     // MARK: - Facets
@@ -102,7 +102,11 @@ public final class WindowBoard: TavernNavigator {
         chatSocketPool.tile(for: servitorID).makeView()
     }
 
-    // MARK: - TavernNavigator
+}
+
+// MARK: - TavernNavigator
+
+extension WindowBoard: TavernNavigator {
 
     public func selectServitor(id: UUID) {
         Self.logger.info("[WindowBoard] selectServitor: \(id)")
