@@ -61,5 +61,34 @@
 
 ---
 
+## SDK Gap Beads — Design Discussion
+
+**[U]** For model/thinking/effort (2a) and budget (2b): we need defaults. Do this at user level for now — create a provider and source for macOS UserDefaults. We dropped UserDefaults when we fixed servitor persistence, but we need to bring it back cleanly for this purpose. These defaults are applied to a servitor at servitor creation and persisted (in the servitor's `.tavern/` record).
+
+**[U]** MCP configuration is per servitor, and again we can have some defaults. Jake's are always prewired to use a fixed set of MCP, though leave the option open for users to add more MCP servers to Jake. For now, MCP server config can actually just be JSON embedded in a code block in the markdown document for the servitor, matching the Claude Code schema. The default is always empty, with all the settings features to add default MCP servers and so on disabled and stubbed. They must be visible in the UI though.
+
+**[U]** Account info is singleton — pulled from the Jake session. Session info is obviously per session.
+
+*[T] Key design decisions captured:*
+
+*1. **UserDefaults revival (clean)**: A new, clean UserDefaults-backed provider specifically for user-level defaults (model, thinking, effort, budget). This is NOT the old SessionStore pattern — it's a new "user preferences" layer. Defaults are stamped onto a servitor at creation time and then persisted in the servitor's `.tavern/` record. After creation, the servitor's config is independent of the defaults.*
+
+*2. **Two-layer config pattern**: UserDefaults (user-level defaults) → ServitorStore (per-servitor persisted config). Defaults only apply at creation time — changing a default doesn't retroactively change existing servitors.*
+
+*3. **MCP config in markdown**: Servitor's `.tavern/servitors/<name>/servitor.md` already has YAML frontmatter. MCP config goes as a JSON code block in the markdown body, matching Claude Code's `mcpServers` schema. This keeps it human-readable and editable.*
+
+*4. **Jake's MCP is special**: Jake always has the tavern MCP server (summon/dismiss). Users can add more, but can't remove the built-in ones. Other servitors start with empty MCP config by default.*
+
+*5. **Account info is singleton**: One `accountInfo()` call from Jake's session, shared across the whole app. Not per-servitor. Makes sense — account tier/limits don't change per servitor.*
+
+*6. **MCP management UI is visible but stubbed**: The UI surfaces show MCP server status, but the "add default servers" management features are disabled/stubbed for now. Users see what's configured but can't manage defaults yet.*
+
+*Resolved questions:*
+- *Changing defaults: strictly creation-time, but offer a "reset to defaults" option on existing servitors*
+- *Jake's fixed MCP set: configurable list that starts with `tavern`. Not hardcoded to one server — treat it as a list that can grow.*
+- *Code blocks in servitor.md: one JSON code block per MCP config. Anticipate multiple code blocks for different purposes in the future, but scope to MCP for now.*
+
+---
+
 ## Item 2: Stale Downstream Refs in Spec Modules
 
