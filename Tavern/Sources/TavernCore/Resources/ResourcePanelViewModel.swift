@@ -1,9 +1,10 @@
 import Foundation
+import Observation
 import os.log
 
 /// ViewModel for the resource panel: file tree + file content viewer
-@MainActor
-public final class ResourcePanelViewModel: ObservableObject {
+@Observable @MainActor
+public final class ResourcePanelViewModel {
 
     /// The file tree scanner
     private let scanner = FileTreeScanner()
@@ -20,22 +21,22 @@ public final class ResourcePanelViewModel: ObservableObject {
     // MARK: - Published State
 
     /// Root-level nodes in the file tree
-    @Published public var rootNodes: [FileTreeNode] = []
+    public var rootNodes: [FileTreeNode] = []
 
     /// URL of the currently selected file
-    @Published public var selectedFileURL: URL?
+    public var selectedFileURL: URL?
 
     /// Content of the currently selected file
-    @Published public var selectedFileContent: String?
+    public var selectedFileContent: String?
 
     /// Name of the currently selected file
-    @Published public var selectedFileName: String?
+    public var selectedFileName: String?
 
     /// Whether a file is currently loading
-    @Published public var isLoading: Bool = false
+    public var isLoading: Bool = false
 
     /// Error message to display
-    @Published public var error: String?
+    public var error: String?
 
     // MARK: - Init
 

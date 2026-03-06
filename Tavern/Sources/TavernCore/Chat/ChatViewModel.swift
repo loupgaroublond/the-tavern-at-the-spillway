@@ -1,56 +1,56 @@
 import Foundation
-import Combine
+import Observation
 import os.log
 
 // MARK: - Provenance: REQ-ARCH-003, REQ-ARCH-004, REQ-ARCH-008, REQ-OPM-001, REQ-OPM-002, REQ-OPM-003, REQ-V1-003
 
 /// View model for managing a chat conversation with an agent
-@MainActor
-public final class ChatViewModel: ObservableObject {
+@Observable @MainActor
+public final class ChatViewModel {
 
     // ServitorActivity has moved to TavernKit as a top-level type.
 
     // MARK: - Published State
 
     /// All messages in the conversation
-    @Published public private(set) var messages: [ChatMessage] = []
+    public private(set) var messages: [ChatMessage] = []
 
     /// The agent's current activity (drives all status indicators)
-    @Published public private(set) var servitorActivity: ServitorActivity = .idle
+    public private(set) var servitorActivity: ServitorActivity = .idle
 
     /// Current input text (bound to text field)
-    @Published public var inputText: String = ""
+    public var inputText: String = ""
 
     /// Cumulative input tokens for this session
-    @Published public private(set) var totalInputTokens: Int = 0
+    public private(set) var totalInputTokens: Int = 0
 
     /// Cumulative output tokens for this session
-    @Published public private(set) var totalOutputTokens: Int = 0
+    public private(set) var totalOutputTokens: Int = 0
 
     /// Any error that occurred
-    @Published public private(set) var error: Error?
+    public private(set) var error: Error?
 
     /// Whether the scroll-to-bottom button should be visible
-    @Published public var showScrollToBottom: Bool = false
+    public var showScrollToBottom: Bool = false
 
     /// Whether session history is currently loading from disk
-    @Published public private(set) var isLoadingHistory: Bool = false
+    public private(set) var isLoadingHistory: Bool = false
 
     /// Whether to show session recovery options (corrupt session detected)
-    @Published public private(set) var showSessionRecoveryOptions: Bool = false
+    public private(set) var showSessionRecoveryOptions: Bool = false
 
     /// The corrupt session ID (if recovery options are shown)
-    @Published public private(set) var corruptSessionId: String?
+    public private(set) var corruptSessionId: String?
 
     /// Current tool approval request waiting for user decision (nil when none pending)
-    @Published public private(set) var pendingApproval: ToolApprovalRequest?
+    public private(set) var pendingApproval: ToolApprovalRequest?
 
     /// Current plan approval request waiting for user decision (nil when none pending)
-    @Published public private(set) var pendingPlanApproval: PlanApprovalRequest?
+    public private(set) var pendingPlanApproval: PlanApprovalRequest?
 
     /// The agent's session mode — drives CLI permission behavior.
     /// Changing this updates the agent immediately.
-    @Published public var sessionMode: PermissionMode {
+    public var sessionMode: PermissionMode {
         didSet {
             guard sessionMode != oldValue else { return }
             servitor.sessionMode = sessionMode

@@ -1,17 +1,18 @@
 import Foundation
+import Observation
 import os.log
 
 /// ViewModel for managing background tasks displayed in the side pane
-@MainActor
-public final class BackgroundTaskViewModel: ObservableObject {
+@Observable @MainActor
+public final class BackgroundTaskViewModel {
 
     // MARK: - Published State
 
     /// All background tasks, most recent first
-    @Published public private(set) var tasks: [TavernTask] = []
+    public private(set) var tasks: [TavernTask] = []
 
     /// ID of the task whose output is currently being viewed
-    @Published public var selectedTaskId: UUID?
+    public var selectedTaskId: UUID?
 
     // MARK: - Init
 

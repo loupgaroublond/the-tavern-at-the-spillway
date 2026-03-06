@@ -1,21 +1,22 @@
 import Foundation
 import ClodKit
+import Observation
 import os.log
 
 // MARK: - Provenance: REQ-AGT-007, REQ-ARCH-002, REQ-ARCH-005, REQ-COM-008
 
 /// Coordinates the Tavern's agents and their chat sessions
 /// This is the central hub that ties together Jake, the Slop Squad, and the UI
-@MainActor
-public final class TavernCoordinator: ObservableObject {
+@Observable @MainActor
+public final class TavernCoordinator {
 
     // MARK: - Published State
 
     /// The agent list view model (manages selection)
-    @Published public private(set) var servitorListViewModel: ServitorListViewModel
+    public private(set) var servitorListViewModel: ServitorListViewModel
 
     /// Currently active chat view model
-    @Published public private(set) var activeChatViewModel: ChatViewModel
+    public private(set) var activeChatViewModel: ChatViewModel
 
     // MARK: - Core Components
 
@@ -65,18 +66,18 @@ public final class TavernCoordinator: ObservableObject {
         self.commandDispatcher = SlashCommandDispatcher()
         self.commandContext = CommandContext()
 
+        // Create the agent list view model
+        self.servitorListViewModel = ServitorListViewModel(jake: jake, spawner: spawner)
+
         // Create Jake's chat view model
         self.jakeChatViewModel = ChatViewModel(jake: jake, loadHistory: restoreState)
-        self.chatViewModels[jake.id] = jakeChatViewModel
 
         // Start with Jake's chat as active
         self.activeChatViewModel = jakeChatViewModel
 
-        // Wire up command dispatcher to Jake's chat
+        // Cache Jake's chat and wire up command dispatcher
+        self.chatViewModels[jake.id] = jakeChatViewModel
         self.jakeChatViewModel.commandDispatcher = commandDispatcher
-
-        // Create the agent list view model
-        self.servitorListViewModel = ServitorListViewModel(jake: jake, spawner: spawner)
 
         // Post-init setup (all stored properties must be initialized above)
         registerCoreCommands()

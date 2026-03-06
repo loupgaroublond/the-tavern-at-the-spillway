@@ -1,17 +1,18 @@
 import Foundation
+import Observation
 import os.log
 
 /// ViewModel for managing a simple TODO checklist in the side pane
-@MainActor
-public final class TodoListViewModel: ObservableObject {
+@Observable @MainActor
+public final class TodoListViewModel {
 
     // MARK: - Published State
 
     /// All TODO items in display order
-    @Published public private(set) var items: [TodoItem] = []
+    public private(set) var items: [TodoItem] = []
 
     /// Text for a new item being composed
-    @Published public var draftText: String = ""
+    public var draftText: String = ""
 
     // MARK: - Init
 

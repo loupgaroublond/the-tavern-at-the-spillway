@@ -1,19 +1,20 @@
 import Foundation
+import Observation
 
 // MARK: - Provenance: REQ-LCM-004, REQ-OPM-004, REQ-VIW-005
 
 /// View model for the servitor list
 /// Manages the list of servitors and selection state
-@MainActor
-public final class ServitorListViewModel: ObservableObject {
+@Observable @MainActor
+public final class ServitorListViewModel {
 
     // MARK: - Published State
 
     /// All servitors in the list
-    @Published public private(set) var items: [ServitorListItem] = []
+    public private(set) var items: [ServitorListItem] = []
 
     /// Currently selected servitor ID
-    @Published public var selectedServitorId: UUID?
+    public var selectedServitorId: UUID?
 
     // MARK: - Dependencies
 

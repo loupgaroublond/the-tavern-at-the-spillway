@@ -1,17 +1,18 @@
 import Foundation
+import Observation
 import os.log
 
 /// ViewModel for the permission settings UI.
 ///
 /// Manages the current mode, rules list, and new-rule input state.
 /// All UX logic lives here; the view is dumb (layout + bindings only).
-@MainActor
-public final class PermissionSettingsViewModel: ObservableObject {
+@Observable @MainActor
+public final class PermissionSettingsViewModel {
 
     // MARK: - Published State
 
     /// The active permission mode
-    @Published public var currentMode: PermissionMode {
+    public var currentMode: PermissionMode {
         didSet {
             if currentMode != oldValue {
                 manager.mode = currentMode
@@ -21,13 +22,13 @@ public final class PermissionSettingsViewModel: ObservableObject {
     }
 
     /// All permission rules (refreshed from store)
-    @Published public private(set) var rules: [PermissionRule]
+    public private(set) var rules: [PermissionRule]
 
     /// Text field for new rule pattern
-    @Published public var newRulePattern: String = ""
+    public var newRulePattern: String = ""
 
     /// Decision picker for new rule
-    @Published public var newRuleDecision: PermissionDecision = .allow
+    public var newRuleDecision: PermissionDecision = .allow
 
     // MARK: - Dependencies
 
