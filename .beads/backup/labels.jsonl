@@ -10,6 +10,8 @@
 {"issue_id":"jake-0lnw","label":"agents"}
 {"issue_id":"jake-0lnw","label":"architecture"}
 {"issue_id":"jake-0lnw","label":"lifecycle"}
+{"issue_id":"jake-0m1n","label":"concurrency"}
+{"issue_id":"jake-0m1n","label":"refactor"}
 {"issue_id":"jake-0ns","label":"core"}
 {"issue_id":"jake-0ns","label":"tavern"}
 {"issue_id":"jake-0ns","label":"ui"}
@@ -28,6 +30,8 @@
 {"issue_id":"jake-0xr","label":"ui"}
 {"issue_id":"jake-15i","label":"architecture"}
 {"issue_id":"jake-15i","label":"tavern"}
+{"issue_id":"jake-16g6","label":"concurrency"}
+{"issue_id":"jake-16g6","label":"refactor"}
 {"issue_id":"jake-1cb","label":"pipeline"}
 {"issue_id":"jake-1cb","label":"spec"}
 {"issue_id":"jake-1jr","label":"permissions"}
