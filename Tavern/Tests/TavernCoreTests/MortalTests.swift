@@ -19,8 +19,7 @@ struct MortalTests {
         let mortal = Mortal(
             name: "TestWorker",
             assignment: "Parse the input file and extract data",
-            projectURL: Self.testProjectURL(),
-            store: try TestFixtures.createTestStore()
+            projectURL: Self.testProjectURL()
         )
 
         #expect(mortal.assignment == "Parse the input file and extract data")
@@ -32,8 +31,7 @@ struct MortalTests {
         let mortal = Mortal(
             name: "IdleWorker",
             assignment: "Do something",
-            projectURL: Self.testProjectURL(),
-            store: try TestFixtures.createTestStore()
+            projectURL: Self.testProjectURL()
         )
 
         #expect(mortal.state == .idle)
@@ -45,8 +43,7 @@ struct MortalTests {
         let mortal = Mortal(
             name: "ExplicitWorker",
             assignment: "Task",
-            projectURL: Self.testProjectURL(),
-            store: try TestFixtures.createTestStore()
+            projectURL: Self.testProjectURL()
         )
 
         #expect(mortal.state == .idle)
@@ -61,8 +58,7 @@ struct MortalTests {
         let mortal = Mortal(
             name: "DoneWorker",
             assignment: "Task",
-            projectURL: Self.testProjectURL(),
-            store: try TestFixtures.createTestStore()
+            projectURL: Self.testProjectURL()
         )
 
         mortal.markDone()
@@ -75,8 +71,7 @@ struct MortalTests {
         let mortal = Mortal(
             name: "TerminalWorker",
             assignment: "Task",
-            projectURL: Self.testProjectURL(),
-            store: try TestFixtures.createTestStore()
+            projectURL: Self.testProjectURL()
         )
 
         mortal.markDone()
@@ -96,8 +91,7 @@ struct MortalTests {
         let mortal = Mortal(
             name: "ResetWorker",
             assignment: "Task",
-            projectURL: Self.testProjectURL(),
-            store: try TestFixtures.createTestStore()
+            projectURL: Self.testProjectURL()
         )
 
         // Session starts nil
@@ -114,8 +108,7 @@ struct MortalTests {
         let mortal = Mortal(
             name: "CommitHelper",
             assignment: "Task",
-            projectURL: Self.testProjectURL(),
-            store: try TestFixtures.createTestStore()
+            projectURL: Self.testProjectURL()
         )
 
         #expect(mortal.commitments.count == 0)
@@ -136,7 +129,6 @@ struct MortalTests {
             name: "PassCheckWorker",
             assignment: "Task",
             projectURL: Self.testProjectURL(),
-            store: try TestFixtures.createTestStore(),
             commitments: commitments
         )
 
@@ -160,7 +152,6 @@ struct MortalTests {
             name: "FailCheckWorker",
             assignment: "Task",
             projectURL: Self.testProjectURL(),
-            store: try TestFixtures.createTestStore(),
             commitments: commitments
         )
 
@@ -182,7 +173,6 @@ struct MortalTests {
             name: "ResponseWorker",
             assignment: "Handle messages",
             projectURL: Self.testProjectURL(),
-            store: try TestFixtures.createTestStore(),
             messenger: mock
         )
 
@@ -201,7 +191,6 @@ struct MortalTests {
             name: "StateWorker",
             assignment: "Task",
             projectURL: Self.testProjectURL(),
-            store: try TestFixtures.createTestStore(),
             messenger: mock
         )
 
@@ -225,7 +214,6 @@ struct MortalTests {
             name: "DoneViaResponse",
             assignment: "Finish up",
             projectURL: Self.testProjectURL(),
-            store: try TestFixtures.createTestStore(),
             messenger: mock
         )
 
@@ -241,7 +229,6 @@ struct MortalTests {
             name: "WaitViaResponse",
             assignment: "Need info",
             projectURL: Self.testProjectURL(),
-            store: try TestFixtures.createTestStore(),
             messenger: mock
         )
 
@@ -258,7 +245,6 @@ struct MortalTests {
             name: "ConvoWorker",
             assignment: "Chat",
             projectURL: Self.testProjectURL(),
-            store: try TestFixtures.createTestStore(),
             messenger: mock
         )
 
@@ -280,7 +266,6 @@ struct MortalTests {
             name: "ErrorWorker",
             assignment: "Fail",
             projectURL: Self.testProjectURL(),
-            store: try TestFixtures.createTestStore(),
             messenger: mock
         )
 
@@ -303,7 +288,6 @@ struct MortalTests {
             name: "NoPledgeWorker",
             assignment: "Quick task",
             projectURL: Self.testProjectURL(),
-            store: try TestFixtures.createTestStore(),
             commitments: CommitmentList(),
             messenger: mock
         )
@@ -325,7 +309,6 @@ struct MortalTests {
             name: "VerifyWorker",
             assignment: "Verify task",
             projectURL: Self.testProjectURL(),
-            store: try TestFixtures.createTestStore(),
             commitments: commitments,
             messenger: mock
         )
@@ -348,7 +331,6 @@ struct MortalTests {
             name: "PassVerifyWorker",
             assignment: "Pass all checks",
             projectURL: Self.testProjectURL(),
-            store: try TestFixtures.createTestStore(),
             commitments: commitments,
             messenger: mock
         )
@@ -368,7 +350,6 @@ struct MortalTests {
             name: "FailVerifyWorker",
             assignment: "Fail checks",
             projectURL: Self.testProjectURL(),
-            store: try TestFixtures.createTestStore(),
             commitments: commitments,
             messenger: mock
         )
@@ -390,7 +371,6 @@ struct MortalTests {
             name: "PartialVerifyWorker",
             assignment: "Partial verification",
             projectURL: Self.testProjectURL(),
-            store: try TestFixtures.createTestStore(),
             commitments: commitments,
             messenger: mock
         )
@@ -408,8 +388,7 @@ struct MortalTests {
     func mortalDefaultsToPlanMode() throws {
         let mortal = Mortal(
             name: "ModeWorker",
-            projectURL: Self.testProjectURL(),
-            store: try TestFixtures.createTestStore()
+            projectURL: Self.testProjectURL()
         )
         #expect(mortal.sessionMode == .plan)
     }
@@ -418,8 +397,7 @@ struct MortalTests {
     func mortalSessionModeCanBeChanged() throws {
         let mortal = Mortal(
             name: "ModeWorker",
-            projectURL: Self.testProjectURL(),
-            store: try TestFixtures.createTestStore()
+            projectURL: Self.testProjectURL()
         )
         #expect(mortal.sessionMode == .plan)
 
@@ -434,7 +412,6 @@ struct MortalTests {
             name: "ModeQueryWorker",
             assignment: "Test modes",
             projectURL: Self.testProjectURL(),
-            store: try TestFixtures.createTestStore(),
             messenger: mock
         )
 

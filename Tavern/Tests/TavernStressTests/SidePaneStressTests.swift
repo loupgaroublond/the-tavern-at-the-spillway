@@ -260,8 +260,7 @@ final class SidePaneStressTests: XCTestCase {
 
 // MARK: - Stub
 
-@MainActor
-private final class StubResourceProvider: ResourceProvider {
+private final class StubResourceProvider: ResourceProvider, Sendable {
     func scanDirectory(at url: URL) throws -> [FileTreeNode] { [] }
     func scanChildren(of node: FileTreeNode) throws -> [FileTreeNode] { [] }
     func readFile(at url: URL) throws -> String { "" }

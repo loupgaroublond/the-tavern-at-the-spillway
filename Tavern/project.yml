@@ -24,6 +24,9 @@ packages:
   ClodKit:
     url: https://github.com/loupgaroublond/ClodKit
     exactVersion: 0.2.63-r0
+  ViewInspector:
+    url: https://github.com/nalexn/ViewInspector
+    from: "0.10.0"
 
 targets:
   TavernKit:
@@ -214,6 +217,8 @@ targets:
       - target: TavernKit
       - target: ChatTile
       - target: ResourcePanelTile
+      - package: ViewInspector
+        product: ViewInspector
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: com.tavern.tests
       SWIFT_VERSION: "6.0"

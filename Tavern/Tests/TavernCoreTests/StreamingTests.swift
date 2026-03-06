@@ -288,7 +288,6 @@ struct StreamingTests {
 
         let jake = Jake(
             projectURL: Self.testProjectURL(),
-            store: try TestFixtures.createTestStore(),
             messenger: mock
         )
 
@@ -319,7 +318,6 @@ struct StreamingTests {
             name: "CancelTest",
             assignment: "Test",
             projectURL: Self.testProjectURL(),
-            store: try TestFixtures.createTestStore(),
             messenger: mock
         )
 
@@ -347,7 +345,6 @@ struct StreamingTests {
 
             let jake = Jake(
                 projectURL: Self.testProjectURL(),
-                store: try TestFixtures.createTestStore(),
                 messenger: mock
             )
 
@@ -379,7 +376,6 @@ struct StreamingTests {
             let mortal = Mortal(
                 name: "RaceTest-\(UUID().uuidString.prefix(4))",
                 projectURL: Self.testProjectURL(),
-                store: try TestFixtures.createTestStore(),
                 messenger: mock
             )
 

@@ -2,8 +2,7 @@ import Foundation
 import TavernKit
 
 /// Stub resource provider for tile tests. Configurable responses, no disk I/O.
-@MainActor
-final class StubResourceProvider: ResourceProvider {
+final class StubResourceProvider: @unchecked Sendable, ResourceProvider {
     var scanResult: [FileTreeNode] = []
     var childrenResult: [FileTreeNode] = []
     var fileContent: String = ""

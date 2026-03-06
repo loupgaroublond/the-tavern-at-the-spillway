@@ -44,5 +44,22 @@
 
 ---
 
+## New Feature: Debug Log Window
+
+**[U]** When running in debug mode, which redo should do by default, the app should display a debug log window that scrolls by every log message and event for my insights into what's going on.
+
+*[T] New feature request — not from the gap reports, but from the user directly. A dedicated window in debug builds that shows a live scrolling feed of all TavernLogger output and system events. This replaces the need to run `log stream` in a terminal or open Console.app. The app already has TavernLogger with 7 categories (agents, chat, coordination, claude, resources, permissions, commands) — this window would be a live consumer of those logs.*
+
+*Open questions for design discussion:*
+- *Window lifecycle: auto-open on debug launch? Togglable via menu item?*
+- *Filtering: per-category toggles? Log level filter?*
+- *Format: structured (columns for timestamp/category/level/message) or raw text scroll?*
+- *Performance: buffering strategy to avoid UI lag from high-volume logging?*
+- *Is this a tile in the existing tileboard, a separate window, or a panel?*
+
+**Status: Logged to plan, design discussion pending.**
+
+---
+
 ## Item 2: Stale Downstream Refs in Spec Modules
 

@@ -4,13 +4,13 @@ import Testing
 
 // MARK: - Provenance: REQ-DOC-004, REQ-DOC-008
 
-@Suite("ServitorStore Tests", .timeLimit(.minutes(1)))
-struct ServitorStoreTests {
+@Suite("ProjectDirectory Servitor Persistence Tests", .timeLimit(.minutes(1)))
+struct ProjectDirectoryServitorTests {
 
     // MARK: - Helpers
 
-    private func makeStore() throws -> ServitorStore {
-        try TestFixtures.createTestStore()
+    private func makeDirectory() throws -> ProjectDirectory {
+        try TestFixtures.createTestDirectory()
     }
 
     private func makeRecord(
@@ -39,7 +39,7 @@ struct ServitorStoreTests {
 
     @Test("Save and load round-trips all fields", .tags(.reqDOC002))
     func testSaveAndLoad() throws {
-        let store = try makeStore()
+        let directory = try makeDirectory()
         let id = UUID()
         let now = Date()
         let record = makeRecord(
@@ -53,8 +53,8 @@ struct ServitorStoreTests {
             updatedAt: now
         )
 
-        try store.save(record)
-        let loaded = try store.load(name: "Marcos")
+        try directory.saveServitor(record)
+        let loaded = try directory.loadServitor(name: "Marcos")
 
         #expect(loaded != nil)
         let r = try #require(loaded)
@@ -69,15 +69,15 @@ struct ServitorStoreTests {
         #expect(abs(r.updatedAt.timeIntervalSince(now)) < 1.0)
     }
 
-    @Test("listAll returns all saved records", .tags(.reqDOC002))
+    @Test("listAllServitors returns all saved records", .tags(.reqDOC002))
     func testListAll() throws {
-        let store = try makeStore()
+        let directory = try makeDirectory()
 
-        try store.save(makeRecord(name: "Alpha"))
-        try store.save(makeRecord(name: "Beta"))
-        try store.save(makeRecord(name: "Gamma"))
+        try directory.saveServitor(makeRecord(name: "Alpha"))
+        try directory.saveServitor(makeRecord(name: "Beta"))
+        try directory.saveServitor(makeRecord(name: "Gamma"))
 
-        let all = try store.listAll()
+        let all = try directory.listAllServitors()
 
         #expect(all.count == 3)
         let names = Set(all.map(\.name))
@@ -88,35 +88,35 @@ struct ServitorStoreTests {
 
     @Test("Remove deletes record from disk", .tags(.reqDOC002))
     func testRemove() throws {
-        let store = try makeStore()
-        try store.save(makeRecord(name: "Ephemeral"))
+        let directory = try makeDirectory()
+        try directory.saveServitor(makeRecord(name: "Ephemeral"))
 
         // Verify it exists
-        #expect(try store.load(name: "Ephemeral") != nil)
+        #expect(try directory.loadServitor(name: "Ephemeral") != nil)
 
-        try store.remove(name: "Ephemeral")
+        try directory.removeServitor(name: "Ephemeral")
 
         // Verify it's gone
-        #expect(try store.load(name: "Ephemeral") == nil)
-        let all = try store.listAll()
+        #expect(try directory.loadServitor(name: "Ephemeral") == nil)
+        let all = try directory.listAllServitors()
         #expect(!all.contains { $0.name == "Ephemeral" })
     }
 
     @Test("Append and load session events preserves order and content")
     func testAppendAndLoadSessionEvents() throws {
-        let store = try makeStore()
+        let directory = try makeDirectory()
         let name = "EventServitor"
-        try store.save(makeRecord(name: name))
+        try directory.saveServitor(makeRecord(name: name))
 
         let event1 = SessionEvent(event: .sessionStarted, sessionId: "sess-1", timestamp: Date())
         let event2 = SessionEvent(event: .sessionExpired, sessionId: "sess-1", timestamp: Date())
         let event3 = SessionEvent(event: .sessionStarted, sessionId: "sess-2", timestamp: Date())
 
-        try store.appendSessionEvent(event1, name: name)
-        try store.appendSessionEvent(event2, name: name)
-        try store.appendSessionEvent(event3, name: name)
+        try directory.appendSessionEvent(event1, name: name)
+        try directory.appendSessionEvent(event2, name: name)
+        try directory.appendSessionEvent(event3, name: name)
 
-        let events = try store.loadSessionEvents(name: name)
+        let events = try directory.loadSessionEvents(name: name)
 
         #expect(events.count == 3)
         #expect(events[0].event == .sessionStarted)
@@ -129,9 +129,9 @@ struct ServitorStoreTests {
 
     @Test("Break event with reason round-trips correctly")
     func testBreakSigil() throws {
-        let store = try makeStore()
+        let directory = try makeDirectory()
         let name = "BreakServitor"
-        try store.save(makeRecord(name: name))
+        try directory.saveServitor(makeRecord(name: name))
 
         let breakEvent = SessionEvent(
             event: .break,
@@ -140,9 +140,9 @@ struct ServitorStoreTests {
             reason: "user_cleared"
         )
 
-        try store.appendSessionEvent(breakEvent, name: name)
+        try directory.appendSessionEvent(breakEvent, name: name)
 
-        let events = try store.loadSessionEvents(name: name)
+        let events = try directory.loadSessionEvents(name: name)
         #expect(events.count == 1)
         #expect(events[0].event == .break)
         #expect(events[0].reason == "user_cleared")
@@ -151,11 +151,11 @@ struct ServitorStoreTests {
 
     @Test("Overwrite record updates persisted state", .tags(.reqDOC002))
     func testOverwriteRecord() throws {
-        let store = try makeStore()
+        let directory = try makeDirectory()
         let id = UUID()
 
         let original = makeRecord(name: "Mutable", id: id, sessionId: "old-session")
-        try store.save(original)
+        try directory.saveServitor(original)
 
         let updated = ServitorRecord(
             name: "Mutable",
@@ -167,9 +167,9 @@ struct ServitorStoreTests {
             createdAt: original.createdAt,
             updatedAt: Date()
         )
-        try store.save(updated)
+        try directory.saveServitor(updated)
 
-        let loaded = try #require(try store.load(name: "Mutable"))
+        let loaded = try #require(try directory.loadServitor(name: "Mutable"))
         #expect(loaded.sessionId == "new-session")
         #expect(loaded.sessionMode == .acceptEdits)
         #expect(loaded.id == id)
@@ -177,23 +177,23 @@ struct ServitorStoreTests {
 
     @Test("Load nonexistent name returns nil without throwing")
     func testLoadNonexistent() throws {
-        let store = try makeStore()
+        let directory = try makeDirectory()
 
-        let result = try store.load(name: "NoSuchServitor")
+        let result = try directory.loadServitor(name: "NoSuchServitor")
         #expect(result == nil)
     }
 
     @Test("YAML escaping handles special characters in description", .tags(.reqDOC002))
     func testYAMLEscaping() throws {
-        let store = try makeStore()
+        let directory = try makeDirectory()
 
         let tricky = makeRecord(
             name: "Escaper",
             description: "line1: value\nline2: \"quoted\"\nkey: #comment & more!"
         )
 
-        try store.save(tricky)
-        let loaded = try #require(try store.load(name: "Escaper"))
+        try directory.saveServitor(tricky)
+        let loaded = try #require(try directory.loadServitor(name: "Escaper"))
 
         #expect(loaded.description == tricky.description)
     }

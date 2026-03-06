@@ -1,6 +1,5 @@
 import Foundation
 
-@MainActor
 public protocol ResourceProvider: Sendable {
     func scanDirectory(at url: URL) throws -> [FileTreeNode]
     func scanChildren(of node: FileTreeNode) throws -> [FileTreeNode]

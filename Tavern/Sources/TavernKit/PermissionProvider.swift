@@ -1,6 +1,5 @@
 import Foundation
 
-@MainActor
 public protocol PermissionProvider: Sendable {
     var mode: PermissionMode { get set }
     func rules() -> [PermissionRuleInfo]

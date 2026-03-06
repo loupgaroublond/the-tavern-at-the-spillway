@@ -5,15 +5,14 @@ import os.log
 
 // MARK: - Provenance: REQ-ARCH-003, REQ-ARCH-004, REQ-ARCH-008
 
-@MainActor
-public final class ClodSessionManager: ServitorProvider {
+public final class ClodSessionManager: @unchecked Sendable, ServitorProvider {
     private static let logger = Logger(subsystem: "com.tavern.spillway", category: "sessionmgr")
 
     let jake: Jake
     let spawner: MortalSpawner
     private let permissionManager: PermissionManager
     private let projectURL: URL
-    private let store: ServitorStore
+    private let directory: ProjectDirectory
 
     var jakeMCPServer: SDKMCPServer? {
         get { jake.mcpServer }
@@ -27,13 +26,13 @@ public final class ClodSessionManager: ServitorProvider {
         spawner: MortalSpawner,
         permissionManager: PermissionManager,
         projectURL: URL,
-        store: ServitorStore
+        directory: ProjectDirectory
     ) {
         self.jake = jake
         self.spawner = spawner
         self.permissionManager = permissionManager
         self.projectURL = projectURL
-        self.store = store
+        self.directory = directory
 
         Self.logger.info("[ClodSessionManager] initialized for project: \(projectURL.lastPathComponent)")
     }
@@ -41,17 +40,26 @@ public final class ClodSessionManager: ServitorProvider {
     // MARK: - ServitorProvider
 
     public func sendStreaming(servitorID: UUID, message: String) -> (stream: AsyncThrowingStream<StreamEvent, Error>, cancel: @Sendable () -> Void) {
+        let servitor: (any Servitor)?
         if servitorID == jake.id {
-            return jake.sendStreaming(message)
+            servitor = jake
+        } else {
+            servitor = spawner.activeMortals.first(where: { $0.id == servitorID })
         }
-        if let mortal = spawner.activeMortals.first(where: { $0.id == servitorID }) {
-            return mortal.sendStreaming(message)
+
+        guard let servitor else {
+            let stream = AsyncThrowingStream<StreamEvent, Error> { continuation in
+                continuation.finish(throwing: TavernError.internalError("Servitor not found: \(servitorID)"))
+            }
+            return (stream: stream, cancel: {})
         }
-        // Unknown servitor — return an error stream
-        let stream = AsyncThrowingStream<StreamEvent, Error> { continuation in
-            continuation.finish(throwing: TavernError.internalError("Servitor not found: \(servitorID)"))
-        }
-        return (stream: stream, cancel: {})
+
+        let (innerStream, innerCancel) = servitor.sendStreaming(message)
+
+        // Wrap to persist session IDs after completion (policy layer)
+        let wrappedStream = wrapStreamWithPersistence(innerStream, servitor: servitor)
+
+        return (stream: wrappedStream, cancel: innerCancel)
     }
 
     public func loadHistory(servitorID: UUID) async -> [ChatMessage] {
@@ -65,7 +73,7 @@ public final class ClodSessionManager: ServitorProvider {
         // Look up the session ID from our file-system store
         let servitorName = servitorName(for: servitorID)
         guard servitorName != "Unknown",
-              let record = try? store.load(name: servitorName),
+              let record = try? directory.loadServitor(name: servitorName),
               let sessionId = record.sessionId else {
             Self.logger.info("[ClodSessionManager] no session ID for servitor \(servitorID), skipping history load")
             return []
@@ -147,7 +155,7 @@ public final class ClodSessionManager: ServitorProvider {
         // Remove from file-system store
         if let name = servitorName {
             do {
-                try store.remove(name: name)
+                try directory.removeServitor(name: name)
             } catch {
                 Self.logger.error("[ClodSessionManager] failed to remove store for \(name): \(error.localizedDescription)")
             }
@@ -162,10 +170,10 @@ public final class ClodSessionManager: ServitorProvider {
 
             // Update in file-system store
             do {
-                if var record = try store.load(name: mortal.name) {
+                if var record = try directory.loadServitor(name: mortal.name) {
                     record.description = description
                     record.updatedAt = Date()
-                    try store.save(record)
+                    try directory.saveServitor(record)
                 }
             } catch {
                 Self.logger.error("[ClodSessionManager] failed to update description for \(mortal.name): \(error.localizedDescription)")
@@ -184,9 +192,60 @@ public final class ClodSessionManager: ServitorProvider {
             description: mortal.chatDescription
         )
         do {
-            try store.save(record)
+            try directory.saveServitor(record)
         } catch {
             Self.logger.error("[ClodSessionManager] failed to persist record for \(mortal.name): \(error.localizedDescription)")
+        }
+    }
+
+    // MARK: - Stream Wrapping
+
+    private func wrapStreamWithPersistence(
+        _ innerStream: AsyncThrowingStream<StreamEvent, Error>,
+        servitor: any Servitor
+    ) -> AsyncThrowingStream<StreamEvent, Error> {
+        let (stream, continuation) = AsyncThrowingStream<StreamEvent, Error>.makeStream()
+        let task = Task { [weak self] in
+            do {
+                for try await event in innerStream {
+                    if case .completed = event {
+                        self?.persistSessionId(for: servitor)
+                    } else if case .sessionBreak(let staleId) = event {
+                        self?.logSessionExpired(servitorName: servitor.name, staleSessionId: staleId)
+                    }
+                    continuation.yield(event)
+                }
+                continuation.finish()
+            } catch {
+                continuation.finish(throwing: error)
+            }
+        }
+        continuation.onTermination = { @Sendable _ in task.cancel() }
+        return stream
+    }
+
+    // MARK: - Session Persistence (policy layer — moved from ClodSession)
+
+    private func persistSessionId(for servitor: any Servitor) {
+        guard let sessionId = servitor.sessionId else { return }
+        let servitorName = servitor.name.lowercased() == "jake" ? "jake" : servitor.name
+        do {
+            if var record = try directory.loadServitor(name: servitorName) {
+                record.sessionId = sessionId
+                record.updatedAt = Date()
+                try directory.saveServitor(record)
+            }
+        } catch {
+            Self.logger.error("[ClodSessionManager] failed to persist session for \(servitorName): \(error.localizedDescription)")
+        }
+    }
+
+    private func logSessionExpired(servitorName: String, staleSessionId: String) {
+        let event = SessionEvent(event: .sessionExpired, sessionId: staleSessionId, timestamp: Date(), reason: "timeout")
+        do {
+            try directory.appendSessionEvent(event, name: servitorName)
+        } catch {
+            Self.logger.error("[ClodSessionManager] failed to log session expired for \(servitorName): \(error.localizedDescription)")
         }
     }
 

@@ -4,7 +4,6 @@ import os.log
 
 // MARK: - Provenance: REQ-COM-008
 
-@MainActor
 public final class CommandRegistry: CommandProvider {
     private static let logger = Logger(subsystem: "com.tavern.spillway", category: "commands")
 
@@ -25,19 +24,19 @@ public final class CommandRegistry: CommandProvider {
         return await dispatcher.dispatch(name: name, arguments: arguments)
     }
 
-    public func availableCommands() -> [(name: String, description: String, usage: String)] {
-        dispatcher.commands.map { cmd in
+    public func availableCommands() async -> [(name: String, description: String, usage: String)] {
+        await dispatcher.commands.map { cmd in
             (name: cmd.name, description: cmd.description, usage: cmd.usage)
         }
     }
 
-    public func completions(for prefix: String) -> [(name: String, description: String)] {
-        dispatcher.matchingCommands(prefix: prefix).map { cmd in
+    public func completions(for prefix: String) async -> [(name: String, description: String)] {
+        await dispatcher.matchingCommands(prefix: prefix).map { cmd in
             (name: cmd.name, description: cmd.description)
         }
     }
 
-    public func fileMentionSuggestions(for prefix: String, projectRoot: URL) -> [FileMentionSuggestion] {
+    public func fileMentionSuggestions(for prefix: String, projectRoot: URL) async -> [FileMentionSuggestion] {
         // Tracked in jake-3eu8: wire to FileTreeScanner when ChatTile absorbs FileMentionAutocomplete
         []
     }

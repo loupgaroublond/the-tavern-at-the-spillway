@@ -4,8 +4,7 @@ import TavernKit
 
 /// Stub ServitorProvider for testing ChatTile and ChatSocketPool
 /// without real Claude sessions.
-@MainActor
-final class StubServitorProvider: ServitorProvider {
+final class StubServitorProvider: @unchecked Sendable, ServitorProvider {
     var streamingResponses: [UUID: [StreamEvent]] = [:]
     var historyResponses: [UUID: [ChatMessage]] = [:]
     var servitorNames: [UUID: String] = [:]

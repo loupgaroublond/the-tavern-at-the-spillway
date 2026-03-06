@@ -5,7 +5,7 @@ import os.log
 
 /// Utilities for loading session history from Claude's native JSONL storage.
 ///
-/// Session ID persistence has moved to ServitorStore (file-system-backed).
+/// Session ID persistence lives in ProjectDirectory (file-system-backed).
 /// This enum retains only the history-loading helpers that read from
 /// Claude CLI's native `~/.claude/projects/` JSONL files.
 public enum SessionStore {
@@ -18,7 +18,7 @@ public enum SessionStore {
     /// Falls back to the most recent session file if the session ID has no matching file.
     /// - Parameters:
     ///   - projectPath: The project path to load history for
-    ///   - sessionId: The session ID to look up (from ServitorStore)
+    ///   - sessionId: The session ID to look up (from ProjectDirectory)
     /// - Returns: Array of stored messages, empty if no history found
     public static func loadJakeSessionHistory(projectPath: String, sessionId: String? = nil) async -> [ClaudeStoredMessage] {
         let storage = ClaudeNativeSessionStorage()

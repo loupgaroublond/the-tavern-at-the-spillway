@@ -119,8 +119,7 @@ struct PermissionSettingsTileTests {
 
 // MARK: - Mock
 
-@MainActor
-private final class MockPermissionProvider: PermissionProvider {
+private final class MockPermissionProvider: @unchecked Sendable, PermissionProvider {
     var mode: PermissionMode
     private var _rules: [PermissionRuleInfo] = []
 

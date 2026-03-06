@@ -32,8 +32,7 @@ final class MortalIntegrationTests: XCTestCase {
         let mortal = Mortal(
             name: "TestWorker",
             assignment: "Respond to test messages",
-            projectURL: projectURL,
-            store: try TestFixtures.createTestStore()
+            projectURL: projectURL
         )
 
         let response = try await mortal.send("Say MORTAL_OK in one word")
@@ -45,8 +44,7 @@ final class MortalIntegrationTests: XCTestCase {
         let mortal = Mortal(
             name: "StateWorker",
             assignment: "Track state transitions",
-            projectURL: projectURL,
-            store: try TestFixtures.createTestStore()
+            projectURL: projectURL
         )
         XCTAssertEqual(mortal.state, .idle, "Mortal should start idle")
 
@@ -74,8 +72,7 @@ final class MortalIntegrationTests: XCTestCase {
         let mortal = Mortal(
             name: "DoneWorker",
             assignment: "Say DONE when complete",
-            projectURL: projectURL,
-            store: try TestFixtures.createTestStore()
+            projectURL: projectURL
         )
 
         let _ = try await mortal.send(
@@ -90,8 +87,7 @@ final class MortalIntegrationTests: XCTestCase {
         let mortal = Mortal(
             name: "WaitWorker",
             assignment: "Wait for input",
-            projectURL: projectURL,
-            store: try TestFixtures.createTestStore()
+            projectURL: projectURL
         )
 
         let _ = try await mortal.send(
@@ -111,8 +107,7 @@ final class MortalIntegrationTests: XCTestCase {
         let mortal = Mortal(
             name: "ConversationWorker",
             assignment: "Remember context across messages",
-            projectURL: projectURL,
-            store: try TestFixtures.createTestStore()
+            projectURL: projectURL
         )
 
         XCTAssertNil(mortal.sessionId, "Session should be nil before first message")
@@ -127,18 +122,15 @@ final class MortalIntegrationTests: XCTestCase {
 
     /// Mortal propagates errors
     func testMortalPropagatesErrors() async throws {
-        // Create a mortal with a bad session ID via ServitorStore
+        // Create a mortal with a bad session ID to trigger error propagation
         let badId = UUID()
-        let store = try TestFixtures.createTestStore()
-        let record = ServitorRecord(name: "ErrorWorker", id: badId, sessionId: "invalid-session-id-bogus")
-        try store.save(record)
 
         let mortal = Mortal(
             id: badId,
             name: "ErrorWorker",
             assignment: "Fail gracefully",
             projectURL: projectURL,
-            store: store
+            initialSessionId: "invalid-session-id-bogus"
         )
 
         do {
@@ -157,7 +149,6 @@ final class MortalIntegrationTests: XCTestCase {
             name: "NoPledgeWorker",
             assignment: "Complete immediately",
             projectURL: projectURL,
-            store: try TestFixtures.createTestStore(),
             commitments: CommitmentList()
         )
 
@@ -177,7 +168,6 @@ final class MortalIntegrationTests: XCTestCase {
             name: "VerifyWorker",
             assignment: "Verify commitments",
             projectURL: projectURL,
-            store: try TestFixtures.createTestStore(),
             commitments: commitments
         )
 
@@ -203,7 +193,6 @@ final class MortalIntegrationTests: XCTestCase {
             name: "PassWorker",
             assignment: "Pass verification",
             projectURL: projectURL,
-            store: try TestFixtures.createTestStore(),
             commitments: commitments
         )
 
@@ -227,7 +216,6 @@ final class MortalIntegrationTests: XCTestCase {
             name: "FailWorker",
             assignment: "Fail verification",
             projectURL: projectURL,
-            store: try TestFixtures.createTestStore(),
             commitments: commitments
         )
 
@@ -253,7 +241,6 @@ final class MortalIntegrationTests: XCTestCase {
             name: "PartialWorker",
             assignment: "Partial verification",
             projectURL: projectURL,
-            store: try TestFixtures.createTestStore(),
             commitments: commitments
         )
 

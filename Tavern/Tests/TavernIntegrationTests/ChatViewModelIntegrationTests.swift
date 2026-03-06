@@ -28,7 +28,7 @@ final class ChatViewModelIntegrationTests: XCTestCase {
 
     /// Sending a message adds both user and agent messages
     func testSendingMessageAddsMessages() async throws {
-        let jake = Jake(projectURL: projectURL, store: try TestFixtures.createTestStore())
+        let jake = Jake(projectURL: projectURL)
         let viewModel = ChatViewModel(jake: jake, loadHistory: false)
 
         viewModel.inputText = "Say hello in 5 words or fewer"
@@ -48,7 +48,7 @@ final class ChatViewModelIntegrationTests: XCTestCase {
 
     /// Input text clears after sending
     func testInputTextClearsAfterSend() async throws {
-        let jake = Jake(projectURL: projectURL, store: try TestFixtures.createTestStore())
+        let jake = Jake(projectURL: projectURL)
         let viewModel = ChatViewModel(jake: jake, loadHistory: false)
 
         viewModel.inputText = "Say OK"
@@ -59,7 +59,7 @@ final class ChatViewModelIntegrationTests: XCTestCase {
 
     /// Cogitating state is set during send and cleared after
     func testCogitatingStateDuringSend() async throws {
-        let jake = Jake(projectURL: projectURL, store: try TestFixtures.createTestStore())
+        let jake = Jake(projectURL: projectURL)
         let viewModel = ChatViewModel(jake: jake, loadHistory: false)
 
         XCTAssertFalse(viewModel.isCogitating, "Should not be cogitating initially")
@@ -78,7 +78,7 @@ final class ChatViewModelIntegrationTests: XCTestCase {
 
     /// Cogitation verb is set during send
     func testCogitationVerbIsSet() async throws {
-        let jake = Jake(projectURL: projectURL, store: try TestFixtures.createTestStore())
+        let jake = Jake(projectURL: projectURL)
         let viewModel = ChatViewModel(jake: jake, loadHistory: false)
 
         // The verb is set randomly during sendMessage
@@ -92,13 +92,9 @@ final class ChatViewModelIntegrationTests: XCTestCase {
 
     /// Error is captured and displayed when agent fails
     func testErrorIsCapturedAndDisplayed() async throws {
-        // Create a Jake with a corrupt session via ServitorStore to trigger error
+        // Create a Jake with a corrupt session ID to trigger error
         let badSessionId = "invalid-session-\(UUID().uuidString)"
-        let store = try TestFixtures.createTestStore()
-        let record = ServitorRecord(name: "jake", sessionId: badSessionId)
-        try store.save(record)
-
-        let jake = Jake(projectURL: projectURL, store: store)
+        let jake = Jake(projectURL: projectURL, initialSessionId: badSessionId)
         let viewModel = ChatViewModel(jake: jake, loadHistory: false)
 
         viewModel.inputText = "This should trigger an error"
@@ -116,7 +112,7 @@ final class ChatViewModelIntegrationTests: XCTestCase {
 
     /// Multiple messages accumulate in the messages array
     func testMultipleMessagesAccumulate() async throws {
-        let jake = Jake(projectURL: projectURL, store: try TestFixtures.createTestStore())
+        let jake = Jake(projectURL: projectURL)
         let viewModel = ChatViewModel(jake: jake, loadHistory: false)
 
         viewModel.inputText = "Say hello"
@@ -136,8 +132,7 @@ final class ChatViewModelIntegrationTests: XCTestCase {
         let mortal = Mortal(
             name: "ChatWorker",
             assignment: "Respond to messages",
-            projectURL: projectURL,
-            store: try TestFixtures.createTestStore()
+            projectURL: projectURL
         )
         let viewModel = ChatViewModel(servitor: mortal, projectPath: projectURL.path, loadHistory: false)
 

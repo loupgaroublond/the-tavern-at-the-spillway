@@ -34,13 +34,11 @@ the-tavern-at-the-spillway/
 │   │       ├── Servitors/           # Jake, Mortal, Servitor protocol, MortalSpawner
 │   │       ├── Chat/                # ChatViewModel, ChatMessage
 │   │       ├── Commitments/         # Commitment, CommitmentList, CommitmentVerifier
-│   │       ├── Coordination/        # TavernCoordinator
-│   │       ├── DocStore/            # DocStore, Document, ServitorNode, ServitorPersistence
 │   │       ├── Errors/              # TavernError, TavernErrorMessages
 │   │       ├── Logging/             # TavernLogger
 │   │       ├── MCP/                 # TavernMCPServer (Jake's tools)
 │   │       ├── Naming/              # NamingTheme, NameGenerator
-│   │       ├── Persistence/         # SessionStore, ClaudeNativeSessionStorage
+│   │       ├── Persistence/         # SessionStore, ClaudeNativeSessionStorage, ServitorRecord
 │   │       ├── Project/             # TavernProject, ProjectManager
 │   │       ├── Resources/           # FileTreeScanner, ResourcePanelViewModel
 │   │       ├── Testing/             # MockServitor, ServitorMessenger, MockClaudeCode, TestFixtures
@@ -56,7 +54,7 @@ the-tavern-at-the-spillway/
 │   ├── 0-transcripts/              # Design transcripts, readers, vocab, notes
 │   ├── 1-prd/                      # Product requirements
 │   ├── 2-spec/                     # Formal specifications (25 modules, §000–§025)
-│   ├── 3-adr/                      # Architecture Decision Records (001–005)
+│   ├── 3-adr/                      # Architecture Decision Records (001–011)
 │   └── 4-docs/                     # Post-implementation docs
 └── scripts/                        # Log helpers, LOC counter
 ```
@@ -137,10 +135,10 @@ From the PRD — these rules cannot be violated under any circumstances:
 ```
 UI Layer (thin, dumb)           ← layout + gestures + bindings only
 ViewModel Layer                 ← all UX logic (@MainActor)
-Application Layer               ← TavernCoordinator, MortalSpawner
+Application Layer               ← ClodSessionManager, MortalSpawner
 Servitor Layer                  ← Jake, Mortal
 Domain Layer                    ← Commitment, Assignment
-Infrastructure Layer            ← DocStore, SessionStore, SDK
+Infrastructure Layer            ← ProjectDirectory, SessionStore, SDK
 ```
 
 Each layer depends only on layers below it. Never reach up.
@@ -175,14 +173,13 @@ See `docs/3-adr/ADR-001-shape-selection.md` for full rationale (49 proposals acr
 ProjectManager.shared (singleton)
     └── openProjects: [TavernProject]
             ├── TavernProject (~/project-a/)
-            │       ├── ClaudeCode instance (1)
-            │       └── TavernCoordinator (1)
-            │               ├── Jake (1)
-            │               ├── MortalSpawner (1)
-            │               │       ├── ServitorRegistry (1)
-            │               │       └── NameGenerator (1)
-            │               ├── ServitorListViewModel (1)
-            │               └── ChatViewModel cache (0..*)
+            │       ├── ProjectDirectory (1)  ← all file-system access
+            │       ├── ClodSessionManager (1) ← ServitorProvider
+            │       │       ├── Jake (1)
+            │       │       └── MortalSpawner (1)
+            │       │               ├── ServitorRegistry (1)
+            │       │               └── NameGenerator (1)
+            │       └── CommandRegistry (1)
             │
             └── TavernProject (~/project-b/)
                     └── ... (same structure, fully isolated)
@@ -191,9 +188,17 @@ ProjectManager.shared (singleton)
 Each project gets its own fresh stack. The only singleton is `ProjectManager`; everything else is per-project.
 
 
-### Thread Safety Model
+### Thread Safety Model (ADR-011)
 
-All mutable state is protected by serial `DispatchQueue`:
+Preference hierarchy for thread safety:
+
+1. **Genuinely `Sendable`** — No mutable state, no queues. `ProjectDirectory` is the exemplar.
+2. **Actor isolation** — For types with mutable state needing cross-isolation access.
+3. **`@MainActor`** — For UI-bound types (ViewModels, `SlashCommandDispatcher`).
+
+**`@unchecked Sendable` is banned for new code.** Existing uses are tracked for removal (jake-16g6).
+
+Legacy types still use serial `DispatchQueue` with `@unchecked Sendable`:
 
 | Type | Queue Label | Protected State |
 |------|-------------|-----------------|
@@ -202,20 +207,19 @@ All mutable state is protected by serial `DispatchQueue`:
 | ServitorRegistry | `com.tavern.ServitorRegistry` | `_agents`, `_nameToId` |
 | NameGenerator | `com.tavern.NameGenerator` | `_usedNames`, indices |
 | CommitmentList | `com.tavern.CommitmentList` | `_commitments` |
-| DocStore | `com.tavern.DocStore` | file operations |
 
-UI-bound types (`TavernCoordinator`, `ChatViewModel`, `ServitorListViewModel`) use `@MainActor`.
+UI-bound types (`ChatViewModel`, `ServitorListViewModel`) use `@MainActor`.
 
 
 ### Session Persistence Model
 
 Session storage operates at two levels:
 
-1. **Session IDs** — `SessionStore` persists IDs in UserDefaults. Jake's sessions are keyed per-project (`com.tavern.jake.session.<encoded-path>`). Mortal sessions are keyed per-servitor UUID.
+1. **Session IDs** — Persisted in `.tavern/servitors/<name>/servitor.md` (YAML frontmatter) via `ProjectDirectory`. `ClodSession` holds IDs in memory; `ClodSessionManager` persists them after each response.
 
 2. **Message History** — `ClaudeNativeSessionStorage` reads Claude CLI's native JSONL files from `~/.claude/projects/`. Display-only (no API calls).
 
-**Path encoding:** `SessionStore.encodePathForKey()` replaces `/` and `_` with `-`, matching Claude CLI's scheme.
+3. **Session Events** — Append-only JSONL log in `.tavern/servitors/<name>/sessions.jsonl`. Tracks session starts, expirations, and breaks.
 
 **Session lifecycle:** Local JSONL files enable history display. Server-side session state enables resume. A session can be "displayable but not resumable" if the server-side state expires.
 
@@ -536,11 +540,13 @@ The **reader document** synthesizes all transcripts into a standalone reference.
 | `Sources/TavernCore/Servitors/Mortal.swift` | Worker servitors (mortal) |
 | `Sources/TavernCore/Servitors/MortalSpawner.swift` | Factory for creating/dismissing mortals |
 | `Sources/TavernCore/MCP/TavernMCPServer.swift` | Jake's MCP tools (summon/dismiss) |
-| `Sources/TavernCore/Coordination/TavernCoordinator.swift` | Central hub per project |
+| `Sources/TavernCore/Providers/ClodSessionManager.swift` | ServitorProvider — session management + persistence policy |
+| `Sources/TavernCore/Providers/ProjectDirectory.swift` | All per-project file-system access (ADR-011) |
+| `Sources/TavernCore/Sessions/ClodSession.swift` | ClodKit wrapper — mechanism, no persistence |
 | `Sources/TavernCore/Project/TavernProject.swift` | Single project representation |
 | `Sources/TavernCore/Project/ProjectManager.swift` | Multi-project management |
 | `Sources/TavernCore/Chat/ChatViewModel.swift` | Conversation view model |
-| `Sources/TavernCore/Persistence/SessionStore.swift` | Session ID persistence (UserDefaults) |
+| `Sources/TavernCore/Persistence/SessionStore.swift` | Session history loading from Claude's native storage |
 | `Sources/TavernCore/Testing/ServitorMessenger.swift` | SDK abstraction for testability |
 | `Sources/TavernCore/Errors/TavernErrorMessages.swift` | Error mapping |
 | `docs/0-transcripts/reader_2026-02-05.md` | Latest reader (design synthesis) |
@@ -581,3 +587,4 @@ Claude must adhere to development standards:
 - New code implementing a specified requirement includes `// MARK: - Provenance: REQ-PREFIX-NNN` (ADR-007)
 - New tests for specified requirements include `.tags()` with requirement-derived tags (ADR-007)
 - When user says "stub" for a bead, the description MUST start with `STUB — <brief note>.` followed by a blank line. Content added beyond the stub marker is a starting point for future design breakdown, not definitive spec. Stubs are not actionable work — they need design decomposition first.
+- **`@unchecked Sendable` is banned for new code** (ADR-011). If a type needs to be `Sendable`, make it genuinely `Sendable` (no mutable state), use an `actor`, or restructure so it doesn't cross isolation domains. `@unchecked Sendable` shifts safety from compiler to code review — the wrong tradeoff.

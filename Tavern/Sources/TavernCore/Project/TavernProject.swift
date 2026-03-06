@@ -62,10 +62,13 @@ public final class TavernProject: Identifiable {
         let permissionManager = PermissionManager(store: PermissionStore())
         TavernLogger.coordination.debug("[\(self.name)] PermissionManager created, mode=\(permissionManager.mode.rawValue)")
 
-        let servitorStore = ServitorStore(rootURL: rootURL)
+        let directory = ProjectDirectory(rootURL: rootURL)
+
+        // Load Jake's session ID from directory for resume
+        let jakeSessionId = (try? directory.loadServitor(name: "jake"))?.sessionId
 
         TavernLogger.coordination.debug("[\(self.name)] Creating Jake...")
-        let jake = Jake(projectURL: rootURL, store: servitorStore, permissionManager: permissionManager)
+        let jake = Jake(projectURL: rootURL, initialSessionId: jakeSessionId, permissionManager: permissionManager)
         TavernLogger.coordination.debug("[\(self.name)] Jake created")
 
         let registry = ServitorRegistry()
@@ -75,7 +78,6 @@ public final class TavernProject: Identifiable {
             registry: registry,
             nameGenerator: nameGenerator,
             projectURL: rootURL,
-            store: servitorStore,
             messengerFactory: { agentName in
                 LiveMessenger(
                     permissionManager: permissionManager,
@@ -91,13 +93,13 @@ public final class TavernProject: Identifiable {
             spawner: spawner,
             permissionManager: permissionManager,
             projectURL: rootURL,
-            store: servitorStore
+            directory: directory
         )
 
         // Setup MCP server for Jake
         let mcpServer = createTavernMCPServer(
             spawner: spawner,
-            onSummon: { [servitorStore] servitor in
+            onSummon: { [directory] servitor in
                 let record = ServitorRecord(
                     name: servitor.name,
                     id: servitor.id,
@@ -106,13 +108,13 @@ public final class TavernProject: Identifiable {
                     description: servitor.chatDescription
                 )
                 do {
-                    try servitorStore.save(record)
+                    try directory.saveServitor(record)
                 } catch {
                     TavernLogger.coordination.error("Failed to persist summoned servitor \(servitor.name): \(error.localizedDescription)")
                 }
                 TavernLogger.coordination.info("Jake summoned servitor: \(servitor.name)")
             },
-            onDismiss: { [servitorStore] servitorId in
+            onDismiss: { servitorId in
                 // Removal is handled by ClodSessionManager.closeServitor
                 TavernLogger.coordination.info("Jake dismissed servitor: \(servitorId)")
             }
@@ -144,7 +146,7 @@ public final class TavernProject: Identifiable {
 
         // Restore persisted servitors from file-system store
         do {
-            let records = try servitorStore.listAll()
+            let records = try directory.listAllServitors()
             for record in records where record.name.lowercased() != "jake" {
                 let mortal = Mortal(
                     id: record.id,
@@ -152,7 +154,7 @@ public final class TavernProject: Identifiable {
                     assignment: record.assignment,
                     chatDescription: record.description,
                     projectURL: rootURL,
-                    store: servitorStore,
+                    initialSessionId: record.sessionId,
                     messenger: LiveMessenger(
                         permissionManager: permissionManager,
                         agentName: record.name
@@ -174,7 +176,7 @@ public final class TavernProject: Identifiable {
 
         // Wire up providers
         self.servitorProvider = sessionManager
-        self.resourceProvider = DocumentStore(rootURL: rootURL)
+        self.resourceProvider = directory
         self.commandProvider = CommandRegistry(
             dispatcher: commandDispatcher,
             projectRoot: rootURL

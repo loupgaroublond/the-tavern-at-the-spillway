@@ -43,10 +43,9 @@ extension TestFixtures {
         try? FileManager.default.removeItem(at: url)
     }
 
-    /// Create a ServitorStore backed by a temporary directory (no pre-existing data).
-    /// Equivalent to the old `loadSavedSession: false` pattern.
-    public static func createTestStore() throws -> ServitorStore {
+    /// Create a ProjectDirectory backed by a temporary directory (no pre-existing data).
+    public static func createTestDirectory() throws -> ProjectDirectory {
         let tempDir = try createTempDirectory()
-        return ServitorStore(rootURL: tempDir)
+        return ProjectDirectory(rootURL: tempDir)
     }
 }

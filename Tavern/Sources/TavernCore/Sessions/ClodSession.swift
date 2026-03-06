@@ -5,11 +5,19 @@ import TavernKit
 
 // MARK: - Provenance: REQ-ARCH-009, REQ-QA-002, REQ-QA-005
 
-/// Consolidated session mechanism layer. Owns all Claude session plumbing:
-/// build options, resume-with-fallback, session persistence, permission mapping.
+/// Pure in-memory session mechanism layer. Owns all Claude session plumbing:
+/// build options, resume-with-fallback, permission mapping.
+///
+/// ClodSession is *mechanism*, not *policy*. It holds ephemeral session state
+/// in memory and returns it to callers. Persistence is the caller's responsibility
+/// (see ClodSessionManager).
 ///
 /// Servitors (Jake, Mortal) delegate to a ClodSession instance, keeping only their
 /// unique business logic (state machines, MCP injection, completion detection).
+// @unchecked Sendable: ClodSession has mutable state (_sessionId, config) but is
+// single-owner (one servitor) and called sequentially. The queue was removed because
+// no cross-isolation access occurs. This @unchecked remains until Jake/Mortal threading
+// cleanup converts servitors to actors or @MainActor (Step 7 follow-up).
 final class ClodSession: @unchecked Sendable {
 
     // MARK: - Configuration
@@ -27,83 +35,71 @@ final class ClodSession: @unchecked Sendable {
     // MARK: - State
 
     private var config: Config
-    private let queue = DispatchQueue(label: "com.tavern.ClodSession")
     private var _sessionId: String?
     private let messenger: ServitorMessenger
-    private let store: ServitorStore
 
     private static let logger = Logger(subsystem: "com.tavern.spillway", category: "session")
 
     // MARK: - Public Properties
 
-    var sessionId: String? {
-        queue.sync { _sessionId }
-    }
+    var sessionId: String? { _sessionId }
 
     var systemPrompt: String {
-        get { queue.sync { config.systemPrompt } }
-        set { queue.sync { config.systemPrompt = newValue } }
+        get { config.systemPrompt }
+        set { config.systemPrompt = newValue }
     }
 
     var permissionMode: TavernKit.PermissionMode {
-        get { queue.sync { config.permissionMode } }
-        set { queue.sync { config.permissionMode = newValue } }
+        get { config.permissionMode }
+        set { config.permissionMode = newValue }
     }
 
     var mcpServers: [String: SDKMCPServer] {
-        get { queue.sync { config.mcpServers } }
-        set { queue.sync { config.mcpServers = newValue } }
+        get { config.mcpServers }
+        set { config.mcpServers = newValue }
     }
 
     // MARK: - Initialization
 
-    init(config: Config, store: ServitorStore, messenger: ServitorMessenger? = nil) {
+    init(config: Config, initialSessionId: String? = nil, messenger: ServitorMessenger? = nil) {
         self.config = config
-        self.store = store
+        self._sessionId = initialSessionId
         self.messenger = messenger ?? LiveMessenger(
             approvalHandler: config.approvalHandler,
             planApprovalHandler: config.planApprovalHandler
         )
 
-        // Load saved session from file-system store
-        if let record = try? store.load(name: config.servitorName) {
-            _sessionId = record.sessionId
-        }
-
-        Self.logger.info("[ClodSession] initialized for '\(config.servitorName)', hasSession: \(self._sessionId != nil)")
+        Self.logger.info("[ClodSession] initialized for '\(config.servitorName)', hasSession: \(initialSessionId != nil)")
     }
 
     // MARK: - Communication
 
     /// Send a message with resume-with-fallback.
-    /// Returns the response text, new session ID (if any), and whether a fallback occurred.
-    func send(_ message: String) async throws -> (response: String, sessionId: String?, didFallback: Bool) {
+    /// Returns the response text, new session ID, whether a fallback occurred,
+    /// and the expired session ID if one was discarded.
+    func send(_ message: String) async throws -> (response: String, sessionId: String?, didFallback: Bool, expiredSessionId: String?) {
         let options = buildOptions()
 
         do {
             let result = try await messenger.query(prompt: message, options: options)
             if let newSessionId = result.sessionId {
-                persistSession(newSessionId)
+                _sessionId = newSessionId
             }
-            return (response: result.response, sessionId: result.sessionId, didFallback: false)
+            return (response: result.response, sessionId: result.sessionId, didFallback: false, expiredSessionId: nil)
         } catch {
-            // If we had a session and it's a stale-session error, retry without resume
-            let hadSessionId = queue.sync { _sessionId }
+            let hadSessionId = _sessionId
             if hadSessionId != nil && isStaleSessionError(error) {
                 Self.logger.warning("[ClodSession] stale session detected, falling back to fresh session")
-                logSessionExpired(staleSessionId: hadSessionId!, reason: "timeout")
-                clearSession()
+                _sessionId = nil
 
                 let freshOptions = buildOptions()
                 let result = try await messenger.query(prompt: message, options: freshOptions)
                 if let newSessionId = result.sessionId {
-                    persistSession(newSessionId)
-                    logSessionStarted(sessionId: newSessionId)
+                    _sessionId = newSessionId
                 }
-                return (response: result.response, sessionId: result.sessionId, didFallback: true)
+                return (response: result.response, sessionId: result.sessionId, didFallback: true, expiredSessionId: hadSessionId)
             }
 
-            // Non-session error or no session to fall back from
             if let sessionId = hadSessionId {
                 throw TavernError.sessionCorrupt(sessionId: sessionId, underlyingError: error)
             }
@@ -116,7 +112,7 @@ final class ClodSession: @unchecked Sendable {
     func sendStreaming(_ message: String) -> (stream: AsyncThrowingStream<StreamEvent, Error>, cancel: @Sendable () -> Void) {
         let options = buildOptions()
         let (innerStream, innerCancel) = messenger.queryStreaming(prompt: message, options: options)
-        let currentSessionId: String? = queue.sync { _sessionId }
+        let currentSessionId = _sessionId
 
         // Sendable box for cancel closure — updated if fallback creates a new stream
         let cancelBox = UnsafeSendableBox<@Sendable () -> Void>(innerCancel)
@@ -133,7 +129,7 @@ final class ClodSession: @unchecked Sendable {
                         switch event {
                         case .completed(let info):
                             if let sessionId = info.sessionId {
-                                self.persistSession(sessionId)
+                                self._sessionId = sessionId
                             }
                             continuation.yield(event)
                         default:
@@ -142,11 +138,9 @@ final class ClodSession: @unchecked Sendable {
                     }
                     continuation.finish()
                 } catch {
-                    // If stale session error, fall back to fresh session
                     if currentSessionId != nil && self.isStaleSessionError(error) {
                         Self.logger.warning("[ClodSession] streaming stale session, falling back")
-                        self.logSessionExpired(staleSessionId: currentSessionId!, reason: "timeout")
-                        self.clearSession()
+                        self._sessionId = nil
 
                         // Yield session break marker
                         continuation.yield(.sessionBreak(staleSessionId: currentSessionId!))
@@ -159,8 +153,7 @@ final class ClodSession: @unchecked Sendable {
                         do {
                             for try await event in retryStream {
                                 if case .completed(let info) = event, let sessionId = info.sessionId {
-                                    self.persistSession(sessionId)
-                                    self.logSessionStarted(sessionId: sessionId)
+                                    self._sessionId = sessionId
                                 }
                                 continuation.yield(event)
                             }
@@ -193,108 +186,30 @@ final class ClodSession: @unchecked Sendable {
         return (stream: wrappedStream, cancel: { cancelBox.value() })
     }
 
-    /// Reset conversation: clear session, log break event.
-    func resetConversation(reason: String = "user_cleared") {
-        let oldSessionId = queue.sync { _sessionId }
-        clearSession()
-
-        // Log the break event
-        let breakEvent = SessionEvent(event: .break, timestamp: Date(), reason: reason)
-        do {
-            try store.appendSessionEvent(breakEvent, name: config.servitorName)
-        } catch {
-            Self.logger.error("[ClodSession] failed to log break event: \(error.localizedDescription)")
-        }
-
-        // If there was an active session, log it as ended
-        if let oldSessionId {
-            let endEvent = SessionEvent(event: .sessionEnded, sessionId: oldSessionId, timestamp: Date(), reason: reason)
-            do {
-                try store.appendSessionEvent(endEvent, name: config.servitorName)
-            } catch {
-                Self.logger.error("[ClodSession] failed to log session ended: \(error.localizedDescription)")
-            }
-        }
-
+    /// Reset conversation: clear in-memory session ID.
+    /// Caller is responsible for persisting the break and logging events.
+    func resetConversation() {
+        _sessionId = nil
         Self.logger.info("[ClodSession] conversation reset for '\(self.config.servitorName)'")
     }
 
     // MARK: - Private — Options
 
     private func buildOptions() -> QueryOptions {
-        let (sessionId, mode, mcpServers, systemPrompt) = queue.sync {
-            (_sessionId, config.permissionMode, config.mcpServers, config.systemPrompt)
-        }
-
         var options = QueryOptions()
-        options.systemPrompt = systemPrompt
-        options.permissionMode = Self.mapPermissionMode(mode)
+        options.systemPrompt = config.systemPrompt
+        options.permissionMode = Self.mapPermissionMode(config.permissionMode)
         options.workingDirectory = config.workingDirectory
 
-        // Resume with session ID if available — fallback logic handles stale sessions
-        if let sessionId {
+        if let sessionId = _sessionId {
             options.resume = sessionId
         }
 
-        for (key, server) in mcpServers {
+        for (key, server) in config.mcpServers {
             options.sdkMcpServers[key] = server
         }
 
         return options
-    }
-
-    // MARK: - Private — Session Persistence
-
-    private func persistSession(_ sessionId: String) {
-        queue.sync { _sessionId = sessionId }
-
-        // Update the servitor record with the new session ID
-        do {
-            if var record = try store.load(name: config.servitorName) {
-                record.sessionId = sessionId
-                record.updatedAt = Date()
-                try store.save(record)
-            } else {
-                // Record doesn't exist yet — this is unusual but handle gracefully
-                Self.logger.warning("[ClodSession] no record found for '\(self.config.servitorName)' during persistSession")
-            }
-        } catch {
-            Self.logger.error("[ClodSession] failed to persist session for '\(self.config.servitorName)': \(error.localizedDescription)")
-        }
-    }
-
-    private func clearSession() {
-        queue.sync { _sessionId = nil }
-
-        do {
-            if var record = try store.load(name: config.servitorName) {
-                record.sessionId = nil
-                record.updatedAt = Date()
-                try store.save(record)
-            }
-        } catch {
-            Self.logger.error("[ClodSession] failed to clear session for '\(self.config.servitorName)': \(error.localizedDescription)")
-        }
-    }
-
-    // MARK: - Private — Session Event Logging
-
-    private func logSessionExpired(staleSessionId: String, reason: String) {
-        let event = SessionEvent(event: .sessionExpired, sessionId: staleSessionId, timestamp: Date(), reason: reason)
-        do {
-            try store.appendSessionEvent(event, name: config.servitorName)
-        } catch {
-            Self.logger.error("[ClodSession] failed to log session expired: \(error.localizedDescription)")
-        }
-    }
-
-    private func logSessionStarted(sessionId: String) {
-        let event = SessionEvent(event: .sessionStarted, sessionId: sessionId, timestamp: Date())
-        do {
-            try store.appendSessionEvent(event, name: config.servitorName)
-        } catch {
-            Self.logger.error("[ClodSession] failed to log session started: \(error.localizedDescription)")
-        }
     }
 
     // MARK: - Private — Error Detection

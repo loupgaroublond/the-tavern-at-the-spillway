@@ -111,7 +111,7 @@ public final class Mortal: Servitor, @unchecked Sendable {
     ///   - assignment: The assignment this mortal is responsible for (nil for user-spawned mortals)
     ///   - chatDescription: User-editable description shown in sidebar
     ///   - projectURL: The project directory URL
-    ///   - store: File-system persistence store for servitor state
+    ///   - initialSessionId: Previously persisted session ID for resume (nil starts fresh)
     ///   - commitments: List of commitments to verify before completion (defaults to empty)
     ///   - verifier: Verifier for checking commitments (defaults to shell-based)
     ///   - messenger: The messenger for Claude communication (default: LiveMessenger)
@@ -121,7 +121,7 @@ public final class Mortal: Servitor, @unchecked Sendable {
         assignment: String? = nil,
         chatDescription: String? = nil,
         projectURL: URL,
-        store: ServitorStore,
+        initialSessionId: String? = nil,
         commitments: CommitmentList = CommitmentList(),
         verifier: CommitmentVerifier = CommitmentVerifier(),
         messenger: ServitorMessenger? = nil
@@ -141,7 +141,7 @@ public final class Mortal: Servitor, @unchecked Sendable {
             servitorName: name.lowercased()
         )
 
-        self.session = ClodSession(config: config, store: store, messenger: messenger)
+        self.session = ClodSession(config: config, initialSessionId: initialSessionId, messenger: messenger)
         // Set the actual system prompt (depends on self.name and self.assignment)
         self.session.systemPrompt = systemPrompt
     }

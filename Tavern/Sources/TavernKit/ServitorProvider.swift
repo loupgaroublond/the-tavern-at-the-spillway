@@ -1,6 +1,5 @@
 import Foundation
 
-@MainActor
 public protocol ServitorProvider: Sendable {
     func sendStreaming(servitorID: UUID, message: String) -> (stream: AsyncThrowingStream<StreamEvent, Error>, cancel: @Sendable () -> Void)
     func loadHistory(servitorID: UUID) async -> [ChatMessage]

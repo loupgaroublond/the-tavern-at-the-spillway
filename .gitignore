@@ -29,5 +29,8 @@ attestation-report.md
 .beads/dolt-monitor*
 .beads/dolt/
 
+# Claude Code worktrees
+.claude/worktrees/
+
 # Scratch/example directories
 hybrid-nav-example/

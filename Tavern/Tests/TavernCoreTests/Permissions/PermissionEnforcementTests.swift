@@ -121,7 +121,6 @@ struct PermissionEnforcementTests {
         let mock = MockMessenger(responses: ["OK"])
         let jake = Jake(
             projectURL: Self.testProjectURL(),
-            store: try TestFixtures.createTestStore(),
             messenger: mock
         )
 

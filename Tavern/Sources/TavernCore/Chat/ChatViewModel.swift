@@ -204,7 +204,7 @@ public final class ChatViewModel {
         if isJake {
             storedMessages = await SessionStore.loadJakeSessionHistory(projectPath: projectPath, sessionId: servitor.sessionId)
         } else {
-            // Get session ID from the servitor (stored in ServitorStore on disk)
+            // Get session ID from the servitor (persisted in ProjectDirectory on disk)
             guard let sessionId = servitor.sessionId else {
                 TavernLogger.chat.info("loadSessionHistory: no session ID for \(self.servitorName), skipping")
                 isLoadingHistory = false

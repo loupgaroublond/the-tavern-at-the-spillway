@@ -4,7 +4,6 @@ import os.log
 
 // MARK: - Provenance: REQ-OPM-001, REQ-OPM-002, REQ-OPM-003
 
-@MainActor
 public final class PermissionSettingsProvider: PermissionProvider {
     private static let logger = Logger(subsystem: "com.tavern.spillway", category: "permissions")
 

@@ -30,7 +30,7 @@ final class JakeIntegrationTests: XCTestCase {
 
     /// Jake responds to a message with non-empty text
     func testJakeRespondsToMessage() async throws {
-        let jake = Jake(projectURL: projectURL, store: try TestFixtures.createTestStore())
+        let jake = Jake(projectURL: projectURL)
 
         var options = QueryOptions()
         options.maxTurns = 1
@@ -55,7 +55,7 @@ final class JakeIntegrationTests: XCTestCase {
 
     /// Jake's state transitions from idle to working and back during send()
     func testJakeStateChangesToWorkingDuringResponse() async throws {
-        let jake = Jake(projectURL: projectURL, store: try TestFixtures.createTestStore())
+        let jake = Jake(projectURL: projectURL)
         XCTAssertEqual(jake.state, .idle, "Jake should start idle")
 
         // Start send in a task so we can observe state mid-flight
@@ -76,7 +76,7 @@ final class JakeIntegrationTests: XCTestCase {
 
     /// Jake maintains conversation continuity via session ID
     func testJakeMaintainsConversationViaSessionId() async throws {
-        let jake = Jake(projectURL: projectURL, store: try TestFixtures.createTestStore())
+        let jake = Jake(projectURL: projectURL)
         XCTAssertNil(jake.sessionId, "Session should be nil before first message")
 
         let _ = try await jake.send("Remember the code word BANANA")
@@ -89,7 +89,7 @@ final class JakeIntegrationTests: XCTestCase {
 
     /// Jake handles text response fallback (assistant message type)
     func testJakeHandlesTextResponseFallback() async throws {
-        let jake = Jake(projectURL: projectURL, store: try TestFixtures.createTestStore())
+        let jake = Jake(projectURL: projectURL)
 
         // Just verify Jake returns something — the fallback logic handles both
         // "result" and "assistant" message types internally
@@ -100,14 +100,10 @@ final class JakeIntegrationTests: XCTestCase {
     /// Jake propagates errors correctly
     func testJakePropagatesErrors() async throws {
         // Use an invalid session ID to trigger an error
-        let jake = Jake(projectURL: projectURL, store: try TestFixtures.createTestStore())
+        let jake = Jake(projectURL: projectURL)
 
-        // Set a known-bad session ID via ServitorStore to force session corruption
-        let store = try TestFixtures.createTestStore()
-        let record = ServitorRecord(name: "jake", sessionId: "invalid-session-id-that-does-not-exist")
-        try store.save(record)
-
-        let jake2 = Jake(projectURL: projectURL, store: store)
+        // Pass a known-bad session ID directly to force session corruption
+        let jake2 = Jake(projectURL: projectURL, initialSessionId: "invalid-session-id-that-does-not-exist")
         XCTAssertEqual(jake2.sessionId, "invalid-session-id-that-does-not-exist")
 
         do {
@@ -125,7 +121,7 @@ final class JakeIntegrationTests: XCTestCase {
 
     /// Jake with tool handler passes through when tool returns no feedback
     func testJakeWithToolHandlerPassesThroughWhenNoFeedback() async throws {
-        let jake = Jake(projectURL: projectURL, store: try TestFixtures.createTestStore())
+        let jake = Jake(projectURL: projectURL)
 
         // Create an MCP server with a no-op tool
         let noopServer = SDKMCPServer(
@@ -165,7 +161,7 @@ final class JakeIntegrationTests: XCTestCase {
             onDismiss: { _ in }
         )
 
-        let jake = Jake(projectURL: projectURL, store: try TestFixtures.createTestStore())
+        let jake = Jake(projectURL: projectURL)
         jake.mcpServer = server
 
         // Ask Jake to summon — he has the tool available
@@ -198,7 +194,7 @@ final class JakeIntegrationTests: XCTestCase {
             onDismiss: { _ in }
         )
 
-        let jake = Jake(projectURL: projectURL, store: try TestFixtures.createTestStore())
+        let jake = Jake(projectURL: projectURL)
         jake.mcpServer = server
 
         // Ask Jake to summon multiple workers

@@ -120,7 +120,7 @@ public final class Jake: Servitor, @unchecked Sendable {
     /// - Parameters:
     ///   - id: Unique identifier (auto-generated if not provided)
     ///   - projectURL: The project directory URL
-    ///   - store: File-system persistence store for servitor state
+    ///   - initialSessionId: Previously persisted session ID for resume (nil starts fresh)
     ///   - permissionManager: Permission manager for tool checks (nil disables checks)
     ///   - approvalHandler: Async callback for user prompting when permission is needed
     ///   - planApprovalHandler: Async callback for plan approval
@@ -128,7 +128,7 @@ public final class Jake: Servitor, @unchecked Sendable {
     public init(
         id: UUID = UUID(),
         projectURL: URL,
-        store: ServitorStore,
+        initialSessionId: String? = nil,
         permissionManager: PermissionManager? = nil,
         approvalHandler: ToolApprovalHandler? = nil,
         planApprovalHandler: PlanApprovalHandler? = nil,
@@ -160,7 +160,7 @@ public final class Jake: Servitor, @unchecked Sendable {
             return nil
         }()
 
-        self.session = ClodSession(config: config, store: store, messenger: resolvedMessenger)
+        self.session = ClodSession(config: config, initialSessionId: initialSessionId, messenger: resolvedMessenger)
     }
 
     // MARK: - Communication

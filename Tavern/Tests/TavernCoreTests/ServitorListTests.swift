@@ -29,7 +29,7 @@ struct ServitorListItemTests {
 
     @Test("Item from Jake marks isJake true")
     func itemFromJakeMarksIsJake() throws {
-        let jake = Jake(projectURL: Self.testProjectURL(), store: try TestFixtures.createTestStore())
+        let jake = Jake(projectURL: Self.testProjectURL())
         let item = ServitorListItem.from(jake: jake)
 
         #expect(item.isJake == true)
@@ -44,8 +44,7 @@ struct ServitorListItemTests {
             name: "Frodo",
             assignment: "Carry the ring",
             chatDescription: "Ring duty",
-            projectURL: Self.testProjectURL(),
-            store: try TestFixtures.createTestStore()
+            projectURL: Self.testProjectURL()
         )
         let item = ServitorListItem.from(mortal: mortal)
 
@@ -60,8 +59,7 @@ struct ServitorListItemTests {
         let mortal = Mortal(
             name: "Sam",
             assignment: "Help Frodo",
-            projectURL: Self.testProjectURL(),
-            store: try TestFixtures.createTestStore()
+            projectURL: Self.testProjectURL()
         )
         let item = ServitorListItem.from(mortal: mortal)
 
