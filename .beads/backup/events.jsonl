@@ -1680,3 +1680,4 @@
 {"actor":"Yaakov M Nemoy","comment":null,"created_at":"2026-03-07T10:01:43Z","event_type":"closed","id":1680,"issue_id":"jake-ms3l","new_value":"CogitationDisplayTests for vocabulary and display mechanism","old_value":""}
 {"actor":"Yaakov M Nemoy","comment":null,"created_at":"2026-03-07T10:01:43Z","event_type":"closed","id":1681,"issue_id":"jake-zm8v","new_value":"Sink-based logging: LogSink, OSLogSink, BufferSink, LogBuffer, TavernLogDispatcher, DebugLogPanel NSPanel","old_value":""}
 {"actor":"Yaakov M Nemoy","comment":null,"created_at":"2026-03-07T10:01:49Z","event_type":"closed","id":1682,"issue_id":"jake-q07k","new_value":"All 24 non-stub beads complete. 840 tests passing (up from 639). Build green.","old_value":""}
+{"actor":"Yaakov M Nemoy","comment":null,"created_at":"2026-03-07T11:47:43Z","event_type":"closed","id":1683,"issue_id":"jake-815","new_value":"Migrated to pipeline p0000","old_value":""}
