@@ -1650,3 +1650,4 @@
 {"actor":"Yaakov M Nemoy","comment":null,"created_at":"2026-03-06T22:22:17Z","event_type":"created","id":1650,"issue_id":"jake-zm8v","new_value":"","old_value":""}
 {"actor":"Yaakov M Nemoy","comment":"Added label: feature","created_at":"2026-03-06T22:22:17Z","event_type":"label_added","id":1651,"issue_id":"jake-zm8v","new_value":null,"old_value":null}
 {"actor":"Yaakov M Nemoy","comment":"Added label: debug","created_at":"2026-03-06T22:22:17Z","event_type":"label_added","id":1652,"issue_id":"jake-zm8v","new_value":null,"old_value":null}
+{"actor":"Yaakov M Nemoy","comment":null,"created_at":"2026-03-07T10:01:02Z","event_type":"closed","id":1653,"issue_id":"jake-uzdp","new_value":"All 6 orphaned markers removed from source files","old_value":""}
