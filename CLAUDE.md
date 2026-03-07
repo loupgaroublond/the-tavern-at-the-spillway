@@ -50,7 +50,7 @@ the-tavern-at-the-spillway/
 │       ├── TavernUITests/           # Grade 4 (XCUITest, steals focus)
 │       └── TavernStressTests/       # Grade 5 (pre-release)
 ├── docs/
-│   ├── pipeline.md                  # Document pipeline spec
+│   ├── reification.md               # Reification chain spec (document flow)
 │   ├── 0-transcripts/              # Design transcripts, readers, vocab, notes
 │   ├── 1-prd/                      # Product requirements
 │   ├── 2-spec/                     # Formal specifications (25 modules, §000–§025)
@@ -365,9 +365,9 @@ Grade 4 XCUITest launch arguments: `--ui-testing` (bypasses welcome window), `--
 - **XCUITest** (ADR-005) — E2E tests **never mock**. Their purpose is to validate the actual user experience. If a response takes 30 seconds from real Claude, the E2E test waits 30 seconds.
 
 
-## Documentation Pipeline
+## Reification Chain
 
-Every document belongs to exactly one pipeline stage. Documents flow forward only.
+Reification is the progressive materialization of abstract ideas into concrete artifacts. Every document belongs to exactly one stage. Documents flow forward only.
 
 ```
 0-transcripts → 1-prd → 2-spec → 3-adr → [code] → [tests] → 4-docs
@@ -384,7 +384,7 @@ Every document belongs to exactly one pipeline stage. Documents flow forward onl
 
 **Rules:** Forward only. Traceability between stages. Single home per document. No "reference" bucket — everything is input, requirement, specification, decision, or post-code documentation.
 
-See `docs/pipeline.md` for full spec.
+See `docs/reification.md` for full spec.
 
 
 ## Slash Commands

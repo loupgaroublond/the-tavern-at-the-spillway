@@ -1,10 +1,10 @@
-# Document Pipeline
+# Reification Chain
 
-**Last Updated:** 2026-02-07
+**Last Updated:** 2026-03-06
 
 ## Overview
 
-Every document in this project belongs to exactly one pipeline stage. Documents flow forward through numbered stages, with each stage consuming and refining the output of prior stages.
+Reification is the progressive materialization of abstract ideas into concrete artifacts. Every document in this project belongs to exactly one stage in the reification chain. Documents flow forward through numbered stages, with each stage consuming and refining the output of prior stages — a search through latent space that finds code, tests, and documentation.
 
 ```
 0-transcripts → 1-prd → 2-spec → 3-adr → [code] → [tests] → 4-docs → [product]
@@ -100,7 +100,7 @@ When new design conversations happen:
 
 ## Verification Checks
 
-Each pipeline stage can be verified against its upstream:
+Each reification stage can be verified against its upstream:
 
 | Check | Upstream | Downstream | Tool |
 |-------|----------|------------|------|

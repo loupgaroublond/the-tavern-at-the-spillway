@@ -73,14 +73,18 @@ echo ""
 scripts_swift_lines=$(find scripts -name "*.swift" 2>/dev/null | xargs wc -l 2>/dev/null | tail -1 | awk '{print $1}')
 scripts_swift_files=$(find scripts -name "*.swift" 2>/dev/null | wc -l | tr -d ' ')
 
+scripts_sh_lines=$(find scripts -name "*.sh" 2>/dev/null | xargs wc -l 2>/dev/null | tail -1 | awk '{print $1}')
+scripts_sh_files=$(find scripts -name "*.sh" 2>/dev/null | wc -l | tr -d ' ')
+
 sandbox_swift_lines=$(find sandbox -name "*.swift" 2>/dev/null | xargs wc -l 2>/dev/null | tail -1 | awk '{print $1}')
 sandbox_swift_files=$(find sandbox -name "*.swift" 2>/dev/null | wc -l | tr -d ' ')
 
 printf "  %-40s %8s lines  (%s files)\n" "scripts/*.swift" "${scripts_swift_lines:-0}" "${scripts_swift_files:-0}"
+printf "  %-40s %8s lines  (%s files)\n" "scripts/*.sh" "${scripts_sh_lines:-0}" "${scripts_sh_files:-0}"
 printf "  %-40s %8s lines  (%s files)\n" "sandbox/*.swift" "${sandbox_swift_lines:-0}" "${sandbox_swift_files:-0}"
 echo "  ─────────────────────────────────────────────────────────────"
-total_scripts=$((${scripts_swift_lines:-0} + ${sandbox_swift_lines:-0}))
-total_scripts_files=$((${scripts_swift_files:-0} + ${sandbox_swift_files:-0}))
+total_scripts=$((${scripts_swift_lines:-0} + ${scripts_sh_lines:-0} + ${sandbox_swift_lines:-0}))
+total_scripts_files=$((${scripts_swift_files:-0} + ${scripts_sh_files:-0} + ${sandbox_swift_files:-0}))
 printf "  %-40s %8s lines  (%s files)\n" "SUBTOTAL (Scripts/Sandbox)" "$total_scripts" "$total_scripts_files"
 
 echo ""
@@ -131,9 +135,21 @@ printf "  %-40s %8s lines  (%s files)\n" "Spec (docs/2-spec/)" "${spec_dir_lines
 printf "  %-40s %8s lines  (%s files)\n" "ADRs (docs/3-adr/)" "${adr_lines:-0}" "${adr_files:-0}"
 printf "  %-40s %8s lines  (%s files)\n" "Architecture Proposals" "${arch_proposals_lines:-0}" "${arch_proposals_files:-0}"
 printf "  %-40s %8s lines  (%s files)\n" "Reference Docs (docs/4-docs/)" "${ref_docs_lines:-0}" "${ref_docs_files:-0}"
+
+# Pipeline docs
+pipeline_process_lines=$(wc -l < docs/pipeline/process.md 2>/dev/null || echo 0)
+pipeline_instr_lines=$(find docs/pipeline/instructions -name "*.md" 2>/dev/null | xargs wc -l 2>/dev/null | tail -1 | awk '{print $1}')
+pipeline_instr_files=$(find docs/pipeline/instructions -name "*.md" 2>/dev/null | wc -l | tr -d ' ')
+pipeline_active_lines=$(find docs/pipeline/active -name "*.md" 2>/dev/null | xargs wc -l 2>/dev/null | tail -1 | awk '{print $1}')
+pipeline_active_files=$(find docs/pipeline/active -name "*.md" 2>/dev/null | wc -l | tr -d ' ')
+pipeline_total=$((${pipeline_process_lines:-0} + ${pipeline_instr_lines:-0} + ${pipeline_active_lines:-0}))
+pipeline_total_files=$((1 + ${pipeline_instr_files:-0} + ${pipeline_active_files:-0}))
+
+printf "  %-40s %8s lines  (%s files)\n" "Pipeline (docs/pipeline/)" "$pipeline_total" "$pipeline_total_files"
+
 echo "  ─────────────────────────────────────────────────────────────"
-total_docs_dir=$((${docs_top_lines:-0} + ${prd_dir_lines:-0} + ${spec_dir_lines:-0} + ${adr_lines:-0} + ${arch_proposals_lines:-0} + ${ref_docs_lines:-0}))
-total_docs_dir_files=$((${docs_top_files:-0} + ${prd_dir_files:-0} + ${spec_dir_files:-0} + ${adr_files:-0} + ${arch_proposals_files:-0} + ${ref_docs_files:-0}))
+total_docs_dir=$((${docs_top_lines:-0} + ${prd_dir_lines:-0} + ${spec_dir_lines:-0} + ${adr_lines:-0} + ${arch_proposals_lines:-0} + ${ref_docs_lines:-0} + ${pipeline_total:-0}))
+total_docs_dir_files=$((${docs_top_files:-0} + ${prd_dir_files:-0} + ${spec_dir_files:-0} + ${adr_files:-0} + ${arch_proposals_files:-0} + ${ref_docs_files:-0} + ${pipeline_total_files:-0}))
 printf "  %-40s %8s lines  (%s files)\n" "SUBTOTAL (docs/)" "$total_docs_dir" "$total_docs_dir_files"
 
 echo ""
