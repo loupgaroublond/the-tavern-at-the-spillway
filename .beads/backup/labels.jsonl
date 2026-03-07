@@ -556,6 +556,8 @@
 {"issue_id":"jake-upl","label":"chat"}
 {"issue_id":"jake-upl","label":"performance"}
 {"issue_id":"jake-upl","label":"ui"}
+{"issue_id":"jake-uzdp","label":"housekeeping"}
+{"issue_id":"jake-uzdp","label":"remediation"}
 {"issue_id":"jake-v7f","label":"bug"}
 {"issue_id":"jake-v7f","label":"chat"}
 {"issue_id":"jake-v7f","label":"cluster:ui-polish"}
