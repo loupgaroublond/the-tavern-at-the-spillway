@@ -93,7 +93,8 @@ let package = Package(
             name: "TavernCoreTests",
             dependencies: [
                 "TavernCore", "TavernKit",
-                "ResourcePanelTile", "PermissionSettingsTile",
+                "ChatTile", "ResourcePanelTile", "PermissionSettingsTile", "ServitorListTile",
+                .product(name: "ViewInspector", package: "ViewInspector"),
             ]
         ),
 

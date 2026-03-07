@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import ClodKit
 import TavernKit
 import os.log
 
@@ -64,11 +65,16 @@ public final class TavernProject: Identifiable {
 
         let directory = ProjectDirectory(rootURL: rootURL)
 
-        // Load Jake's session ID from directory for resume
-        let jakeSessionId = (try? directory.loadServitor(name: "jake"))?.sessionId
+        // Load Jake's record from directory for resume + MCP config
+        let jakeRecord = try? directory.loadServitor(name: "jake")
 
         TavernLogger.coordination.debug("[\(self.name)] Creating Jake...")
-        let jake = Jake(projectURL: rootURL, initialSessionId: jakeSessionId, permissionManager: permissionManager)
+        let jake = Jake(projectURL: rootURL, initialSessionId: jakeRecord?.sessionId, permissionManager: permissionManager)
+        // Load Jake's user-configured external MCP servers from servitor.md
+        if let mcpEntries = jakeRecord?.mcpServers, !mcpEntries.isEmpty {
+            jake.externalMCPServers = mcpEntries.toMCPServerConfigs()
+            TavernLogger.coordination.info("[\(self.name)] Loaded \(mcpEntries.count) external MCP server(s) for Jake")
+        }
         TavernLogger.coordination.debug("[\(self.name)] Jake created")
 
         let registry = ServitorRegistry()
@@ -160,6 +166,11 @@ public final class TavernProject: Identifiable {
                         agentName: record.name
                     )
                 )
+                // Load user-configured external MCP servers from servitor.md
+                if !record.mcpServers.isEmpty {
+                    mortal.externalMCPServers = record.mcpServers.toMCPServerConfigs()
+                    TavernLogger.coordination.info("[\(self.name)] Loaded \(record.mcpServers.count) external MCP server(s) for \(record.name)")
+                }
                 do {
                     try spawner.register(mortal)
                     TavernLogger.coordination.info("[\(self.name)] Restored mortal: \(record.name)")

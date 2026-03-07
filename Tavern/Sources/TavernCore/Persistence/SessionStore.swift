@@ -1,7 +1,6 @@
 import Foundation
-import os.log
 
-// MARK: - Provenance: REQ-DOC-004, REQ-DOC-008
+// MARK: - Provenance: REQ-DOC-001
 
 /// Utilities for loading session history from Claude's native JSONL storage.
 ///
@@ -10,7 +9,7 @@ import os.log
 /// Claude CLI's native `~/.claude/projects/` JSONL files.
 public enum SessionStore {
 
-    private static let logger = Logger(subsystem: "com.tavern.spillway", category: "persistence")
+    private static let logger = TavernLogger.chat
 
     // MARK: - Jake Session History
 

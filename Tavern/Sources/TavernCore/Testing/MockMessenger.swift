@@ -48,6 +48,27 @@ public final class MockMessenger: ServitorMessenger, @unchecked Sendable {
     /// Every QueryOptions passed to `query()`, in order.
     public private(set) var queryOptions: [QueryOptions] = []
 
+    /// Canned account info to return from `fetchAccountInfo()`.
+    public var mockAccountInfo: AccountInfo = AccountInfo(
+        email: "test@example.com",
+        organization: "Test Org",
+        subscriptionType: "pro"
+    )
+
+    /// Canned initialization result to return from `fetchAccountInfo()`.
+    public var mockInitResult: SDKControlInitializeResponse = MockMessenger.defaultInitResult()
+
+    /// Number of times `fetchAccountInfo()` has been called.
+    public private(set) var fetchAccountInfoCallCount: Int = 0
+
+    /// Recorded MCP control calls for assertions.
+    public private(set) var mcpStatusCalls: Int = 0
+    public private(set) var reconnectCalls: [String] = []
+    public private(set) var toggleCalls: [(name: String, enabled: Bool)] = []
+
+    /// Canned MCP server statuses to return from `mcpServerStatus()`.
+    public var mcpStatuses: [McpServerStatus] = []
+
     private let queue = DispatchQueue(label: "com.tavern.MockMessenger")
 
     /// Create a mock messenger
@@ -68,6 +89,10 @@ public final class MockMessenger: ServitorMessenger, @unchecked Sendable {
     /// Number of characters per streaming chunk (default 5).
     /// Set to customize how MockMessenger breaks responses into chunks.
     public var streamingChunkSize: Int = 5
+
+    /// Notifications to emit during streaming, yielded before text chunks.
+    /// Consumed (cleared) after each `queryStreaming()` call.
+    public var notificationsToEmit: [NotificationInfo] = []
 
     public func query(prompt: String, options: QueryOptions) async throws -> (response: String, sessionId: String?) {
         queue.sync {
@@ -105,6 +130,12 @@ public final class MockMessenger: ServitorMessenger, @unchecked Sendable {
         return (response: response, sessionId: sessionId)
     }
 
+    public func fetchAccountInfo(options: QueryOptions) async throws -> (account: AccountInfo, initResult: SDKControlInitializeResponse) {
+        queue.sync { fetchAccountInfoCallCount += 1 }
+        if let error = errorToThrow { throw error }
+        return (account: mockAccountInfo, initResult: mockInitResult)
+    }
+
     public func queryStreaming(prompt: String, options: QueryOptions) -> (stream: AsyncThrowingStream<StreamEvent, Error>, cancel: @Sendable () -> Void) {
         let cancelled = UnsafeSendableBox(false)
 
@@ -122,6 +153,11 @@ public final class MockMessenger: ServitorMessenger, @unchecked Sendable {
         let sid = sessionId
         let chunkSize = streamingChunkSize
         let staleError = staleSessionError
+        let notifications: [NotificationInfo] = queue.sync {
+            let n = notificationsToEmit
+            notificationsToEmit = []
+            return n
+        }
 
         let stream = AsyncThrowingStream<StreamEvent, Error> { continuation in
             let task = Task {
@@ -146,6 +182,11 @@ public final class MockMessenger: ServitorMessenger, @unchecked Sendable {
                     continuation.yield(.error(error.localizedDescription))
                     continuation.finish(throwing: error)
                     return
+                }
+
+                // Yield any queued notifications before content
+                for notification in notifications {
+                    continuation.yield(.notification(notification))
                 }
 
                 // Yield response in chunks
@@ -177,5 +218,48 @@ public final class MockMessenger: ServitorMessenger, @unchecked Sendable {
         }
 
         return (stream: stream, cancel: cancel)
+    }
+
+    // MARK: - MCP Runtime Control
+
+    public func mcpServerStatus() async throws -> [McpServerStatus] {
+        queue.sync { mcpStatusCalls += 1 }
+        return mcpStatuses
+    }
+
+    public func reconnectMcpServer(name: String) async throws {
+        queue.sync { reconnectCalls.append(name) }
+    }
+
+    public func toggleMcpServer(name: String, enabled: Bool) async throws {
+        queue.sync { toggleCalls.append((name: name, enabled: enabled)) }
+    }
+
+    // MARK: - Helpers
+
+    /// Default init result decoded from JSON (SDKControlInitializeResponse has no public memberwise init).
+    private static func defaultInitResult() -> SDKControlInitializeResponse {
+        let json = """
+        {
+            "commands": [],
+            "agents": [],
+            "output_style": "text",
+            "available_output_styles": ["text"],
+            "models": [
+                {
+                    "value": "claude-sonnet-4-20250514",
+                    "display_name": "Claude Sonnet 4",
+                    "description": "Fast and capable"
+                }
+            ],
+            "account": {
+                "email": "test@example.com",
+                "organization": "Test Org",
+                "subscription_type": "pro"
+            }
+        }
+        """
+        // Force-unwrap acceptable in test infrastructure — failure is a developer error
+        return try! JSONDecoder().decode(SDKControlInitializeResponse.self, from: Data(json.utf8))
     }
 }

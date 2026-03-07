@@ -10,7 +10,7 @@
 
 ## Downstream References
 - ADR: --
-- Code: Tavern/Sources/TavernCore/Chat/, Tavern/Sources/TavernCore/Agents/
+- Code: Tavern/Sources/TavernCore/Chat/, Tavern/Sources/TavernCore/Servitors/
 - Tests: Tavern/Tests/TavernCoreTests/
 
 ---

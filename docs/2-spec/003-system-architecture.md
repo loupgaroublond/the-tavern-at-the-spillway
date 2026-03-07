@@ -47,7 +47,7 @@ Tech stack, layer structure, concurrency rules, component ownership hierarchy, a
 ```
 UI Layer (thin, dumb)           — layout + gestures + bindings only
 ViewModel Layer                 — all UX logic (@MainActor)
-Application Layer               — TavernCoordinator, ServitorSpawner
+Application Layer               — TavernCoordinator, MortalSpawner
 Agent Layer                     — Jake, Servitor, Sidecar
 Domain Layer                    — Commitment, Assignment
 Infrastructure Layer            — DocStore, SessionStore, SDK
@@ -86,13 +86,12 @@ Infrastructure Layer            — DocStore, SessionStore, SDK
 | D: Supervisor Tree | Agent hierarchy with lifecycle, Erlang-style |
 | A: Reactive Streams | UI updates, with batching at 60fps |
 | A: Message Bus | Agent-to-agent messaging over shared workspace |
-| I: Plugin | Closed set of agent types and spawners (registered at startup) |
 | C: Layer | Basic layering for testability |
 | L: Sidecar | Agent responsiveness while managing children |
 
 **See also:** §10.2.1 (doc store as filesystem), §4.2.8 (sidecar pattern per agent)
 
-**Testable assertion:** Each shape is identifiable in the codebase. The doc store is the communication medium (E). Agent hierarchy is a tree (D). UI updates are reactive (A). Agent types are registered at startup (I). Layer dependencies go downward only (C). API calls use sidecar actors (L).
+**Testable assertion:** Each shape is identifiable in the codebase. The doc store is the communication medium (E). Agent hierarchy is a tree (D). UI updates are reactive (A). Layer dependencies go downward only (C). API calls use sidecar actors (L).
 
 ### REQ-ARCH-005: Component Ownership Hierarchy
 **Source:** Reader §5 (Component Ownership Chain)
@@ -111,7 +110,7 @@ ProjectManager.shared (singleton)
                     +-- ClaudeCode instance (1)
                     +-- TavernCoordinator (1)
                             +-- Jake (1)
-                            +-- ServitorSpawner (1)
+                            +-- MortalSpawner (1)
                             |       +-- AgentRegistry (1)
                             |       +-- NameGenerator (1)
                             +-- AgentListViewModel (1)
@@ -123,9 +122,9 @@ Note: The object diagram above is demonstrative only. The text description is no
 **Testable assertion:** Two projects have independent coordinators, registries, and agent sets. No shared mutable state exists between projects. `ProjectManager` is the sole singleton.
 
 ### ~~REQ-ARCH-006: Closed Plugin Set~~
-~~**Source:** ADR-001, Shape I~~
+~~**Source:** ADR-001~~
 ~~**Priority:** must-have~~
-**Status:** dropped — *subsequently removed from spec, left unspecified*
+**Status:** dropped — *Shape I (Plugin) rejected as moribund; the system should not be locked to a closed set of agent types. Removed from Architecture Shapes (REQ-ARCH-004) and all downstream references.*
 
 ~~**Properties:**~~
 ~~- Agent types and spawners are registered at startup, not dynamically loaded~~
@@ -221,7 +220,7 @@ flowchart TD
     TP1 --> TC1[TavernCoordinator]
 
     TC1 --> Jake1[Jake]
-    TC1 --> SS1[ServitorSpawner]
+    TC1 --> SS1[MortalSpawner]
     TC1 --> ALVM1[AgentListViewModel]
     TC1 --> CVM1["ChatViewModel cache"]
 

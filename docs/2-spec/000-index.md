@@ -1,7 +1,7 @@
 # 000 — Formal Specification Index
 
 **Status:** complete
-**Last Updated:** 2026-02-16
+**Last Updated:** 2026-03-06
 
 ## Purpose
 
@@ -66,34 +66,34 @@ Traceability matrix mapping every PRD section to its spec module(s). Every requi
 
 ## Module Status Overview
 
-| Doc # | Module | Prefix | Status | Requirements Count |
-|-------|--------|--------|--------|-------------------|
-| 002 | 002-invariants.md | REQ-INV | complete | 9 |
-| 003 | 003-system-architecture.md | REQ-ARCH | complete | 10 |
-| 004 | 004-agents.md | REQ-AGT | complete | 10 |
-| 005 | 005-spawning.md | REQ-SPN | complete | 10 |
-| 006 | 006-lifecycle.md | REQ-LCM | complete | 7 |
-| 007 | 007-operating-modes.md | REQ-OPM | complete | 6 |
-| 008 | 008-deterministic-shell.md | REQ-DET | complete | 8 |
-| 009 | 009-communication.md | REQ-COM | complete | 8 |
-| 010 | 010-doc-store.md | REQ-DOC | complete | 8 |
-| 011 | 011-sandbox.md | REQ-SBX | complete | 8 |
-| 012 | 012-workflows.md | REQ-WRK | complete | 8 |
-| 013 | 013-user-experience.md | REQ-UX | complete | 11 |
-| 014 | 014-view-architecture.md | REQ-VIW | complete | 11 |
-| 015 | 015-observability.md | REQ-OBS | complete | 9 |
-| 016 | 016-quality.md | REQ-QA | complete | 17 |
-| 017 | 017-v1-scope.md | REQ-V1 | complete | 17 |
-| 018 | 018-spec-fidelity.md | REQ-FID | complete | 7 |
-| 019 | 019-states-modes.md | REQ-STM | complete | 7 |
-| 020 | 020-servitor-trees.md | REQ-TRE | complete | 6 |
-| 021 | 021-capability-delegation.md | REQ-CAP | complete | 6 |
-| 022 | 022-chat-discussions.md | REQ-CDS | complete | 5 |
-| 023 | 023-keyboard-shortcuts.md | REQ-KEY | stub | 0 |
-| 024 | 024-accessibility.md | REQ-ACC | stub | 0 |
-| 025 | 025-search.md | REQ-SRC | stub | 0 |
+| Doc # | Module | Prefix | Status | Active | Dropped | Total |
+|-------|--------|--------|--------|-------:|--------:|------:|
+| 002 | 002-invariants.md | REQ-INV | complete | 9 | 0 | 9 |
+| 003 | 003-system-architecture.md | REQ-ARCH | complete | 9 | 1 | 10 |
+| 004 | 004-agents.md | REQ-AGT | complete | 10 | 0 | 10 |
+| 005 | 005-spawning.md | REQ-SPN | complete | 10 | 0 | 10 |
+| 006 | 006-lifecycle.md | REQ-LCM | complete | 7 | 0 | 7 |
+| 007 | 007-operating-modes.md | REQ-OPM | complete | 6 | 0 | 6 |
+| 008 | 008-deterministic-shell.md | REQ-DET | complete | 6 | 2 | 8 |
+| 009 | 009-communication.md | REQ-COM | complete | 8 | 0 | 8 |
+| 010 | 010-doc-store.md | REQ-DOC | complete | 5 | 3 | 8 |
+| 011 | 011-sandbox.md | REQ-SBX | complete | 8 | 0 | 8 |
+| 012 | 012-workflows.md | REQ-WRK | complete | 7 | 3 | 10 |
+| 013 | 013-user-experience.md | REQ-UX | complete | 11 | 1 | 12 |
+| 014 | 014-view-architecture.md | REQ-VIW | complete | 11 | 0 | 11 |
+| 015 | 015-observability.md | REQ-OBS | complete | 9 | 2 | 11 |
+| 016 | 016-quality.md | REQ-QA | complete | 17 | 1 | 18 |
+| 017 | 017-v1-scope.md | REQ-V1 | complete | 17 | 0 | 17 |
+| 018 | 018-spec-fidelity.md | REQ-FID | complete | 7 | 0 | 7 |
+| 019 | 019-states-modes.md | REQ-STM | complete | 7 | 0 | 7 |
+| 020 | 020-servitor-trees.md | REQ-TRE | complete | 6 | 0 | 6 |
+| 021 | 021-capability-delegation.md | REQ-CAP | complete | 6 | 0 | 6 |
+| 022 | 022-chat-discussions.md | REQ-CDS | complete | 5 | 0 | 5 |
+| 023 | 023-keyboard-shortcuts.md | REQ-KEY | stub | 0 | 0 | 0 |
+| 024 | 024-accessibility.md | REQ-ACC | stub | 0 | 0 | 0 |
+| 025 | 025-search.md | REQ-SRC | stub | 0 | 0 | 0 |
 
-**Total requirements:** 188
+**Total requirements:** 172 active, 13 dropped, 185 total
 
 ## Pinned Decisions
 

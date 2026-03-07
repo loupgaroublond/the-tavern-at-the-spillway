@@ -1,7 +1,7 @@
 import Foundation
 import os.log
 
-// MARK: - Provenance: REQ-AGT-007, REQ-ARCH-004, REQ-ARCH-006, REQ-OPM-005, REQ-SPN-001, REQ-SPN-002, REQ-SPN-003, REQ-SPN-010, REQ-V1-004
+// MARK: - Provenance: REQ-AGT-007, REQ-ARCH-004, REQ-OPM-005, REQ-SPN-001, REQ-SPN-002, REQ-SPN-003, REQ-SPN-010, REQ-V1-004
 
 /// Factory type for creating ServitorMessenger instances.
 /// Accepts the mortal name for context in permission approval requests.
@@ -18,6 +18,7 @@ public final class MortalSpawner: @unchecked Sendable {
     private let nameGenerator: NameGenerator
     private let projectURL: URL
     private let messengerFactory: MessengerFactory
+    private let defaults: TavernDefaultsProvider?
 
     // MARK: - Initialization
 
@@ -27,16 +28,19 @@ public final class MortalSpawner: @unchecked Sendable {
     ///   - nameGenerator: The name generator for themed names
     ///   - projectURL: The project directory URL for spawned mortals
     ///   - messengerFactory: Factory for creating messengers for spawned mortals (default: LiveMessenger)
+    ///   - defaults: User-level defaults provider for stamping model config at creation (nil = no defaults)
     public init(
         registry: ServitorRegistry,
         nameGenerator: NameGenerator,
         projectURL: URL,
-        messengerFactory: @escaping MessengerFactory = { _ in LiveMessenger() }
+        messengerFactory: @escaping MessengerFactory = { _ in LiveMessenger() },
+        defaults: TavernDefaultsProvider? = nil
     ) {
         self.registry = registry
         self.nameGenerator = nameGenerator
         self.projectURL = projectURL
         self.messengerFactory = messengerFactory
+        self.defaults = defaults
     }
 
     // MARK: - Summoning
@@ -56,6 +60,9 @@ public final class MortalSpawner: @unchecked Sendable {
             name: name,
             assignment: nil,
             projectURL: projectURL,
+            modelId: defaults?.defaultModelId,
+            thinkingBudget: defaults?.defaultThinkingConfig?.budgetTokens,
+            effortLevel: defaults?.defaultEffortLevel,
             messenger: messengerFactory(name)
         )
 
@@ -80,6 +87,9 @@ public final class MortalSpawner: @unchecked Sendable {
             name: name,
             assignment: assignment,
             projectURL: projectURL,
+            modelId: defaults?.defaultModelId,
+            thinkingBudget: defaults?.defaultThinkingConfig?.budgetTokens,
+            effortLevel: defaults?.defaultEffortLevel,
             messenger: messengerFactory(name)
         )
 
@@ -109,6 +119,9 @@ public final class MortalSpawner: @unchecked Sendable {
             name: name,
             assignment: assignment,
             projectURL: projectURL,
+            modelId: defaults?.defaultModelId,
+            thinkingBudget: defaults?.defaultThinkingConfig?.budgetTokens,
+            effortLevel: defaults?.defaultEffortLevel,
             messenger: messengerFactory(name)
         )
 

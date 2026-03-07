@@ -9,7 +9,7 @@
 import Foundation
 import OSLog
 
-// MARK: - Provenance: REQ-DET-002, REQ-DOC-004, REQ-DOC-005
+// MARK: - Provenance: REQ-DET-002
 import Darwin
 
 /// Implementation of Claude's native session storage that reads from ~/.claude/projects/
@@ -24,31 +24,6 @@ public class ClaudeNativeSessionStorage {
     }
 
     // MARK: - Public Methods
-
-    public func listProjects() async throws -> [String] {
-        guard fileManager.fileExists(atPath: basePath) else {
-            logger.info("Claude projects directory not found at \(self.basePath)")
-            return []
-        }
-
-        let contents = try fileManager.contentsOfDirectory(atPath: basePath)
-
-        // Filter only directories and decode the project paths
-        let projects = contents.compactMap { item -> String? in
-            let fullPath = (basePath as NSString).appendingPathComponent(item)
-            var isDirectory: ObjCBool = false
-
-            guard fileManager.fileExists(atPath: fullPath, isDirectory: &isDirectory),
-                  isDirectory.boolValue else {
-                return nil
-            }
-
-            // Decode the project path (convert dashes back to slashes)
-            return decodeProjectPath(item)
-        }
-
-        return projects.sorted()
-    }
 
     public func getSessions(for projectPath: String) async throws -> [ClaudeStoredSession] {
         let encodedPath = encodeProjectPath(projectPath)
@@ -96,19 +71,6 @@ public class ClaudeNativeSessionStorage {
             sessionId: id,
             projectPath: projectPath
         )
-    }
-
-    public func getAllSessions() async throws -> [ClaudeStoredSession] {
-        let projects = try await listProjects()
-        var allSessions: [ClaudeStoredSession] = []
-
-        for project in projects {
-            let sessions = try await getSessions(for: project)
-            allSessions.append(contentsOf: sessions)
-        }
-
-        // Sort all sessions by last accessed date
-        return allSessions.sorted { $0.lastAccessedAt > $1.lastAccessedAt }
     }
 
     public func getMessages(sessionId: String, projectPath: String) async throws -> [ClaudeStoredMessage] {

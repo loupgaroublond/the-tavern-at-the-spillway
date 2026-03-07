@@ -4,6 +4,12 @@ import TavernCore
 /// AppKit delegate for Dock menu and other OS-level integration
 class TavernAppDelegate: NSObject, NSApplicationDelegate {
 
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        #if DEBUG
+        DebugLogPanelController.shared.restoreIfNeeded()
+        #endif
+    }
+
     /// Provides the Dock icon right-click menu
     func applicationDockMenu(_ sender: NSApplication) -> NSMenu? {
         let menu = NSMenu()

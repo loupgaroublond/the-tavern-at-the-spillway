@@ -10,7 +10,7 @@
 
 ## Downstream References
 - ADR: --
-- Code: Tavern/Sources/TavernCore/Agents/ (partial implementation)
+- Code: Tavern/Sources/TavernCore/Servitors/ (partial implementation)
 - Tests: --
 
 ---

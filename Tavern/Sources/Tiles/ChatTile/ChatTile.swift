@@ -264,6 +264,16 @@ public final class ChatTile {
                         ))
                     }
 
+                // ── Notification ──
+                case .notification(let info):
+                    Self.logger.info("[ChatTile] notification: level=\(info.level.rawValue), title=\(info.title ?? "(none)"), message=\(info.message)")
+                    let prefix = info.title.map { "[\($0)] " } ?? ""
+                    messages.append(ChatMessage(
+                        role: .system,
+                        content: "\(prefix)\(info.message)",
+                        messageType: .notification
+                    ))
+
                 // ── Completion ──
                 case .completed(let info):
                     Self.logger.info("[ChatTile] stream completed")

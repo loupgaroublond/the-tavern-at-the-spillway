@@ -39,10 +39,13 @@ public struct ToolProgressInfo: Sendable, Equatable {
     }
 }
 
+// MARK: - Provenance: REQ-COST-001
+
 /// Information from a completed stream
 public struct CompletionInfo: Sendable, Equatable {
     public let sessionId: String?
     public let usage: SessionUsage?
+    public let perModelUsage: [String: SessionUsage]?
     public let costUsd: Double?
     public let totalCostUsd: Double?
     public let durationMs: Int?
@@ -52,6 +55,7 @@ public struct CompletionInfo: Sendable, Equatable {
     public init(
         sessionId: String? = nil,
         usage: SessionUsage? = nil,
+        perModelUsage: [String: SessionUsage]? = nil,
         costUsd: Double? = nil,
         totalCostUsd: Double? = nil,
         durationMs: Int? = nil,
@@ -60,11 +64,53 @@ public struct CompletionInfo: Sendable, Equatable {
     ) {
         self.sessionId = sessionId
         self.usage = usage
+        self.perModelUsage = perModelUsage
         self.costUsd = costUsd
         self.totalCostUsd = totalCostUsd
         self.durationMs = durationMs
         self.stopReason = stopReason
         self.numTurns = numTurns
+    }
+}
+
+// MARK: - Provenance: REQ-ARCH-009
+
+/// Information about a CLI notification surfaced through the streaming pipeline.
+/// Maps from ClodKit's `NotificationInput` hook data.
+public struct NotificationInfo: Sendable, Equatable {
+    /// The notification message body.
+    public let message: String
+
+    /// Optional title for the notification.
+    public let title: String?
+
+    /// Severity level parsed from the CLI's `notificationType` string.
+    public let level: Level
+
+    /// The raw notification type string from the CLI (preserved for forward compatibility).
+    public let rawType: String
+
+    /// Notification severity levels.
+    public enum Level: String, Sendable, Equatable {
+        case info
+        case warning
+        case error
+    }
+
+    public init(message: String, title: String? = nil, level: Level = .info, rawType: String = "info") {
+        self.message = message
+        self.title = title
+        self.level = level
+        self.rawType = rawType
+    }
+
+    /// Parse a `NotificationInfo.Level` from the CLI's notification type string.
+    /// Unrecognized types default to `.info`.
+    public static func parseLevel(from notificationType: String) -> Level {
+        let normalized = notificationType.lowercased()
+        if normalized.contains("error") { return .error }
+        if normalized.contains("warn") { return .warning }
+        return .info
     }
 }
 
@@ -95,6 +141,9 @@ public struct SessionUsage: Sendable, Equatable {
     /// Number of cache creation input tokens
     public let cacheCreationInputTokens: Int
 
+    /// Number of web search requests made
+    public let webSearchRequests: Int
+
     /// Cost in USD for this usage
     public let costUsd: Double
 
@@ -103,12 +152,14 @@ public struct SessionUsage: Sendable, Equatable {
         outputTokens: Int,
         cacheReadInputTokens: Int = 0,
         cacheCreationInputTokens: Int = 0,
+        webSearchRequests: Int = 0,
         costUsd: Double = 0
     ) {
         self.inputTokens = inputTokens
         self.outputTokens = outputTokens
         self.cacheReadInputTokens = cacheReadInputTokens
         self.cacheCreationInputTokens = cacheCreationInputTokens
+        self.webSearchRequests = webSearchRequests
         self.costUsd = costUsd
     }
 
@@ -155,6 +206,9 @@ public enum StreamEvent: Sendable, Equatable {
 
     /// Rate limit warning
     case rateLimitWarning(RateLimitInfo)
+
+    /// A CLI notification (e.g. task complete, context limit approaching)
+    case notification(NotificationInfo)
 
     /// A session break occurred — the previous session could not be resumed
     /// and a new session was started. The stale session ID is provided.

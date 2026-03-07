@@ -46,6 +46,16 @@ struct TavernApp: App {
         }
         .windowStyle(.hiddenTitleBar)
         .commands {
+            #if DEBUG
+            // Debug menu
+            CommandGroup(after: .help) {
+                Button("Toggle Log Window") {
+                    DebugLogPanelController.shared.toggle()
+                }
+                .keyboardShortcut("l", modifiers: [.command, .shift])
+            }
+            #endif
+
             // File menu
             CommandGroup(replacing: .newItem) {
                 Button("Open Project...") {

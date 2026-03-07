@@ -2,7 +2,7 @@ import Foundation
 import ClodKit
 import os.log
 
-// MARK: - Provenance: REQ-AGT-001, REQ-AGT-008, REQ-ARCH-007, REQ-COM-008, REQ-DET-001, REQ-DOC-005, REQ-LCM-007, REQ-OBS-011, REQ-V1-001, REQ-V1-002
+// MARK: - Provenance: REQ-AGT-001, REQ-AGT-008, REQ-ARCH-007, REQ-COM-008, REQ-DET-001, REQ-LCM-007, REQ-OBS-011, REQ-V1-001, REQ-V1-002
 
 /// Jake - The Proprietor of the Tavern
 /// The top-level coordinating agent with the voice of a used car salesman
@@ -58,10 +58,22 @@ public final class Jake: Servitor, @unchecked Sendable {
         queue.sync { _isCogitating }
     }
 
+    /// Account info fetched from the SDK (populated after `fetchAccountInfo()`).
+    public var accountInfo: TavernAccountInfo? {
+        session.accountInfo
+    }
+
     /// The current session mode (plan, normal, acceptEdits, etc.)
     public var sessionMode: TavernKit.PermissionMode {
         get { session.permissionMode }
         set { session.permissionMode = newValue }
+    }
+
+    /// External MCP server configurations loaded from servitor.md.
+    /// Merged with the built-in tavern server at query time.
+    public var externalMCPServers: [String: MCPServerConfig] {
+        get { session.externalMCPServers }
+        set { session.externalMCPServers = newValue }
     }
 
     /// Jake's system prompt - establishes his character and dispatcher role
@@ -110,6 +122,11 @@ public final class Jake: Servitor, @unchecked Sendable {
 
         The Regulars handle the actual work. You handle the coordination, the patter, \
         and the AMBIANCE.
+
+        DISCOVERY SHARING: When Regulars report discoveries (prefixed with "DISCOVERY:"), \
+        acknowledge them and route them to the appropriate party — the user, another \
+        Regular, or log them for later. Discoveries from one agent may be relevant to \
+        another's work. Keep the flow moving; discoveries should not block ongoing tasks.
 
         Remember: Perfect execution. Lingering unease. That's the Tavern experience.
         """
@@ -235,6 +252,13 @@ public final class Jake: Servitor, @unchecked Sendable {
         }
 
         return (stream: wrappedStream, cancel: cancel)
+    }
+
+    /// Fetch account info from the SDK. Caches the result — safe to call multiple times.
+    @discardableResult
+    public func fetchAccountInfo() async throws -> TavernAccountInfo {
+        TavernLogger.agents.info("Jake.fetchAccountInfo called")
+        return try await session.fetchAccountInfo()
     }
 
     /// Reset Jake's conversation (start fresh)

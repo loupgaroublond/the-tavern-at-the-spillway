@@ -26,6 +26,7 @@ extension Tag {
     @Tag static var reqSPN010: Self
 
     // 008-deterministic-shell
+    @Tag static var reqDET002: Self
     @Tag static var reqDET004: Self
     @Tag static var reqDET005: Self
 
@@ -48,6 +49,9 @@ extension Tag {
     // 015-observability
     @Tag static var reqOBS005: Self
     @Tag static var reqOBS006: Self
+    @Tag static var reqOBS008: Self
+    @Tag static var reqOBS009: Self
+    @Tag static var reqOBS011: Self
 
     // 003-system-architecture
     @Tag static var reqARCH003: Self
@@ -60,6 +64,7 @@ extension Tag {
     @Tag static var reqOPM002: Self
     @Tag static var reqOPM004: Self
     @Tag static var reqOPM005: Self
+    @Tag static var reqOPM006: Self
 
     // 014-view-architecture
     @Tag static var reqVIW001: Self
@@ -68,10 +73,13 @@ extension Tag {
     @Tag static var reqVIW005: Self
 
     // 013-user-experience
+    @Tag static var reqUX001: Self
     @Tag static var reqUX002: Self
     @Tag static var reqUX003: Self
     @Tag static var reqUX005: Self
     @Tag static var reqUX006: Self
+    @Tag static var reqUX007: Self
+    @Tag static var reqUX008: Self
     @Tag static var reqUX009: Self
 
     // 016-quality

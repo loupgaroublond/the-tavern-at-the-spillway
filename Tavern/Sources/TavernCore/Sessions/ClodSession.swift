@@ -27,15 +27,30 @@ final class ClodSession: @unchecked Sendable {
         var permissionMode: TavernKit.PermissionMode
         var workingDirectory: URL
         var mcpServers: [String: SDKMCPServer] = [:]
+        /// External MCP server configurations (command-based, not in-process).
+        var externalMCPServers: [String: MCPServerConfig] = [:]
         var approvalHandler: ToolApprovalHandler?
         var planApprovalHandler: PlanApprovalHandler?
+        var elicitationHandler: ElicitationHandler?
         let servitorName: String
+
+        // MARK: - Model & Thinking Control (SDK gap 2a)
+
+        /// Model ID (nil = SDK default)
+        var modelId: String?
+
+        /// Thinking budget in tokens (nil = no explicit budget)
+        var thinkingBudget: Int?
+
+        /// Effort level: "low", "medium", "high", "max" (nil = SDK default)
+        var effortLevel: String?
     }
 
     // MARK: - State
 
     private var config: Config
     private var _sessionId: String?
+    private var _accountInfo: TavernAccountInfo?
     private let messenger: ServitorMessenger
 
     private static let logger = Logger(subsystem: "com.tavern.spillway", category: "session")
@@ -43,6 +58,9 @@ final class ClodSession: @unchecked Sendable {
     // MARK: - Public Properties
 
     var sessionId: String? { _sessionId }
+
+    /// Account info fetched from the SDK (populated after `fetchAccountInfo()`).
+    var accountInfo: TavernAccountInfo? { _accountInfo }
 
     var systemPrompt: String {
         get { config.systemPrompt }
@@ -59,6 +77,11 @@ final class ClodSession: @unchecked Sendable {
         set { config.mcpServers = newValue }
     }
 
+    var externalMCPServers: [String: MCPServerConfig] {
+        get { config.externalMCPServers }
+        set { config.externalMCPServers = newValue }
+    }
+
     // MARK: - Initialization
 
     init(config: Config, initialSessionId: String? = nil, messenger: ServitorMessenger? = nil) {
@@ -66,7 +89,8 @@ final class ClodSession: @unchecked Sendable {
         self._sessionId = initialSessionId
         self.messenger = messenger ?? LiveMessenger(
             approvalHandler: config.approvalHandler,
-            planApprovalHandler: config.planApprovalHandler
+            planApprovalHandler: config.planApprovalHandler,
+            elicitationHandler: config.elicitationHandler
         )
 
         Self.logger.info("[ClodSession] initialized for '\(config.servitorName)', hasSession: \(initialSessionId != nil)")
@@ -186,6 +210,50 @@ final class ClodSession: @unchecked Sendable {
         return (stream: wrappedStream, cancel: { cancelBox.value() })
     }
 
+    // MARK: - MCP Runtime Control
+
+    /// Get the status of all configured MCP servers.
+    func mcpServerStatus() async throws -> [McpServerStatus] {
+        Self.logger.info("[ClodSession] querying MCP server status for '\(self.config.servitorName)'")
+        return try await messenger.mcpServerStatus()
+    }
+
+    /// Reconnect a named MCP server.
+    func reconnectMcpServer(name: String) async throws {
+        Self.logger.info("[ClodSession] reconnecting MCP server '\(name)' for '\(self.config.servitorName)'")
+        try await messenger.reconnectMcpServer(name: name)
+    }
+
+    /// Enable or disable a named MCP server.
+    func toggleMcpServer(name: String, enabled: Bool) async throws {
+        Self.logger.info("[ClodSession] toggling MCP server '\(name)' enabled=\(enabled) for '\(self.config.servitorName)'")
+        try await messenger.toggleMcpServer(name: name, enabled: enabled)
+    }
+
+    // MARK: - Account Info
+
+    /// Fetch account information from the SDK.
+    /// Stores the result internally and returns it. Subsequent calls return the cached value.
+    @discardableResult
+    func fetchAccountInfo() async throws -> TavernAccountInfo {
+        if let existing = _accountInfo {
+            Self.logger.debug("[ClodSession] returning cached account info for '\(self.config.servitorName)'")
+            return existing
+        }
+
+        Self.logger.info("[ClodSession] fetching account info for '\(self.config.servitorName)'")
+        let options = buildOptions()
+        let result = try await messenger.fetchAccountInfo(options: options)
+
+        let info = TavernAccountInfo.from(
+            account: result.account,
+            initResult: result.initResult
+        )
+        _accountInfo = info
+        Self.logger.info("[ClodSession] account info fetched: email=\(info.email ?? "nil"), org=\(info.organization ?? "nil"), plan=\(info.subscriptionType ?? "nil")")
+        return info
+    }
+
     /// Reset conversation: clear in-memory session ID.
     /// Caller is responsible for persisting the break and logging events.
     func resetConversation() {
@@ -208,6 +276,17 @@ final class ClodSession: @unchecked Sendable {
         for (key, server) in config.mcpServers {
             options.sdkMcpServers[key] = server
         }
+
+        for (key, server) in config.externalMCPServers {
+            options.mcpServers[key] = server
+        }
+
+        // Model & Thinking Control (SDK gap 2a)
+        options.model = config.modelId
+        if let budget = config.thinkingBudget {
+            options.maxThinkingTokens = budget
+        }
+        options.effort = config.effortLevel
 
         return options
     }

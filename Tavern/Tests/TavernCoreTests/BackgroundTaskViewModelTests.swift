@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import TavernCore
 
-@Suite("BackgroundTaskViewModel Tests")
+@Suite("BackgroundTaskViewModel Tests", .timeLimit(.minutes(2)))
 @MainActor
 struct BackgroundTaskViewModelTests {
 

@@ -112,3 +112,75 @@ public struct PlanApprovalResponse: Sendable {
         self.feedback = feedback
     }
 }
+
+// MARK: - Elicitation
+
+// MARK: - Provenance: REQ-SDK-002f
+
+/// Async callback invoked when an MCP server requests user input via elicitation.
+/// The handler should present the elicitation UI, wait for the user's decision,
+/// and return the response.
+///
+/// Called from LiveMessenger's onElicitation closure. The closure suspends until
+/// the user accepts, declines, or cancels the elicitation.
+public typealias ElicitationHandler = @Sendable (TavernElicitationRequest) async -> TavernElicitationResponse
+
+/// Represents an MCP server elicitation request asking for user input.
+///
+/// Tavern-owned type that mirrors ClodKit's `ElicitationRequest` to prevent
+/// SDK dependency from leaking into the UI layer.
+public struct TavernElicitationRequest: Identifiable, Sendable {
+
+    /// Unique identifier for this request
+    public let id: UUID
+
+    /// Name of the MCP server requesting elicitation
+    public let serverName: String
+
+    /// Message to display to the user
+    public let message: String
+
+    /// Elicitation mode: "form" for structured input, "url" for browser-based auth
+    public let mode: String?
+
+    /// URL to open (only for "url" mode)
+    public let url: String?
+
+    /// Elicitation ID for correlating URL elicitations with completion notifications
+    public let elicitationId: String?
+
+    /// When the request was created
+    public let requestedAt: Date
+
+    public init(
+        id: UUID = UUID(),
+        serverName: String,
+        message: String,
+        mode: String? = nil,
+        url: String? = nil,
+        elicitationId: String? = nil,
+        requestedAt: Date = Date()
+    ) {
+        self.id = id
+        self.serverName = serverName
+        self.message = message
+        self.mode = mode
+        self.url = url
+        self.elicitationId = elicitationId
+        self.requestedAt = requestedAt
+    }
+}
+
+/// The user's response to an elicitation request.
+public enum TavernElicitationResponse: Sendable {
+
+    /// Accept the elicitation with optional structured content.
+    /// The content dictionary maps field names to string values for form mode.
+    case accept(content: [String: String]? = nil)
+
+    /// Decline the elicitation (MCP server is notified).
+    case decline
+
+    /// Cancel the elicitation (operation is aborted).
+    case cancel
+}

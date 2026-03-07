@@ -24,4 +24,21 @@ public protocol ServitorMessenger: Sendable {
     ///   - options: Query options (system prompt, session ID, etc.)
     /// - Returns: A stream of StreamEvent values and a cancellation handle
     func queryStreaming(prompt: String, options: QueryOptions) -> (stream: AsyncThrowingStream<StreamEvent, Error>, cancel: @Sendable () -> Void)
+
+    /// Fetch account information from the Claude SDK.
+    /// Creates a lightweight query to retrieve account and initialization data.
+    /// - Parameter options: Query options (working directory, etc.)
+    /// - Returns: Account info and initialization result
+    func fetchAccountInfo(options: QueryOptions) async throws -> (account: AccountInfo, initResult: SDKControlInitializeResponse)
+
+    // MARK: - MCP Runtime Control
+
+    /// Get the status of all configured MCP servers for the current session.
+    func mcpServerStatus() async throws -> [McpServerStatus]
+
+    /// Reconnect a named MCP server.
+    func reconnectMcpServer(name: String) async throws
+
+    /// Enable or disable a named MCP server.
+    func toggleMcpServer(name: String, enabled: Bool) async throws
 }

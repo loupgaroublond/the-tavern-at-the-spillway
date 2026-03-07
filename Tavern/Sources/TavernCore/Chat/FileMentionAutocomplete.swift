@@ -50,7 +50,7 @@ public final class FileMentionAutocomplete {
         selectedIndex = 0
         isVisible = !matches.isEmpty
 
-        TavernLogger.chat.debug("FileMention: prefix=\"\(partial, privacy: .public)\" matches=\(matches.count)")
+        TavernLogger.chat.debug("FileMention: prefix=\"\(partial)\" matches=\(matches.count)")
     }
 
     /// Hide the autocomplete popup

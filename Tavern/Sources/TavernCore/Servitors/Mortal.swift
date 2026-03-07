@@ -57,6 +57,12 @@ public final class Mortal: Servitor, @unchecked Sendable {
         set { session.permissionMode = newValue }
     }
 
+    /// External MCP server configurations loaded from servitor.md.
+    public var externalMCPServers: [String: MCPServerConfig] {
+        get { session.externalMCPServers }
+        set { session.externalMCPServers = newValue }
+    }
+
     // MARK: - System Prompt
 
     /// Generate the system prompt for this mortal
@@ -77,6 +83,12 @@ public final class Mortal: Servitor, @unchecked Sendable {
             If you need input or clarification, ask for it.
             If you encounter an error you can't resolve, report it clearly.
 
+            DISCOVERY SHARING: If you discover something unexpected or important \
+            while working — a bug, a pattern, a risk, a dependency — report it \
+            clearly in your response. Prefix discoveries with "DISCOVERY:" so they \
+            can be routed to Jake or other agents. Do not stop your main task to \
+            share discoveries; include them alongside your regular output.
+
             You speak professionally but with personality. You're not Jake
             (nobody is quite like Jake), but you work for him and share his
             commitment to quality execution beneath a quirky exterior.
@@ -95,6 +107,12 @@ public final class Mortal: Servitor, @unchecked Sendable {
             If you need input or clarification, ask for it.
             If you encounter an error you can't resolve, report it clearly.
 
+            DISCOVERY SHARING: If you discover something unexpected or important \
+            while working — a bug, a pattern, a risk, a dependency — report it \
+            clearly in your response. Prefix discoveries with "DISCOVERY:" so they \
+            can be routed to Jake or other agents. Do not stop your main task to \
+            share discoveries; include them alongside your regular output.
+
             You speak professionally but with personality. You're not Jake
             (nobody is quite like Jake), but you work for him and share his
             commitment to quality execution beneath a quirky exterior.
@@ -112,6 +130,9 @@ public final class Mortal: Servitor, @unchecked Sendable {
     ///   - chatDescription: User-editable description shown in sidebar
     ///   - projectURL: The project directory URL
     ///   - initialSessionId: Previously persisted session ID for resume (nil starts fresh)
+    ///   - modelId: Model ID override (nil = SDK default)
+    ///   - thinkingBudget: Thinking token budget (nil = no explicit budget)
+    ///   - effortLevel: Effort level override (nil = SDK default)
     ///   - commitments: List of commitments to verify before completion (defaults to empty)
     ///   - verifier: Verifier for checking commitments (defaults to shell-based)
     ///   - messenger: The messenger for Claude communication (default: LiveMessenger)
@@ -122,6 +143,9 @@ public final class Mortal: Servitor, @unchecked Sendable {
         chatDescription: String? = nil,
         projectURL: URL,
         initialSessionId: String? = nil,
+        modelId: String? = nil,
+        thinkingBudget: Int? = nil,
+        effortLevel: String? = nil,
         commitments: CommitmentList = CommitmentList(),
         verifier: CommitmentVerifier = CommitmentVerifier(),
         messenger: ServitorMessenger? = nil
@@ -138,7 +162,10 @@ public final class Mortal: Servitor, @unchecked Sendable {
             systemPrompt: "", // Will be set below via session.systemPrompt
             permissionMode: .plan,
             workingDirectory: projectURL,
-            servitorName: name.lowercased()
+            servitorName: name.lowercased(),
+            modelId: modelId,
+            thinkingBudget: thinkingBudget,
+            effortLevel: effortLevel
         )
 
         self.session = ClodSession(config: config, initialSessionId: initialSessionId, messenger: messenger)
@@ -239,14 +266,6 @@ public final class Mortal: Servitor, @unchecked Sendable {
         }
 
         session.resetConversation()
-    }
-
-    /// Update the chat description
-    /// - Parameter description: The new description (nil to clear)
-    /// Note: Persistence is handled by ClodSessionManager.updateDescription()
-    public func updateChatDescription(_ description: String?) {
-        self.chatDescription = description
-        TavernLogger.agents.debug("[\(self.name)] chat description updated: \(description ?? "nil")")
     }
 
     // MARK: - State Management

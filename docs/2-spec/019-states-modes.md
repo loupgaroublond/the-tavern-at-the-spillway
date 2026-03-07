@@ -9,7 +9,7 @@
 - Transcripts: transcript_2026-01-19-1144.md (agent states, task modes)
 
 ## Downstream References
-- Code: Tavern/Sources/TavernCore/Agents/ (Servitor.swift, Jake.swift)
+- Code: Tavern/Sources/TavernCore/Servitors/ (Servitor.swift, Jake.swift)
 - Tests: Tavern/Tests/TavernCoreTests/, Tavern/Tests/TavernTests/
 
 > **Note:** This module is the canonical source for servitor state machine and mode definitions. The state/mode sections in §004, §006, and §007 are deprecated in favor of this module.

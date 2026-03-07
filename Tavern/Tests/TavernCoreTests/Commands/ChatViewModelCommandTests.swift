@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import TavernCore
 
-@Suite("ChatViewModel Slash Command Integration Tests")
+@Suite("ChatViewModel Slash Command Integration Tests", .timeLimit(.minutes(2)))
 struct ChatViewModelCommandTests {
 
     private static func testProjectURL() -> URL {

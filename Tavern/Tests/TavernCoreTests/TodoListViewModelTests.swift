@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import TavernCore
 
-@Suite("TodoListViewModel Tests")
+@Suite("TodoListViewModel Tests", .timeLimit(.minutes(2)))
 @MainActor
 struct TodoListViewModelTests {
 

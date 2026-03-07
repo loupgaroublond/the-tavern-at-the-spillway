@@ -9,7 +9,7 @@
 - Transcripts: transcript_2026-01-19-1144.md (Erlang-style hierarchies)
 
 ## Downstream References
-- Code: Tavern/Sources/TavernCore/Agents/ (Servitor.swift, ServitorSpawner.swift, Jake.swift)
+- Code: Tavern/Sources/TavernCore/Servitors/ (Servitor.swift, MortalSpawner.swift, Jake.swift)
 - Tests: Tavern/Tests/TavernCoreTests/, Tavern/Tests/TavernTests/
 
 ---

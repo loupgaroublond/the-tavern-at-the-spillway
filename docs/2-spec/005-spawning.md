@@ -10,7 +10,7 @@
 
 ## Downstream References
 - ADR: --
-- Code: Tavern/Sources/TavernCore/Agents/ServitorSpawner.swift, Tavern/Sources/TavernCore/Naming/, Tavern/Sources/TavernCore/Coordination/
+- Code: Tavern/Sources/TavernCore/Servitors/MortalSpawner.swift, Tavern/Sources/TavernCore/Naming/, Tavern/Sources/TavernCore/Coordination/
 - Tests: Tavern/Tests/TavernCoreTests/, Tavern/Tests/TavernTests/
 
 ---

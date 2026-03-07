@@ -11,6 +11,7 @@ extension Tag {
     // 013-user-experience (wiring tests)
     @Tag static var reqUX002: Self
     @Tag static var reqUX003: Self
+    @Tag static var reqUX009: Self
 
     // 016-quality (view wiring tests)
     @Tag static var reqQA003: Self

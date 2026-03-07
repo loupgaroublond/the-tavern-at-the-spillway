@@ -19,23 +19,30 @@ public struct LiveMessenger: ServitorMessenger {
     private let permissionManager: PermissionManager?
     private let approvalHandler: ToolApprovalHandler?
     private let planApprovalHandler: PlanApprovalHandler?
+    private let elicitationHandler: ElicitationHandler?
     private let agentName: String
+
+    /// Shared reference to the most recent active query for runtime MCP control.
+    private let activeQueryBox = UnsafeSendableBox<ClaudeQuery?>(nil)
 
     /// Create a LiveMessenger with optional permission enforcement.
     /// - Parameters:
     ///   - permissionManager: Permission manager for tool checks (nil disables checks)
     ///   - approvalHandler: Async callback for user prompting (required when manager is non-nil)
     ///   - planApprovalHandler: Async callback for ExitPlanMode requests
+    ///   - elicitationHandler: Async callback for MCP server elicitation requests
     ///   - agentName: Name of the agent using this messenger (for approval request context)
     public init(
         permissionManager: PermissionManager? = nil,
         approvalHandler: ToolApprovalHandler? = nil,
         planApprovalHandler: PlanApprovalHandler? = nil,
+        elicitationHandler: ElicitationHandler? = nil,
         agentName: String = ""
     ) {
         self.permissionManager = permissionManager
         self.approvalHandler = approvalHandler
         self.planApprovalHandler = planApprovalHandler
+        self.elicitationHandler = elicitationHandler
         self.agentName = agentName
     }
 
@@ -128,13 +135,56 @@ public struct LiveMessenger: ServitorMessenger {
         }
     }
 
+    // MARK: - Provenance: REQ-SDK-002f
+
+    /// Build the onElicitation callback from the elicitation handler.
+    /// Returns nil if no handler is configured; the SDK will auto-decline.
+    /// Internal visibility for testability (accessed from ElicitationTests).
+    func buildElicitationCallback() -> (@Sendable (ElicitationRequest) async throws -> ElicitationResult)? {
+        guard let handler = elicitationHandler else { return nil }
+        let name = agentName
+
+        return { sdkRequest in
+            TavernLogger.agents.info("Elicitation request from '\(sdkRequest.serverName)' (agent: \(name)): \(sdkRequest.message)")
+
+            let tavernRequest = TavernElicitationRequest(
+                serverName: sdkRequest.serverName,
+                message: sdkRequest.message,
+                mode: sdkRequest.mode,
+                url: sdkRequest.url,
+                elicitationId: sdkRequest.elicitationId
+            )
+
+            let response = await handler(tavernRequest)
+
+            switch response {
+            case .accept(let content):
+                TavernLogger.agents.info("Elicitation accepted for server '\(sdkRequest.serverName)' (agent: \(name))")
+                let jsonContent: JSONValue? = content.map { dict in
+                    .object(dict.mapValues { .string($0) })
+                }
+                return .accept(content: jsonContent)
+
+            case .decline:
+                TavernLogger.agents.info("Elicitation declined for server '\(sdkRequest.serverName)' (agent: \(name))")
+                return .decline()
+
+            case .cancel:
+                TavernLogger.agents.info("Elicitation cancelled for server '\(sdkRequest.serverName)' (agent: \(name))")
+                return .cancel()
+            }
+        }
+    }
+
     public func query(prompt: String, options: QueryOptions) async throws -> (response: String, sessionId: String?) {
         var options = options
         options.canUseTool = buildCanUseToolCallback()
+        options.onElicitation = buildElicitationCallback()
         // Prevent nested-session detection when Tavern is launched from Claude Code
         options.environment["CLAUDECODE"] = ""
 
         let query = try await Clod.query(prompt: prompt, options: options)
+        activeQueryBox.value = query
         var responseText = ""
         var messageCount = 0
 
@@ -165,10 +215,29 @@ public struct LiveMessenger: ServitorMessenger {
     public func queryStreaming(prompt: String, options: QueryOptions) -> (stream: AsyncThrowingStream<StreamEvent, Error>, cancel: @Sendable () -> Void) {
         var opts = options
         opts.canUseTool = buildCanUseToolCallback()
+        opts.onElicitation = buildElicitationCallback()
         // Prevent nested-session detection when Tavern is launched from Claude Code
         opts.environment["CLAUDECODE"] = ""
         // Enable partial messages for real-time content block streaming
         opts.includePartialMessages = true
+
+        // Register notification hook — yields .notification events through the stream.
+        // The continuation box is populated once the stream closure runs, before the
+        // query starts. The hook callback checks the box and yields to the continuation.
+        let continuationBox = UnsafeSendableBox<AsyncThrowingStream<StreamEvent, Error>.Continuation?>(nil)
+        opts.notificationHooks.append(NotificationHookConfig { input in
+            let level = NotificationInfo.parseLevel(from: input.notificationType)
+            let info = NotificationInfo(
+                message: input.message,
+                title: input.title,
+                level: level,
+                rawType: input.notificationType
+            )
+            TavernLogger.agents.info("[LiveMessenger] notification hook fired: type=\(input.notificationType), title=\(input.title ?? "(none)"), message=\(input.message)")
+            continuationBox.value?.yield(.notification(info))
+            return HookOutput()
+        })
+
         let options = opts
 
         // Shared cancellation state
@@ -177,10 +246,14 @@ public struct LiveMessenger: ServitorMessenger {
         let queryBox = UnsafeSendableBox<ClaudeQuery?>(nil)
 
         let stream = AsyncThrowingStream<StreamEvent, Error> { continuation in
+            // Populate the continuation box so the notification hook can yield events
+            continuationBox.value = continuation
+
             let task = Task {
                 do {
                     let query = try await Clod.query(prompt: prompt, options: options)
                     queryBox.value = query
+                    self.activeQueryBox.value = query
 
                     // Track active content blocks by index for start/delta/stop correlation
                     var activeBlocks: [Int: ContentBlockState] = [:]
@@ -362,6 +435,46 @@ public struct LiveMessenger: ServitorMessenger {
         return (stream: stream, cancel: cancel)
     }
 
+    public func fetchAccountInfo(options: QueryOptions) async throws -> (account: AccountInfo, initResult: SDKControlInitializeResponse) {
+        var options = options
+        // Prevent nested-session detection when Tavern is launched from Claude Code
+        options.environment["CLAUDECODE"] = ""
+
+        // Create a minimal query just to access initialization data
+        let query = try await Clod.query(prompt: "/help", options: options)
+        let account = try await query.accountInfo()
+        let initResult = try await query.initializationResult()
+        await query.close()
+
+        return (account: account, initResult: initResult)
+    }
+
+    // MARK: - MCP Runtime Control
+
+    public func mcpServerStatus() async throws -> [McpServerStatus] {
+        guard let query = activeQueryBox.value else {
+            TavernLogger.agents.info("[LiveMessenger] mcpServerStatus called with no active query")
+            return []
+        }
+        return try await query.mcpServerStatus()
+    }
+
+    public func reconnectMcpServer(name: String) async throws {
+        guard let query = activeQueryBox.value else {
+            TavernLogger.agents.info("[LiveMessenger] reconnectMcpServer called with no active query")
+            return
+        }
+        try await query.reconnectMcpServer(name: name)
+    }
+
+    public func toggleMcpServer(name: String, enabled: Bool) async throws {
+        guard let query = activeQueryBox.value else {
+            TavernLogger.agents.info("[LiveMessenger] toggleMcpServer called with no active query")
+            return
+        }
+        try await query.toggleMcpServer(name: name, enabled: enabled)
+    }
+
     // MARK: - Private Helpers
 
     /// State tracking for an active content block during streaming
@@ -401,26 +514,44 @@ public struct LiveMessenger: ServitorMessenger {
     }
 
     /// Parse a result SDKMessage into CompletionInfo
-    private static func parseCompletionInfo(from msg: SDKMessage) -> CompletionInfo {
+    // MARK: - Provenance: REQ-COST-001
+    static func parseCompletionInfo(from msg: SDKMessage) -> CompletionInfo {
         let json = msg.rawJSON
         let usageObj = json["usage"]?.objectValue
-        let usage: SessionUsage? = usageObj.map { u in
-            SessionUsage(
-                inputTokens: u["input_tokens"]?.intValue ?? 0,
-                outputTokens: u["output_tokens"]?.intValue ?? 0,
-                cacheReadInputTokens: u["cache_read_input_tokens"]?.intValue ?? 0,
-                cacheCreationInputTokens: u["cache_creation_input_tokens"]?.intValue ?? 0,
-                costUsd: numericDouble(u["cost_usd"]) ?? 0
-            )
+        let usage: SessionUsage? = usageObj.map { parseSessionUsage(from: $0) }
+
+        // Parse per-model usage breakdown (SDK key: "modelUsage")
+        let perModelUsage: [String: SessionUsage]? = json["modelUsage"]?.objectValue.map { dict in
+            var result: [String: SessionUsage] = [:]
+            for (modelName, value) in dict {
+                if let modelObj = value.objectValue {
+                    result[modelName] = parseSessionUsage(from: modelObj)
+                }
+            }
+            return result
         }
+
         return CompletionInfo(
             sessionId: json["session_id"]?.stringValue,
             usage: usage,
+            perModelUsage: perModelUsage,
             costUsd: numericDouble(json["total_cost_usd"]),
             totalCostUsd: numericDouble(json["total_cost_usd"]),
             durationMs: json["duration_ms"]?.intValue,
             stopReason: json["stop_reason"]?.stringValue,
             numTurns: json["num_turns"]?.intValue
+        )
+    }
+
+    /// Parse a usage JSON object into SessionUsage
+    private static func parseSessionUsage(from u: [String: JSONValue]) -> SessionUsage {
+        SessionUsage(
+            inputTokens: u["input_tokens"]?.intValue ?? 0,
+            outputTokens: u["output_tokens"]?.intValue ?? 0,
+            cacheReadInputTokens: u["cache_read_input_tokens"]?.intValue ?? 0,
+            cacheCreationInputTokens: u["cache_creation_input_tokens"]?.intValue ?? 0,
+            webSearchRequests: u["web_search_requests"]?.intValue ?? 0,
+            costUsd: numericDouble(u["cost_usd"]) ?? 0
         )
     }
 }

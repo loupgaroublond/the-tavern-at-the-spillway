@@ -42,7 +42,7 @@ public final class ResourcePanelViewModel {
 
     public init(rootURL: URL) {
         self.rootURL = rootURL
-        TavernLogger.resources.info("[ResourcePanelViewModel] Created for: \(rootURL.path, privacy: .public)")
+        TavernLogger.resources.info("[ResourcePanelViewModel] Created for: \(rootURL.path)")
     }
 
     // MARK: - Actions
@@ -54,7 +54,7 @@ public final class ResourcePanelViewModel {
             rootNodes = try scanner.scanDirectory(at: rootURL, relativeTo: rootURL)
             error = nil
         } catch {
-            TavernLogger.resources.error("[ResourcePanelViewModel] Failed to load root: \(error.localizedDescription, privacy: .public)")
+            TavernLogger.resources.error("[ResourcePanelViewModel] Failed to load root: \(error.localizedDescription)")
             self.error = "Failed to load directory: \(error.localizedDescription)"
         }
     }
@@ -63,7 +63,7 @@ public final class ResourcePanelViewModel {
     public func toggleDirectory(_ node: FileTreeNode) {
         guard node.isDirectory else { return }
 
-        TavernLogger.resources.debug("[ResourcePanelViewModel] Toggling directory: \(node.name, privacy: .public)")
+        TavernLogger.resources.debug("[ResourcePanelViewModel] Toggling directory: \(node.name)")
 
         if node.isExpanded {
             // Collapse: just toggle the flag
@@ -80,7 +80,7 @@ public final class ResourcePanelViewModel {
                         n.isExpanded = true
                     }
                 } catch {
-                    TavernLogger.resources.error("[ResourcePanelViewModel] Failed to expand \(node.name, privacy: .public): \(error.localizedDescription, privacy: .public)")
+                    TavernLogger.resources.error("[ResourcePanelViewModel] Failed to expand \(node.name): \(error.localizedDescription)")
                     self.error = "Failed to read directory: \(error.localizedDescription)"
                 }
             } else {
@@ -95,7 +95,7 @@ public final class ResourcePanelViewModel {
     public func selectFile(_ node: FileTreeNode) {
         guard !node.isDirectory else { return }
 
-        TavernLogger.resources.info("[ResourcePanelViewModel] Selected file: \(node.name, privacy: .public)")
+        TavernLogger.resources.info("[ResourcePanelViewModel] Selected file: \(node.name)")
         selectedFileURL = node.url
         selectedFileName = node.name
         isLoading = true
@@ -128,7 +128,7 @@ public final class ResourcePanelViewModel {
             selectedFileContent = content
             isLoading = false
         } catch {
-            TavernLogger.resources.error("[ResourcePanelViewModel] Failed to read file \(node.name, privacy: .public): \(error.localizedDescription, privacy: .public)")
+            TavernLogger.resources.error("[ResourcePanelViewModel] Failed to read file \(node.name): \(error.localizedDescription)")
             selectedFileContent = nil
             self.error = "Failed to read file: \(error.localizedDescription)"
             isLoading = false

@@ -24,7 +24,7 @@ public final class FileTreeScanner: Sendable {
         let resolvedURL = url.resolvingSymlinksInPath()
         let resolvedRoot = root.resolvingSymlinksInPath()
 
-        TavernLogger.resources.debug("[FileTreeScanner] Scanning: \(resolvedURL.path, privacy: .public)")
+        TavernLogger.resources.debug("[FileTreeScanner] Scanning: \(resolvedURL.path)")
 
         let contents = try FileManager.default.contentsOfDirectory(
             at: resolvedURL,
@@ -67,7 +67,7 @@ public final class FileTreeScanner: Sendable {
             return lhs.name.localizedStandardCompare(rhs.name) == .orderedAscending
         }
 
-        TavernLogger.resources.debug("[FileTreeScanner] Found \(nodes.count) items in: \(url.lastPathComponent, privacy: .public)")
+        TavernLogger.resources.debug("[FileTreeScanner] Found \(nodes.count) items in: \(url.lastPathComponent)")
         return nodes
     }
 }

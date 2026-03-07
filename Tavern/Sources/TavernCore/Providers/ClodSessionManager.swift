@@ -14,6 +14,12 @@ public final class ClodSessionManager: @unchecked Sendable, ServitorProvider {
     private let projectURL: URL
     private let directory: ProjectDirectory
 
+    /// Cached account info fetched from Jake's session (singleton per project).
+    private var _accountInfo: TavernAccountInfo?
+
+    /// Account info for this project, fetched once from Jake's session.
+    public var accountInfo: TavernAccountInfo? { _accountInfo }
+
     var jakeMCPServer: SDKMCPServer? {
         get { jake.mcpServer }
         set { jake.mcpServer = newValue }
@@ -179,6 +185,24 @@ public final class ClodSessionManager: @unchecked Sendable, ServitorProvider {
                 Self.logger.error("[ClodSessionManager] failed to update description for \(mortal.name): \(error.localizedDescription)")
             }
         }
+    }
+
+    // MARK: - Account Info
+
+    /// Fetch account info from Jake's session. Caches the result as a singleton —
+    /// subsequent calls return the cached value without hitting the SDK.
+    @discardableResult
+    public func fetchAccountInfo() async throws -> TavernAccountInfo {
+        if let cached = _accountInfo {
+            Self.logger.debug("[ClodSessionManager] returning cached account info")
+            return cached
+        }
+
+        Self.logger.info("[ClodSessionManager] fetching account info via Jake")
+        let info = try await jake.fetchAccountInfo()
+        _accountInfo = info
+        Self.logger.info("[ClodSessionManager] account info cached: email=\(info.email ?? "nil"), org=\(info.organization ?? "nil")")
+        return info
     }
 
     // MARK: - Private Helpers

@@ -15,8 +15,6 @@ Tavern will use the following shape combination:
 | **D: Supervisor Tree** | Agent hierarchy with lifecycle management, bubbling | Primary |
 | **A: Reactive Streams** | UI subscribes to state changes; non-blocking updates | Primary (UI) |
 | **A: Message Bus** | Agent-to-agent messaging, layered on supervisor channels | Supporting |
-<!-- DROPPED: subsequently removed from spec, left unspecified -->
-| **I: Plugin** | Closed set of pluggable agent types and spawners | Supporting |
 | **C: Layer** | Basic layering for testability; not full ceremony | Supporting |
 | **L: Sidecar** | Agent responsiveness while managing children | Supporting |
 
@@ -62,7 +60,7 @@ D+L (Supervisor Tree + Sidecar) is synergistic: tree boundaries naturally define
 **Rejected for v1.** State machines for agent lifecycle (idle→working→done) are sufficient. Full formal verification adds tooling complexity without proportional benefit at current scale.
 
 ### Flat/Monolithic (Shape F)
-**Rejected.** Conflicts with plugin requirement and testability goals. Basic layering is necessary.
+**Rejected.** Conflicts with testability goals. Basic layering is necessary.
 
 ### Cellular/Emergent (Shape 49)
 **Rejected.** Too speculative. Emergent behavior is unpredictable; PRD requires deterministic verification. Research direction, not v1 architecture.
@@ -89,7 +87,6 @@ D+L (Supervisor Tree + Sidecar) is synergistic: tree boundaries naturally define
 │ Application Layer                       │
 │   TavernCoordinator                     │
 │   AgentSpawner                          │
-│   Plugin registry                       │
 ├─────────────────────────────────────────┤
 │ Agent Layer                             │
 │   Jake (immortal, top-level)            │
@@ -217,40 +214,9 @@ actor AgentSidecar {
 - UI updates via Combine, never block main thread
 
 
-<!-- DROPPED: subsequently removed from spec, left unspecified -->
-### Plugin System (Closed Set)
-
-Plugins are registered at startup, not dynamically loaded.
-
-```swift
-// Agent type plugin
-protocol AgentTypePlugin {
-    static var agentType: String { get }
-    func create(name: String, assignment: String, parent: (any Agent)?) -> any Agent
-}
-
-// Spawner strategy plugin
-protocol SpawnerPlugin {
-    func selectAgentType(for assignment: String, context: SpawnContext) -> AgentTypePlugin
-}
-
-// Registration at app startup
-struct PluginRegistry {
-    static let agentTypes: [AgentTypePlugin] = [
-        JakeAgentPlugin(),
-        MortalAgentPlugin(),
-        DroneAgentPlugin(),
-        MonitorAgentPlugin(),
-    ]
-
-    static let spawners: [SpawnerPlugin] = [
-        DefaultSpawnerPlugin(),
-        // Future: GangOfExpertsSpawnerPlugin()
-    ]
-}
-```
-
-**Why closed set:** Security (no arbitrary code loading), simplicity (no plugin discovery), and type safety (all plugins known at compile time).
+<!-- DROPPED: Shape I (Plugin — closed set of agent types) rejected as moribund.
+     The system should not be locked to a closed set of agent types.
+     Removed from spec (REQ-ARCH-004, REQ-ARCH-006) per transcript_2026-03-04. -->
 
 
 ### Shared Workspace (Doc Store as Blackboard)
@@ -377,7 +343,7 @@ class AgentListViewModel: ObservableObject {
 1. **Clear mental model** — Agents work on shared blackboard, supervised in tree, UI reacts
 2. **Testable without UI** — ViewModels contain all UX logic; 90%+ of workflows testable via unit tests
 3. **Testable without filesystem** — DocStore protocol enables in-memory testing
-4. **Extensible** — New agent types via plugins without core changes
+4. **Extensible** — New agent types without core changes
 5. **Responsive UI** — Reactive streams prevent blocking
 6. **Thread safe** — Actor isolation + sidecar pattern
 7. **Thin UI** — SwiftUI views are pure layout/binding; easy to change styling without breaking logic
@@ -386,9 +352,8 @@ class AgentListViewModel: ObservableObject {
 
 1. **Sidecar overhead** — Each agent has two actors (main + sidecar)
 2. **No event replay** — Can't reconstruct historical states from event log
-3. **Plugin limitations** — Closed set means recompile for new types
-4. **Learning curve** — Team must understand actor isolation, Combine
-5. **ViewModel proliferation** — Many ViewModels (Tile, Panel, Agent, Chat, etc.) to maintain
+3. **Learning curve** — Team must understand actor isolation, Combine
+4. **ViewModel proliferation** — Many ViewModels (Tile, Panel, Agent, Chat, etc.) to maintain
 
 ### Risks
 

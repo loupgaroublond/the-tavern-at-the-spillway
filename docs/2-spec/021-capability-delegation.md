@@ -9,7 +9,7 @@
 - Transcripts: transcript_2026-01-19-1144.md (capability concepts)
 
 ## Downstream References
-- Code: Tavern/Sources/TavernCore/Agents/, Tavern/Sources/TavernCore/MCP/
+- Code: Tavern/Sources/TavernCore/Servitors/, Tavern/Sources/TavernCore/MCP/
 - Tests: Tavern/Tests/TavernCoreTests/, Tavern/Tests/TavernTests/
 
 > **Note:** PRD backfill needed. This spec was written first; a corresponding PRD section should be added to PRD v1.2. See Open Questions.

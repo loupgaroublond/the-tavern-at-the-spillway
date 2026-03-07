@@ -99,7 +99,7 @@ struct ServitorRegistryTests {
         #expect(names.contains("Servitor3"))
     }
 
-    @Test("Registry removes servitor", .tags(.reqARCH006))
+    @Test("Registry removes servitor")
     func registryRemovesServitor() throws {
         let registry = ServitorRegistry()
         let servitor = TestServitor(name: "ToBeRemoved")

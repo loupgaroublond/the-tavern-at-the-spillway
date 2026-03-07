@@ -2,7 +2,7 @@ import Foundation
 import os.log
 import TavernKit
 
-// MARK: - Provenance: REQ-ARCH-003, REQ-DOC-001, REQ-DOC-002, REQ-DOC-004, REQ-DOC-008
+// MARK: - Provenance: REQ-ARCH-003, REQ-DOC-001, REQ-DOC-002
 
 /// Errors from servitor file system operations
 public enum ServitorStoreError: Error {
@@ -274,9 +274,38 @@ public final class ProjectDirectory: ProjectHandle, ResourceProvider, Sendable {
         if let description = record.description {
             lines.append("description: \(yamlEscape(description))")
         }
+        if let modelId = record.modelId {
+            lines.append("model_id: \(yamlEscape(modelId))")
+        }
+        if let thinkingBudget = record.thinkingBudget {
+            lines.append("thinking_budget: \(thinkingBudget)")
+        }
+        if let effortLevel = record.effortLevel {
+            lines.append("effort_level: \(yamlEscape(effortLevel))")
+        }
         lines.append("created_at: \(Self.iso8601.string(from: record.createdAt))")
         lines.append("updated_at: \(Self.iso8601.string(from: record.updatedAt))")
         lines.append("---")
+        // Serialize MCP servers as a JSON code block in the body
+        if !record.mcpServers.isEmpty {
+            lines.append("## MCP Servers")
+            lines.append("")
+            lines.append("```json mcp-servers")
+            if let jsonData = try? Self.jsonEncoder.encode(record.mcpServers),
+               let jsonString = String(data: jsonData, encoding: .utf8) {
+                // Pretty-print for human readability
+                if let jsonObj = try? JSONSerialization.jsonObject(with: jsonData),
+                   let prettyData = try? JSONSerialization.data(withJSONObject: jsonObj, options: [.prettyPrinted, .sortedKeys]),
+                   let prettyString = String(data: prettyData, encoding: .utf8) {
+                    lines.append(prettyString)
+                } else {
+                    lines.append(jsonString)
+                }
+            }
+            lines.append("```")
+            lines.append("")
+        }
+
         lines.append("")
         return lines.joined(separator: "\n")
     }
@@ -312,11 +341,49 @@ public final class ProjectDirectory: ProjectHandle, ResourceProvider, Sendable {
             sessionMode = .plan
         }
 
+        let thinkingBudget: Int? = fields["thinking_budget"].flatMap { Int($0) }
+
+        // Parse MCP servers from JSON code block in body (after frontmatter)
+        let mcpServers = parseMCPServersFromBody(lines: lines, afterFrontmatter: secondDelim + 1)
+
         return ServitorRecord(
             name: name, id: id, assignment: fields["assignment"],
             sessionId: fields["session_id"], sessionMode: sessionMode,
-            description: fields["description"], createdAt: createdAt, updatedAt: updatedAt
+            description: fields["description"], createdAt: createdAt, updatedAt: updatedAt,
+            modelId: fields["model_id"], thinkingBudget: thinkingBudget,
+            effortLevel: fields["effort_level"],
+            mcpServers: mcpServers
         )
+    }
+
+    /// Parse MCP server configs from a ```json mcp-servers code block in the body.
+    private func parseMCPServersFromBody(lines: [String], afterFrontmatter: Int) -> [String: MCPServerEntry] {
+        guard afterFrontmatter < lines.count else { return [:] }
+
+        let bodyLines = Array(lines[afterFrontmatter...])
+
+        // Find ```json mcp-servers opening fence
+        guard let openIndex = bodyLines.firstIndex(where: {
+            $0.trimmingCharacters(in: .whitespaces).hasPrefix("```json mcp-servers")
+        }) else { return [:] }
+
+        // Find closing ``` fence
+        let searchStart = bodyLines.index(after: openIndex)
+        guard searchStart < bodyLines.endIndex else { return [:] }
+        guard let closeIndex = bodyLines[searchStart...].firstIndex(where: {
+            $0.trimmingCharacters(in: .whitespaces) == "```"
+        }) else { return [:] }
+
+        let jsonLines = bodyLines[searchStart..<closeIndex]
+        let jsonString = jsonLines.joined(separator: "\n")
+
+        guard let jsonData = jsonString.data(using: .utf8) else { return [:] }
+        do {
+            return try Self.jsonDecoder.decode([String: MCPServerEntry].self, from: jsonData)
+        } catch {
+            Self.logger.error("[ProjectDirectory] failed to parse MCP servers JSON: \(error.localizedDescription)")
+            return [:]
+        }
     }
 
     // MARK: - YAML Escaping

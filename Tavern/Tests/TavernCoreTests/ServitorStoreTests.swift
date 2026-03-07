@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import TavernCore
 
-// MARK: - Provenance: REQ-DOC-004, REQ-DOC-008
+// MARK: - Provenance: REQ-DOC-001
 
 @Suite("ProjectDirectory Servitor Persistence Tests", .timeLimit(.minutes(1)))
 struct ProjectDirectoryServitorTests {

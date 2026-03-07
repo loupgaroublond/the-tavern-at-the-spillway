@@ -463,3 +463,264 @@ struct ChatTileTests {
         #expect(errorMsg?.isError == true)
     }
 }
+
+// MARK: - Provenance: REQ-UX-009
+
+@Suite("ChatTile Controls", .tags(.reqUX009), .timeLimit(.minutes(2)))
+@MainActor
+struct ChatTileControlsTests {
+
+    // MARK: - Factory
+
+    private static func makeTile(
+        servitorID: UUID = UUID(),
+        provider: StubServitorProvider = StubServitorProvider(),
+        commandProvider: StubCommandProvider = StubCommandProvider(),
+        activityLog: ActivityLog? = nil
+    ) -> ChatTile {
+        let responder = ChatResponder(
+            onApprovalRequired: { _ in ToolApprovalResponse(approved: false, alwaysAllow: false) },
+            onPlanApprovalRequired: { _ in PlanApprovalResponse(approved: false, feedback: nil) },
+            onActivityChanged: { activity in activityLog?.record(activity) }
+        )
+        return ChatTile(
+            servitorID: servitorID,
+            servitorProvider: provider,
+            commandProvider: commandProvider,
+            responder: responder
+        )
+    }
+
+    // MARK: - Input Field Binding
+
+    @Test("Typing text updates tile inputText state")
+    func inputFieldBinding() {
+        let tile = Self.makeTile()
+
+        #expect(tile.inputText.isEmpty)
+
+        tile.inputText = "Hello world"
+        #expect(tile.inputText == "Hello world")
+
+        tile.inputText = ""
+        #expect(tile.inputText.isEmpty)
+    }
+
+    @Test("Input text with only whitespace is treated as empty by sendMessage")
+    func whitespaceOnlyInputIsNoop() async {
+        let tile = Self.makeTile()
+
+        tile.inputText = "   \t\n  "
+        await tile.sendMessage()
+
+        #expect(tile.messages.isEmpty)
+        // Input text is NOT cleared since guard returns early
+        #expect(tile.inputText == "   \t\n  ")
+    }
+
+    // MARK: - Send Button Behavior
+
+    @Test("Send triggers message send and clears input")
+    func sendTriggersMessageAndClearsInput() async {
+        let tile = Self.makeTile()
+        tile.inputText = "Test message"
+
+        await tile.sendMessage()
+
+        #expect(tile.inputText.isEmpty)
+        #expect(tile.messages.count >= 1)
+        #expect(tile.messages[0].role == .user)
+        #expect(tile.messages[0].content == "Test message")
+    }
+
+    @Test("Send is effectively disabled when input is empty — no messages produced")
+    func sendDisabledWhenEmpty() async {
+        let tile = Self.makeTile()
+        tile.inputText = ""
+
+        await tile.sendMessage()
+
+        #expect(tile.messages.isEmpty)
+    }
+
+    // MARK: - Interrupt / Cancel Streaming
+
+    @Test("cancelStreaming resets cogitating and streaming state")
+    func cancelResetsState() async {
+        let id = UUID()
+        let provider = StubServitorProvider()
+        // Use a stream that never finishes so we can cancel mid-flight
+        provider.streamingResponses[id] = [] // empty = use default which finishes
+        let tile = Self.makeTile(servitorID: id, provider: provider)
+
+        // Simulate mid-cogitation state (as if sendMessage is in progress)
+        // We set these directly since the real sendMessage would set them
+        tile.isCogitating = true
+        tile.isStreaming = true
+
+        tile.cancelStreaming()
+
+        #expect(tile.isCogitating == false)
+        #expect(tile.isStreaming == false)
+        #expect(tile.currentToolName == nil)
+        #expect(tile.toolStartTime == nil)
+    }
+
+    @Test("cancelStreaming fires idle activity callback")
+    func cancelFiresIdleActivity() async {
+        let log = ActivityLog()
+        let tile = Self.makeTile(activityLog: log)
+
+        tile.isCogitating = true
+        tile.cancelStreaming()
+
+        #expect(log.activities.last == .idle)
+    }
+
+    @Test("cancelStreaming is safe to call when not cogitating")
+    func cancelWhenNotCogitating() {
+        let tile = Self.makeTile()
+
+        // Should not crash or change state
+        tile.cancelStreaming()
+
+        #expect(tile.isCogitating == false)
+        #expect(tile.isStreaming == false)
+    }
+
+    // MARK: - State-Based Control Enablement
+
+    @Test("isCogitating is false at initialization — send enabled")
+    func initialStateAllowsSend() {
+        let tile = Self.makeTile()
+
+        #expect(tile.isCogitating == false)
+        #expect(tile.isStreaming == false)
+    }
+
+    @Test("isCogitating becomes false after sendMessage completes — send re-enabled")
+    func cogitatingResetsAfterSend() async {
+        let tile = Self.makeTile()
+        tile.inputText = "hello"
+
+        await tile.sendMessage()
+
+        #expect(tile.isCogitating == false)
+        #expect(tile.isStreaming == false)
+    }
+
+    @Test("cogitationVerb is 'Jake is cogitating' for Jake servitor")
+    func cogitationVerbForJake() {
+        let id = UUID()
+        let provider = StubServitorProvider()
+        provider.servitorNames[id] = "Jake"
+
+        let tile = Self.makeTile(servitorID: id, provider: provider)
+
+        #expect(tile.cogitationVerb == "Jake is cogitating")
+    }
+
+    @Test("cogitationVerb uses 'thinking' for non-Jake servitors")
+    func cogitationVerbForNonJake() {
+        let id = UUID()
+        let provider = StubServitorProvider()
+        provider.servitorNames[id] = "Marcos Antonio"
+
+        let tile = Self.makeTile(servitorID: id, provider: provider)
+
+        #expect(tile.cogitationVerb == "Marcos Antonio is thinking")
+    }
+
+    // MARK: - Activity Callback
+
+    @Test("sendMessage fires cogitating then idle activity callbacks")
+    func sendMessageFiresActivityCallbacks() async {
+        let log = ActivityLog()
+        let tile = Self.makeTile(activityLog: log)
+        tile.inputText = "hello"
+
+        await tile.sendMessage()
+
+        // Should have received cogitating followed by idle
+        #expect(log.activities.count >= 2)
+        guard case .cogitating = log.activities.first else {
+            Issue.record("Expected first activity to be .cogitating, got \(String(describing: log.activities.first))")
+            return
+        }
+        #expect(log.activities.last == .idle)
+    }
+
+    @Test("slash command does NOT fire cogitating activity")
+    func slashCommandDoesNotFireActivity() async {
+        let log = ActivityLog()
+        let commandProvider = StubCommandProvider()
+        commandProvider.dispatchResult = .message("output")
+
+        let tile = Self.makeTile(commandProvider: commandProvider, activityLog: log)
+        tile.inputText = "/help"
+
+        await tile.sendMessage()
+
+        // Slash commands short-circuit before cogitation
+        let cogitatingEvents = log.activities.filter {
+            if case .cogitating = $0 { return true }
+            return false
+        }
+        #expect(cogitatingEvents.isEmpty)
+    }
+
+    // MARK: - Session Mode Sync
+
+    @Test("sessionMode change calls setSessionMode on provider")
+    func sessionModeSyncsToProvider() {
+        let id = UUID()
+        let provider = StubServitorProvider()
+        let tile = Self.makeTile(servitorID: id, provider: provider)
+
+        tile.sessionMode = .bypassPermissions
+        tile.syncSessionModeToProvider()
+
+        #expect(provider.setSessionModeCalls.count == 1)
+        #expect(provider.setSessionModeCalls[0].mode == .bypassPermissions)
+        #expect(provider.setSessionModeCalls[0].id == id)
+    }
+
+    // MARK: - Clear Conversation
+
+    @Test("clearConversation resets all control-relevant state")
+    func clearResetsControlState() async {
+        let tile = Self.makeTile()
+        tile.inputText = "pending"
+        await tile.sendMessage()
+
+        #expect(!tile.messages.isEmpty)
+
+        tile.clearConversation()
+
+        #expect(tile.messages.isEmpty)
+        #expect(tile.totalInputTokens == 0)
+        #expect(tile.totalOutputTokens == 0)
+        #expect(tile.totalCostUsd == 0)
+        #expect(tile.promptSuggestions.isEmpty)
+    }
+}
+
+// MARK: - Test Helpers
+
+/// Thread-safe log for tracking activity callbacks in tests.
+private final class ActivityLog: @unchecked Sendable {
+    private let lock = NSLock()
+    private var _activities: [ServitorActivity] = []
+
+    var activities: [ServitorActivity] {
+        lock.lock()
+        defer { lock.unlock() }
+        return _activities
+    }
+
+    func record(_ activity: ServitorActivity) {
+        lock.lock()
+        defer { lock.unlock() }
+        _activities.append(activity)
+    }
+}

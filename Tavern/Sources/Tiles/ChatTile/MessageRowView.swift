@@ -44,6 +44,9 @@ struct MessageRowView: View {
 
             case .sessionBreak:
                 sessionBreakRow
+
+            case .notification:
+                textMessageRow
             }
         }
         .onAppear {

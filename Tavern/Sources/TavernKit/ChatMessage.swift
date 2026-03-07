@@ -9,6 +9,8 @@ public enum MessageType: String, Equatable, Sendable {
     case thinking
     case webSearch
     case sessionBreak
+    /// A CLI notification surfaced through the streaming pipeline
+    case notification
 }
 
 /// A message in a chat conversation

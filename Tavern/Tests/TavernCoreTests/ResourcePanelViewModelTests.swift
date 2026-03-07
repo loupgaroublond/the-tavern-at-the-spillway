@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import TavernCore
 
-@Suite("ResourcePanelViewModel Tests")
+@Suite("ResourcePanelViewModel Tests", .timeLimit(.minutes(2)))
 @MainActor
 struct ResourcePanelViewModelTests {
 

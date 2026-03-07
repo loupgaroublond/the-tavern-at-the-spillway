@@ -10,7 +10,7 @@
 
 ## Downstream References
 - ADR: ADR-001-shape-selection.md
-- Code: Tavern/Sources/TavernCore/Agents/ (Jake.swift, Servitor.swift, ServitorSpawner.swift)
+- Code: Tavern/Sources/TavernCore/Servitors/ (Jake.swift, Servitor.swift, MortalSpawner.swift)
 - Tests: Tavern/Tests/TavernCoreTests/, Tavern/Tests/TavernTests/
 
 ---
