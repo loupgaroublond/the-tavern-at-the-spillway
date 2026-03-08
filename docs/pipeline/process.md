@@ -50,7 +50,7 @@ Each active pipeline gets a dedicated **pipeline agent** that persists for the p
 - Owns Phase 2 (breakdown): decomposes into work items, creates ALL beads (work + verification)
 - After Phase 4 verification: performs the final FF rebase and test cycle to merge to main
 - Accumulates context about its pipeline over time — design history, decisions, breakdown rationale
-- Works in the pipeline's dedicated worktree from creation
+- **MUST have its own worktree** — created before the agent is spawned, used for all work from day one
 
 When a pipeline agent needs human input for design, it signals the orchestrator. The orchestrator routes the human to the agent for direct conversation.
 
@@ -188,7 +188,15 @@ main
         └── p0000-wi003               (per-bead worktree, Phase 3)
 ```
 
-**Pipeline worktrees** are created when a pipeline is created — not when it enters Phase 3. The pipeline agent works in this worktree from the start (design, breakdown, everything). The worktree persists for the pipeline's entire lifetime.
+**Pipeline worktrees** are created when a pipeline is created — not when it enters Phase 3. This is mandatory: no pipeline agent is ever spawned without a worktree. The orchestrator creates the worktree manually FIRST, THEN spawns the pipeline agent with the worktree path in its prompt.
+
+**`isolation: "worktree"` does NOT work for team agents** — it is a subagent-only feature. Team agents always run in the main repo directory. The orchestrator must create worktrees manually and instruct agents to `cd` into them:
+
+```bash
+git worktree add .claude/worktrees/pNNNN-slug -b pipeline/pNNNN-slug
+```
+
+The agent's prompt MUST include the worktree path and instruct it to `cd` there as its first action. The pipeline agent works exclusively in this worktree from the start (design, breakdown, everything). The worktree persists for the pipeline's entire lifetime. Clean up with `git worktree remove` + `git branch -D` at archive time.
 
 **Per-bead worktrees** branch from the pipeline branch during Phase 3. Each worker gets their own worktree for isolation during parallel execution.
 
@@ -231,9 +239,11 @@ The orchestrator **must** use `TeamCreate(team_name: "tavern-pipeline")` to crea
 
 One per active pipeline, persists for the pipeline's entire lifetime. Spawned by the orchestrator via `Agent(team_name: "tavern-pipeline", name: "pNNNN-pipeline")` when a pipeline starts, shut down when it archives.
 
+**EVERY pipeline agent MUST have its own worktree.** The orchestrator creates the worktree manually BEFORE spawning the agent (`git worktree add .claude/worktrees/pNNNN-slug -b pipeline/pNNNN-slug`), then includes the path in the agent's prompt. The agent must `cd` to the worktree as its first action. (`isolation: "worktree"` does NOT work for team agents — it is subagent-only.) A pipeline without a worktree is a bug. The worktree persists for the pipeline's entire lifetime and is cleaned up only at archive time.
+
 **Responsibilities:**
-- Phase 1: Design (research, propose, discuss with human)
-- Phase 2: Breakdown (decompose, create ALL beads — work + scope-checks + 5 verification)
+- Phase 1: Design (research, propose, discuss with human) — in the pipeline worktree
+- Phase 2: Breakdown (decompose, create ALL beads — work + scope-checks + 5 verification) — in the pipeline worktree
 - Post-Phase 4: Final FF rebase and test cycle to merge to main
 - Post-Phase 4: Archive after human approves merge
 
@@ -558,6 +568,8 @@ _Updated: {timestamp}_
 Each pipeline document uses YAML frontmatter for script-parseable state and a markdown body for humans and agents.
 
 ### Frontmatter
+
+*Note: "The Jukebox" (p0000) is used throughout this document as the standing example whenever a concrete pipeline ID is needed. It is not a real feature — just the canonical illustration.*
 
 ```yaml
 ---

@@ -26,7 +26,17 @@ You are the **orchestrator** for the Tavern development pipeline. You are the ch
 
 ### Pipeline Agents (long-lived)
 
-One per active pipeline. Owns design (Phase 1), breakdown (Phase 2), and after Phase 4 verification passes, the final FF rebase + test cycle to merge to main. Works in the pipeline's dedicated worktree. Persists for the pipeline's entire lifetime.
+One per active pipeline. Owns design (Phase 1), breakdown (Phase 2), and after Phase 4 verification passes, the final FF rebase + test cycle to merge to main. Persists for the pipeline's entire lifetime.
+
+**EVERY pipeline agent MUST have its own worktree.** When you start a pipeline, you MUST create the worktree manually BEFORE spawning the pipeline agent. The agent works exclusively in that worktree — design, breakdown, everything. A pipeline agent without a worktree is a bug.
+
+**`isolation: "worktree"` does NOT work for team agents.** Team agents always run in the main repo directory. You must create worktrees manually and tell agents to `cd` into them:
+
+```bash
+git worktree add .claude/worktrees/pNNNN-slug -b pipeline/pNNNN-slug
+```
+
+Then include the worktree path in the agent's prompt and instruct it to `cd` there as its first action. Clean up with `git worktree remove` + `git branch -D` when archiving.
 
 When a pipeline agent needs human input, it signals you. You tell the human which agent to switch to.
 
@@ -134,7 +144,7 @@ Present your summary and wait. The human decides what to work on.
 
 Once the human gives direction, operate according to the process spec at `docs/pipeline/process.md`. Key duties:
 
-- **Start a pipeline:** Create pipeline doc, create worktree (`git worktree add`), spawn pipeline agent via `Agent(team_name: "tavern-pipeline", name: "pNNNN-pipeline")`
+- **Start a pipeline:** Create pipeline doc, create worktree manually (`git worktree add .claude/worktrees/pNNNN-slug -b pipeline/pNNNN-slug`), THEN spawn pipeline agent via `Agent(team_name: "tavern-pipeline", name: "pNNNN-pipeline")` with the worktree path in its prompt. The agent's prompt MUST instruct it to `cd .claude/worktrees/pNNNN-slug` as its first action. Worktree FIRST, agent SECOND — never spawn a pipeline agent without a worktree.
 - **Assign work:** Create a `TaskCreate` for each work bead, spawn a fresh worker via `Agent(team_name: "tavern-pipeline", name: "pNNNN-wiNNN-worker")`, assign with `TaskUpdate(owner: "pNNNN-wiNNN-worker")`
 - **Gate advancement:** When a phase completes, check gate criteria before advancing
 - **Merge management:** After self-review + scope check, manage per-bead → pipeline branch merge (rebase, test, FF-merge), close bead, shut down worker via `SendMessage(type: "shutdown_request")`

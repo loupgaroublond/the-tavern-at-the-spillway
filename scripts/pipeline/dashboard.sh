@@ -175,9 +175,13 @@ build_json() {
     local blocked
     blocked=$(echo "$active_json" | jq '[.[] | select(.blocked_by | length > 0)]')
 
-    # Needs attention (pending gates, high priority)
+    # Needs attention (waiting for human input, unblocked)
     local needs_attention
-    needs_attention=$(echo "$active_json" | jq '[.[] | select(.gate == "pending" or .gate == "blocked" or .gate == "waiting-for-human") | select(.blocked_by | length == 0)] | sort_by(.priority)')
+    needs_attention=$(echo "$active_json" | jq '[.[] | select(.gate == "waiting-for-human") | select(.blocked_by | length == 0)] | sort_by(.priority)')
+
+    # Pending (gate pending, unblocked — agent working or awaiting agent assignment)
+    local pending
+    pending=$(echo "$active_json" | jq '[.[] | select(.gate == "pending" or .gate == "blocked") | select(.blocked_by | length == 0)] | sort_by(.priority)')
 
     jq -n \
         --argjson pipelines "$active_json" \
@@ -186,6 +190,7 @@ build_json() {
         --argjson archived "$archived_count" \
         --argjson total_active "$total_active" \
         --argjson needs_attention "$needs_attention" \
+        --argjson pending "$pending" \
         --argjson blocked "$blocked" \
         '{
             timestamp: $timestamp,
@@ -195,6 +200,7 @@ build_json() {
                 by_phase: $phase_counts
             },
             needs_attention: $needs_attention,
+            pending: $pending,
             blocked: $blocked,
             pipelines: $pipelines
         }'
@@ -226,7 +232,16 @@ _Updated: ${timestamp}_
 |----------|-------|:--------:|---------------|
 HEADER
 
-    echo "$json" | jq -r '.needs_attention[] | "| \(.id) \(.title) | \(.phase) | \(.priority) | \(if .gate == "waiting-for-human" then "Waiting for human input" else "Gate: \(.gate)" end) |"'
+    echo "$json" | jq -r '.needs_attention[] | "| \(.id) \(.title) | \(.phase) | \(.priority) | Waiting for human input |"'
+
+    cat <<PENDING
+
+## Pending
+| Pipeline | Phase | Priority | Status |
+|----------|-------|:--------:|--------|
+PENDING
+
+    echo "$json" | jq -r '.pending[] | "| \(.id) \(.title) | \(.phase) | \(.priority) | \(if .assigned_agent != "null" and .assigned_agent != null then "Agent: \(.assigned_agent)" else "Unassigned" end) |"'
 
     cat <<RUNNING
 
