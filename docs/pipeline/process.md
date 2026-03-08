@@ -20,20 +20,21 @@ This document defines how work moves through the Tavern development system, from
 ### Human (VP)
 
 - Gate 1 and Gate 2 approval
-- Design discussions (directly with agents, not mediated by orchestrator)
+- Design discussions (directly with pipeline agents, not mediated by orchestrator)
 - Verification result review
 - Merge path decisions (direct to main vs. review branch)
 
 ### Orchestrator (Claude — Chief of Staff)
 
 Does:
-- Create pipeline docs, update dashboard
+- Create pipeline docs and pipeline worktrees, update dashboard
+- Spawn and manage the persistent agent team (never tear it down)
+- Assign specific beads to specific workers and verifiers (explicit assignment, not self-selection)
 - Route human attention ("Switch to agent [name] for pipeline p{id}")
-- Manage worker pool (assign beads to free agents)
 - Manage merge ordering and tell agents their queue position at both merge levels
 - Track pipeline states, advance through gates
-- Collect simple questions from multiple agents, present in batch
-- Remind workers to do self-review before scope check
+- Collect questions from agents, present in batch or route for longer consultation
+- Handle verification failures: reopen verification beads, create fix beads, reassign
 
 Does NOT:
 - Make design decisions about the app
@@ -41,13 +42,45 @@ Does NOT:
 - Run tests or verification
 - Mediate technical discussions (routes to agents instead)
 
-### Workers (Agent Team — Rank and File)
+### Pipeline Agents (Long-Lived, One Per Pipeline)
 
-- Grab available work from a queue
-- Get assigned to a pipeline for the duration of their work period
-- Work in per-bead worktrees (during execution)
-- Released back to pool when work is done
-- Optional specialization (e.g., UI worker with `ui-views.md` loaded)
+Each active pipeline gets a dedicated **pipeline agent** that persists for the pipeline's entire lifetime. The pipeline agent:
+
+- Owns Phase 1 (design): researches, proposes, discusses with the human
+- Owns Phase 2 (breakdown): decomposes into work items, creates ALL beads (work + verification)
+- After Phase 4 verification: performs the final FF rebase and test cycle to merge to main
+- Accumulates context about its pipeline over time — design history, decisions, breakdown rationale
+- Works in the pipeline's dedicated worktree from creation
+
+When a pipeline agent needs human input for design, it signals the orchestrator. The orchestrator routes the human to the agent for direct conversation.
+
+### Workers and Verifiers (Short-Lived, One Per Bead)
+
+The orchestrator creates a **fresh agent for each bead** and terminates it when the bead closes. Workers and verifiers are not specialized and do not persist across beads.
+
+**Workers** implement code. One worker per work bead, working in a per-bead worktree branched from the pipeline worktree.
+
+**Verifiers** review completed work on the pipeline worktree. One verifier per verification bead:
+
+| Type | Layer | What It Does |
+|------|:-----:|-------------|
+| `scope-check` | 0 | Reviews diffs for scope creep |
+| `verify-1` | 1 | Traceability audit |
+| `verify-2` | 2 | Invariant review |
+| `verify-3` | 3 | Architecture conformance |
+| `verify-4` | 4 | Blast radius check |
+| `verify-5` | 5 | Gap scan |
+
+When verification fails and the orchestrator reopens all verification beads, fresh agents handle both the fix work and the re-verification. No stale context carries over.
+
+### Communication
+
+All agents — pipeline, worker, and verifier — can signal the orchestrator with questions for the human:
+
+- **Quick questions:** The orchestrator batches and presents them
+- **Longer consultation:** The orchestrator routes the human to the agent directly
+
+Agents are encouraged to ask questions rather than guess. An extra round trip is always cheaper than rework.
 
 
 ## 3. Pipeline Lifecycle
@@ -57,12 +90,12 @@ Every pipeline moves through four phases:
 ```
 Phase 1: Design ──→ Phase 2: Breakdown ──→ Phase 3: Execution ──→ Phase 4: Verification
          │                    │                      │                       │
-      Gate 1              Gate 2                  Gate 3 +              Layers 1-5
-   Human Approval      Human Summary           Scope Check           Human Review
-      (full)            (summary)              (per-bead)            (per-pipeline)
+      Gate 1              Gate 2                  Gate 3              Layer 0 / Layers 1-5
+   Human Approval      Human Summary           Self-Review          (per-bead / per-pipeline)
+      (full)            (summary)              (per-bead)            Human Review
 ```
 
-A pipeline in Phase 1 may loop — design agents research, propose, discuss with the human, and iterate until the stub is ready for breakdown. Phase 2 may also loop, punting items back to Phase 1 for more design. Phase 3 is linear per-bead. Phase 4 runs on the complete pipeline branch.
+A pipeline in Phase 1 may loop — the pipeline agent researches, proposes, discusses with the human, and iterates until the stub is ready for breakdown. Phase 2 may also loop, punting items back to Phase 1 for more design. Phase 3 is linear per-bead (workers implement, self-review, merge). Phase 4 verification: scope checks (layer 0) run per-bead as work merges; layers 1-5 run per-pipeline after all scope checks pass.
 
 
 ## 4. Gate Specifications
@@ -91,24 +124,32 @@ A pipeline in Phase 1 may loop — design agents research, propose, discuss with
 - Human has reviewed the summary (titles, scopes, ordering, complexity estimates) and explicitly approves
 - Human does NOT review compiled documentation bundles — those are for execution agents only
 
-**On approval:** The breakdown agent creates beads with compiled context. The orchestrator creates the pipeline branch.
+**On approval:** The pipeline agent creates all beads (work + N scope-check + 5 verification) with compiled context and dependency chain. Each work bead gets a paired scope-check bead.
 
-### Gate 3: Self-Review (Per-Bead, Agent)
+### Gate 3: Self-Review (Per-Bead, Orchestrator-Mediated)
 
-**Enforcer:** Execution agent (self)
+**Enforcer:** Orchestrator (mediates between worker and review)
 
-**Criteria:**
+**Flow:**
+1. Worker signals the orchestrator that the task is done
+2. Orchestrator sends the worker a self-review prompt
+3. Worker performs the self-review (checklist below) and reports results
+4. Orchestrator evaluates the review — if gaps remain, sends the worker back to fix them
+5. When the orchestrator is satisfied, the worker sits idle while scope check runs
+6. After scope check passes, the worker merges into the pipeline branch
+
+**Self-review criteria:**
 - `redo Tavern/test` passes
 - For each acceptance criterion: implemented (Yes/No)
 - For each code standard in distilled instructions: followed (Yes/No)
 - For each claimed requirement: provenance marker present (Yes/No)
 - Unsure items listed explicitly
 
-The worker fixes any gaps it identifies, then messages the orchestrator. The orchestrator reminds the worker to complete self-review before advancing to scope check.
+The orchestrator does NOT run tests or review code — it checks that the self-review is thorough and complete. Verification catches what self-review misses.
 
-### Scope Check (Per-Bead, Separate Agent)
+### Scope Check (Per-Bead, Layer 0)
 
-**Enforcer:** Scope check agent (separate from the worker)
+**Enforcer:** Scope check verifier (fresh agent per scope-check bead, assigned by orchestrator)
 
 **Criteria:**
 - Diff matches the work item scope — no scope creep
@@ -117,13 +158,13 @@ The worker fixes any gaps it identifies, then messages the orchestrator. The orc
 - Changes address acceptance criteria
 - No obvious red flags
 
-The work agent sits idle during scope check, maintaining context for bounce-back. If issues found, the orchestrator bounces the feedback to the idle worker immediately. If clean, the per-bead branch merges into the pipeline branch.
+Each work bead has a paired scope-check bead (layer 0). After self-review passes, the orchestrator creates a fresh scope-check verifier to review the worker's diff *before* it merges. The worker sits idle during scope check (maintains context for bounce-back). If the scope check fails, the orchestrator bounces the worker to fix issues. If it passes, the worker merges into the pipeline branch.
 
-### Verification (Per-Pipeline, Five Layers)
+### Verification (Per-Pipeline, Layers 1-5)
 
-**Enforcer:** Pooled verification agents (one per layer)
+**Enforcer:** Fresh verification agents (one per layer, assigned by orchestrator)
 
-Runs after ALL beads have merged into the pipeline branch. See Section 9 for full layer specifications.
+Runs after scope check passes. Each layer is a bead. See Section 9 for full layer specifications and the failure/rerun flow.
 
 ### Post-Verification: Human Review
 
@@ -141,18 +182,20 @@ Multi-level branching for parallel execution:
 
 ```
 main
-  └── pipeline/p0000-jukebox          (pipeline branch)
-        ├── p0000-wi001               (per-bead worktree)
-        ├── p0000-wi002               (per-bead worktree)
-        └── p0000-wi003               (per-bead worktree)
+  └── pipeline/p0000-jukebox          (pipeline worktree, created at pipeline start)
+        ├── p0000-wi001               (per-bead worktree, Phase 3)
+        ├── p0000-wi002               (per-bead worktree, Phase 3)
+        └── p0000-wi003               (per-bead worktree, Phase 3)
 ```
 
-**Pipeline branches** are created when a pipeline enters Phase 3 (after Gate 2 approval). They branch from main and accumulate all bead work for the pipeline.
+**Pipeline worktrees** are created when a pipeline is created — not when it enters Phase 3. The pipeline agent works in this worktree from the start (design, breakdown, everything). The worktree persists for the pipeline's entire lifetime.
 
-**Per-bead worktrees** branch from the pipeline branch. Each worker gets their own worktree. Workers modify code AND the pipeline doc in their worktree.
+**Per-bead worktrees** branch from the pipeline branch during Phase 3. Each worker gets their own worktree for isolation during parallel execution.
+
+**All beads reference their worktree.** Work beads and scope-check beads specify the per-bead worktree. Layers 1-5 verification beads specify the pipeline worktree (they examine the fully merged result).
 
 **Merge flow:**
-1. Per-bead branch → pipeline branch (after scope check)
+1. Per-bead branch → pipeline branch (after self-review + scope check)
 2. Pipeline branch → main or review branch (after verification + human review)
 
 ### Proactive Rebasing
@@ -167,63 +210,58 @@ The orchestrator tells agents their queue position and which branches are ahead 
 
 ### Merge Into Pipeline Branch
 
-After scope check passes:
-1. Per-bead branch rebases onto pipeline branch HEAD
-2. Worker runs `redo Tavern/test` on the rebased branch
-3. If clean, fast-forward merge into pipeline branch
-4. Worker released back to pool
-
-Since tests on a rebased branch should match tests on the target after merge, multiple workers can test in parallel — testing is not a merge bottleneck.
+After self-review and scope check pass, the worker merges into the pipeline branch (see Section 8 for details). The orchestrator closes the work bead and terminates the worker. Multiple workers can test in parallel since tests on a rebased branch match tests on the target after merge.
 
 ### Merge to Main
 
-After verification passes and human reviews:
+After verification passes and human reviews, the **pipeline agent** performs the final merge:
 - **Direct to main:** Pipeline branch rebases to main HEAD, runs `redo Tavern/test`, fast-forward merges
 - **Review branch:** Orchestrator assembles aggregate diff from multiple pipelines, human reviews code, then merges
 
 The orchestrator manages merge ordering across pipelines.
 
 
-## 6. Worker Pool
+## 6. Agent Model
 
-Workers grab available work from a queue. They do not belong to a specific pipeline — they get assigned for the duration of a work period, then released back to the pool.
+Two tiers of agents, managed as a single persistent team via `TeamCreate`.
 
-**Pool size:** 5-10 total agents running at any time, adjustable as we learn.
+The orchestrator **must** use `TeamCreate(team_name: "tavern-pipeline")` to create the team on first session. All agents are spawned with `team_name: "tavern-pipeline"` so they join the team and coordinate via the shared task list (`TaskCreate`, `TaskUpdate`, `TaskList`). Agents are shut down via `SendMessage(type: "shutdown_request")`.
 
-### Worker Types
+### Tier 1: Pipeline Agents (Long-Lived)
 
-Every worker has a **type** that determines what phase of work it performs:
+One per active pipeline, persists for the pipeline's entire lifetime. Spawned by the orchestrator via `Agent(team_name: "tavern-pipeline", name: "pNNNN-pipeline")` when a pipeline starts, shut down when it archives.
 
-| Type | Phase | What It Does |
-|------|-------|-------------|
-| `design` | 1 | Researches stubs, develops design proposals, drafts alternatives |
-| `breakdown` | 2 | Decomposes designs into self-contained work items |
-| `work` | 3 | Implements code in per-bead worktrees |
-| `scope-check` | 3 | Reviews diffs for scope creep (separate from the work agent) |
-| `verify-1` | 4 | Traceability audit |
-| `verify-2` | 4 | Invariant review |
-| `verify-3` | 4 | Architecture conformance |
-| `verify-4` | 4 | Blast radius check |
-| `verify-5` | 4 | Gap scan |
+**Responsibilities:**
+- Phase 1: Design (research, propose, discuss with human)
+- Phase 2: Breakdown (decompose, create ALL beads — work + scope-checks + 5 verification)
+- Post-Phase 4: Final FF rebase and test cycle to merge to main
+- Post-Phase 4: Archive after human approves merge
 
-Worker type is fixed for the lifetime of the agent. A `work` agent does not become a `scope-check` agent.
+The pipeline agent accumulates context over the pipeline's life. It knows the design history, decisions, breakdown rationale, and which beads are in flight. It is the authority on its pipeline.
 
-### Specialization
+### Tier 2: Workers and Verifiers (Short-Lived)
 
-Orthogonal to type. A specialization is a domain area of the app (e.g., UI, servitor lifecycle, infrastructure). Specialized workers load domain-specific instruction supplements (`ui-views.md`, `agent-core.md`, etc.) in addition to `core.md`.
+The orchestrator spawns a **fresh agent for each bead** (via `Agent(team_name: "tavern-pipeline", name: "pNNNN-wiNNN-worker")` or `name: "pNNNN-verify-N"`) and shuts it down when the bead closes. Workers and verifiers do not persist across beads and are not specialized.
 
-Specialization is optional and applies mainly to `design`, `breakdown`, and `work` types. The orchestrator considers specialization when assigning work — a UI-specialized worker gets UI beads when available.
+- **Workers:** One per work bead. Work in per-bead worktrees branched from the pipeline worktree.
+- **Verifiers:** One per verification bead. Examine the pipeline worktree.
 
-**One active team at a time:** This is a Claude Code platform limitation, not a design choice. Many agents come and go, but only one team is active in the orchestrator's session at any given moment.
+When verification fails and all verification beads reopen, fresh agents handle both the fix and the re-verification. No stale context carries over.
+
+### Team Lifecycle
+
+The team is **permanent**. The orchestrator never tears it down, even if no agents are currently active (though there usually will be). Pipeline agents persist for their pipeline's lifetime. Workers and verifiers come and go as beads are created and closed.
+
+**Agent count:** 5-10 total agents running at any time, adjustable as we learn. This includes pipeline agents + active workers/verifiers.
 
 
 ## 7. Work Breakdown
 
-The breakdown agent (Phase 2) decomposes the pipeline into self-contained work items.
+The **pipeline agent** (Phase 2) decomposes the pipeline into self-contained work items and creates ALL beads — both work beads and verification beads.
 
 ### Decomposition Depth
 
-The agent examines each chunk: "Can one agent implement and test this in one worktree?" If not, go deeper. This recurses:
+The pipeline agent examines each chunk: "Can one agent implement and test this in one worktree?" If not, go deeper. This recurses:
 - Large feature becomes work items
 - Work item becomes sub-items with dependencies
 - Beads can be hierarchical (parent-child via `bd`)
@@ -232,19 +270,39 @@ At each level: punt back to Phase 1 for more design, or go deeper on decompositi
 
 ### The Breakdown Plan
 
-The breakdown agent creates a **complete plan first** in the pipeline doc's Work Breakdown Plan section. This plan includes:
+The pipeline agent creates a **complete plan first** in the pipeline doc's Work Breakdown Plan section. This plan includes:
 
 - Every work item with full detail
 - Markers showing where to create beads
 - Context-source specifications per work item (see below)
 - Dependencies and ordering
 - Parallelism opportunities
+- Verification beads with their dependency chain (see below)
 
-Only after the plan is written and approved (Gate 2) does the agent create beads — without re-reading source docs. The agent already made the control-plane decisions about what to include.
+Only after the plan is written and approved (Gate 2) does the pipeline agent create beads — without re-reading source docs. The agent already made the control-plane decisions about what to include.
+
+### Verification Beads
+
+The pipeline agent **always** creates verification beads alongside the work beads: one scope-check bead per work bead (N total) plus 5 per-pipeline verification beads. The dependency chain:
+
+```
+Work bead A ──→ Scope-check A  ┐
+Work bead B ──→ Scope-check B  ├──→ Layer 1: verify-1  ┐
+Work bead C ──→ Scope-check C  ┘    Layer 2: verify-2  ├──→ Layer 4: verify-4  ┐
+                                     Layer 3: verify-3  ┘    Layer 5: verify-5  ┘
+```
+
+- Each work bead gets a **paired scope-check bead** (layer 0) blocked on it
+- Layers 1, 2, 3 are blocked on **all** scope-check beads
+- Layers 4, 5 are blocked on layers 1, 2, 3
+
+Scope-check beads reference the per-bead worktree (they review the worker's diff *before* merge). Layers 1-5 reference the pipeline worktree (they examine the fully merged result).
+
+When a verifier passes its layer, it closes the bead. When a verifier fails, it notifies the orchestrator. See Section 9 for the failure flow.
 
 ### Context-Source Specifications
 
-For each work item, the breakdown agent specifies what documentation to compile into the bead:
+For each work item, the pipeline agent specifies what documentation to compile into the bead:
 
 ```yaml
 context-sources:
@@ -253,69 +311,69 @@ context-sources:
   adrs: [ADR-001 section-3.2, ADR-003 section-2]
   code: [Jake.swift:1-50, MortalSpawner.swift:init]
   design-statements: [from pipeline Design Statements, items 2-3]
+  worktree: pipeline/p0000-jukebox
 ```
 
 The compile script (`scripts/pipeline/compile-bead-context.sh`) reads these references and produces a single compiled context document per bead. Execution agents burn tokens reading docs once — when they read the bead.
 
 ### Design Statement Flow
 
-Design agents (Phase 1) produce Design Statements in the pipeline doc. The breakdown agent reads these and decides which to inject into each bead. The compile script includes them. Nobody re-researches what was already figured out.
+The pipeline agent (Phase 1) produces Design Statements in the pipeline doc. During breakdown (Phase 2), the same agent reads these and decides which to inject into each bead. The compile script includes them. Nobody re-researches what was already figured out.
 
 
 ## 8. Execution
 
 ### Per-Bead Worktrees
 
-Each worker gets a worktree branched from the pipeline branch. They implement the work item, modify the pipeline doc if needed, and commit in their per-bead branch.
+The orchestrator creates a fresh worker agent for each work bead and assigns it. Each worker gets a worktree branched from the pipeline branch. They implement the work item, modify the pipeline doc if needed, and commit in their per-bead branch.
 
 ### Self-Review (Gate 3)
 
-When done, the worker reviews its own instructions piece by piece:
+When the worker signals it is done, the orchestrator sends it a self-review prompt. The worker reviews its own instructions piece by piece:
 - For each acceptance criterion: implemented? Yes/No
 - For each code standard: followed? Yes/No
 - For each claimed requirement: provenance marker? Yes/No
 - Unsure items listed
 
-The worker fixes any gaps it identifies, then messages the orchestrator. The orchestrator does NOT run checks — verification catches what self-review misses.
+The worker reports results to the orchestrator. If the orchestrator identifies gaps in the review, it sends the worker back to fix them. This loop continues until the orchestrator is satisfied the review is thorough. The orchestrator does NOT review code for correctness — it checks completeness of the self-review. Verification catches what self-review misses.
 
-### Scope Check
+### Scope Check (Per-Bead, Layer 0)
 
-After self-review, a **separate scope check agent** does a quick pass:
-- Does the diff match the work item scope?
-- Scope creep? Missing files? Obvious omissions?
+After self-review passes, the orchestrator creates a fresh scope-check verifier to review the worker's diff against the work item scope. The **worker sits idle** during scope check — it maintains context for immediate bounce-back if issues are found.
 
-The work agent sits idle during scope check (maintains context for bounce-back). If issues found, the orchestrator bounces to the idle worker immediately. If clean, per-bead branch merges into the pipeline branch.
+- **Pass:** The scope-check bead closes, the verifier is terminated, and the worker proceeds to merge.
+- **Fail:** The orchestrator bounces the worker with specific feedback. The worker fixes, re-does self-review, and scope check runs again.
 
-This is the only verification that happens per-bead. Full verification (Layers 1-5) is per-pipeline.
+### Merge Into Pipeline Branch
+
+After scope check passes, the worker merges its work:
+1. Per-bead branch rebases onto pipeline branch HEAD
+2. Worker runs `redo Tavern/test` on the rebased branch
+3. If clean, fast-forward merge into pipeline branch
+4. Worker messages the orchestrator; orchestrator closes the work bead and terminates the worker
+
+When ALL work beads and their scope-check beads are closed, layers 1-3 become unblocked.
 
 
 ## 9. Verification
 
-Verification runs on the **pipeline branch** after all beads have merged into it. This is per-pipeline, not per-bead.
+Scope checks (layer 0) run per-bead *before* merge (see Section 8). Layers 1-5 run per-pipeline on the **pipeline worktree** after all work has merged. Each verification layer is a bead with dependencies (see Section 7). The orchestrator creates a fresh verifier agent for each layer 1-5 bead and terminates it when the bead closes.
 
-Five layers, each run by a separate agent with comprehensive instructions (400-900 lines per layer — every rule, invariant, and check baked into the prompt). Agents do NOT run slash commands.
+Verification agents receive comprehensive instructions (400-900 lines per layer — every rule, invariant, and check baked into the prompt). Agents do NOT run slash commands.
 
-Verification agents are pooled — when idle, they pick up the next job for their layer. They keep context on their layer's methodology, making them efficient across pipelines.
-
-### Verification Flow
+### Verification Flow (Bead Dependencies)
 
 ```
-Pipeline branch complete (all beads merged)
-    |
-    v
-Layer 1: Traceability Audit  \
-Layer 2: Invariant Review      |-- can run in parallel
-Layer 3: Architecture Conformance /
-    |
-    v (when 1-3 complete)
-Layer 4: Blast Radius Check
-    |
-    v
-Layer 5: Gap Scan
-    |
-    v
-Results recorded in pipeline doc --> human reviews
+Work bead A ──→ Self-review ──→ Scope-check A ──→ Merge A  ┐
+Work bead B ──→ Self-review ──→ Scope-check B ──→ Merge B  ├──→ Layers 1,2,3 ──→ Layers 4,5
+Work bead C ──→ Self-review ──→ Scope-check C ──→ Merge C  ┘
+                (per-bead, before merge)                         (per-pipeline, after all merged)
+                                                                      │
+                                                                      v
+                                                                 Results ──→ human reviews
 ```
+
+Layers 1-3 become unblocked when ALL work beads and scope-check beads are closed (all work merged). Layers 4-5 become unblocked when layers 1-3 close.
 
 ### Layer 1: Traceability Audit
 
@@ -369,33 +427,49 @@ Zoom out from the specific work and assess what was revealed.
 
 Gaps become new pipeline stubs at Phase 1.
 
-### Post-Verification
+### Pass Flow
+
+When a verifier passes its layer, it closes the bead. The orchestrator terminates the verifier. Downstream verification beads become unblocked.
+
+When ALL verification beads (N scope-checks + 5 layers) are closed, the pipeline is ready for human review.
+
+### Failure Flow
+
+When a verifier finds a problem, it notifies the orchestrator with specific findings. The orchestrator then:
+
+1. **Reopens all verification beads** (N scope-checks + 5 layers — even those already passed, since the fix may invalidate prior results)
+2. **Creates a new work bead** for the fix, referencing the verifier's findings
+3. **Creates a new scope-check bead** paired with the fix work bead
+4. **Blocks layers 1-3 on the new scope-check bead** (the dependency chain cascades: layers 4-5 blocked on 1-3)
+5. **Creates a fresh worker** for the fix bead
+
+After the fix merges into the pipeline branch, the entire verification chain reruns with fresh agents. No stale context carries over from the prior attempt.
+
+### Post-Verification: Human Review
 
 If all layers pass, human decides merge path (direct to main or review branch).
 
-If layers fail:
-- **Violated invariants:** New beads created, workers fix, re-merge into pipeline branch, verification re-runs
-- **Unclear verdicts:** Human reviews and decides
-- **Gaps found:** New pipeline stubs created
+Unclear verdicts from Layer 2 escalate to human before the pipeline can pass.
 
 ### Archiving
 
 After merge:
-1. Orchestrator closes child beads
+1. Pipeline agent closes all child beads
 2. Pipeline doc moved to `archive/`
-3. Never written again
-4. Dashboard updated
+3. Pipeline worktree cleaned up
+4. Pipeline agent terminated
+5. Dashboard updated
 
 
 ## 10. Merge to Main
 
-The orchestrator manages merge ordering across pipelines. Proactive rebasing at both levels keeps branches current and reduces merge friction.
+The **pipeline agent** performs the final merge. The orchestrator manages merge ordering across pipelines and tells pipeline agents their queue position.
 
-**Direct merge:** Pipeline branch rebases to main HEAD, runs `redo Tavern/test`, fast-forward merges.
+**Direct merge:** Pipeline agent rebases the pipeline branch to main HEAD, runs `redo Tavern/test`, fast-forward merges.
 
 **Review branch:** Orchestrator assembles aggregate diff from multiple pipelines, human reviews code, then merges.
 
-The human decides which path each pipeline takes.
+The human decides which path each pipeline takes. Proactive rebasing at both levels keeps branches current and reduces merge friction.
 
 
 ## 11. Distilled Instructions
@@ -435,7 +509,7 @@ When specs or ADRs change, affected instruction sets must be regenerated from th
 
 ### Two-Layer Generation
 
-1. **Script** (`scripts/pipeline/dashboard.sh`): Parse YAML frontmatter from all active pipeline docs. Compute phase counts, blocked-by chains, time-in-phase.
+1. **Script** (`scripts/pipeline/dashboard.sh`): Parse YAML frontmatter from all active pipeline docs. **Worktree-aware** — for each pipeline with a worktree, reads the worktree version of the pipeline doc (which may be more current than the main branch copy). Computes phase counts, blocked-by chains, time-in-phase.
 
 2. **Orchestrator**: Read pipeline docs for context. Fill in "what's needed" descriptions, progress details, human-readable summaries.
 
@@ -496,7 +570,8 @@ priority: 2
 source-bead: jake-815
 child-beads: []
 blocked-by: []
-pipeline-branch: null
+pipeline-branch: pipeline/p0000-jukebox
+worktree-path: /path/to/worktree/p0000-jukebox
 created: 2026-03-06
 updated: 2026-03-06
 assigned-agent: null
@@ -516,7 +591,8 @@ assigned-agent: null
 | `source-bead` | string | Original bead ID this pipeline was migrated from (null if new) |
 | `child-beads` | list | Bead IDs created during breakdown |
 | `blocked-by` | list | Pipeline IDs that must complete first |
-| `pipeline-branch` | string | Git branch name (null until Phase 3) |
+| `pipeline-branch` | string | Git branch name (created at pipeline start) |
+| `worktree-path` | string | Path to pipeline worktree (created at pipeline start) |
 | `created` | date | Creation date |
 | `updated` | date | Last update date |
 | `assigned-agent` | string | Currently assigned agent name (null if unassigned) |
@@ -582,7 +658,7 @@ Epic beads become stubbed pipeline docs, blocked on their children. When all chi
 
 5. **Gaps generate stubs.** Verification is not just quality control — it is a source of new work. This is how the pipeline feeds itself.
 
-6. **Context is compiled, not re-researched.** Design agents produce Design Statements. Breakdown agents produce context-source specifications. The compile script bundles them. Execution agents read once.
+6. **Context is compiled, not re-researched.** The pipeline agent produces Design Statements (Phase 1) and context-source specifications (Phase 2). The compile script bundles them. Workers read once.
 
 7. **The orchestrator coordinates, never decides.** Technical decisions belong to agents and the human. The orchestrator routes attention, manages queues, and tracks state.
 
@@ -590,4 +666,4 @@ Epic beads become stubbed pipeline docs, blocked on their children. When all chi
 
 9. **Proactive rebasing at all levels.** Agents stay current with their merge targets. The orchestrator tells them their queue position and which branches are ahead.
 
-10. **One team active, many agents in flight.** The Claude Code platform limits us to one active team, but agents come and go continuously. The pool is the design unit, not the team.
+10. **The team is permanent, agents are ephemeral.** Pipeline agents persist for the pipeline's lifetime. Workers and verifiers are created fresh per bead and terminated when the bead closes. The team itself is never torn down.

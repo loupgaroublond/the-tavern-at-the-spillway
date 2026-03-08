@@ -1,8 +1,8 @@
 # Development Pipeline System — Design & Implementation
 
 **Date:** 2026-03-06
-**Sessions:** 1 (2 context continuations)
-**Scope:** Design and implement a development pipeline system for tracking work from stub through design, breakdown, execution, and verification. Migrate all 91 open beads. Rename "document pipeline" to "reification chain."
+**Sessions:** 1 (4 context continuations)
+**Scope:** Design and implement a development pipeline system for tracking work from stub through design, breakdown, execution, and verification. Migrate all 91 open beads. Rename "document pipeline" to "reification chain." Revise agent model after failed orchestration attempt.
 **Follows:** `transcript_2026-03-05-udd-consolidation.md`
 
 ---
@@ -134,3 +134,104 @@ Previously these were invisible in the project line count.
 | `docs/pipeline.md` → `docs/reification.md` | Renamed + updated |
 | `CLAUDE.md` | Updated (reification rename + project structure) |
 | `scripts/loc.sh` | Updated (pipeline + shell script counting) |
+
+---
+
+## Orchestration Failure — Agent Model Revision (Session 3, Post-Compaction)
+
+*[T] The user ran `/orchestrate` and the orchestrator failed: it spawned design agents as subagents (fire-and-forget), they ran autonomously without human input, got terminated, and the design discussion — the most valuable part — never happened. This triggered a fundamental rethink of the agent model.*
+
+[U] "we need to fix the orchestration rules, i ran this, claude failed to put anyone in a worktree. then claude ran design agents, terminated them, and i never had a discussion. i have some thoughts about a fundamental shift, but first, what are your thoughts?"
+
+[C] Diagnosed the problem as a role model mismatch: the process spec envisions persistent agents that sit idle and hold context, but subagents are fire-and-forget. Proposed that the orchestrator should be a "mode" rather than a role, with Claude working directly in the main session for interactive phases and subagents only for parallelizable non-interactive work.
+
+[U] "no, it's agent teams, not subagents"
+
+[C] "You're right, that changes things. With agent teams, the members are persistent — the human can switch to them and have a real conversation. So the platform supports the model."
+
+### The Two-Tier Agent Model
+
+[U] "i am thinking to make the pipeline have a 'pipeline' agent, who is responsible for design, breakdown, and then performing the final FF rebase and testing cycle. then we have one open pipeline agent per pipeline, for the lifetime of the pipeline. the orchestrator must never tear down the team, even if there are no agents running, but there usually will be. then, we have a pool of workers, and pools of the verification agents available, at least one of each type. these general purpose agents are also able to let the orchestrator know they have questions for me, and either have the orchestrator present them, or ask for a longer consultation. we should encourage agents to ask questions in general, too. explain this idea back to me so i know you got it"
+
+[C] Reflected back: pipeline agents are long-lived (one per pipeline, owns design + breakdown + final merge), worker and verification pools are shared and general-purpose, any agent can signal for human input (quick questions batched, longer consultation routed directly), team is permanent and never torn down.
+
+[U] "you forgot the 0th type of verification agent, the scope checkers. also, let's add we can have specialized workers and verifiers on specific areas of the code, as appropriate, and then route work and verification steps to those, as appropriate"
+
+*[T] This added scope-check as layer 0 and introduced optional specialization for workers/verifiers.*
+
+### Revision: Ephemeral Workers, Not Pools
+
+[U] "actually, let's revise this, worker, verifier agents are not specialized, and they are short lived, as the orchestrator creates one for each bead, and then terminates them when the gate has been passed. when a verification step fails, and the orchestrator reopens all the verification beads, ideally both the fixes and the verifications are all performed with fresh agents."
+
+*[T] Significant reversal — from pooled/specialized workers to fresh-per-bead ephemeral workers. Clean context per bead is more important than accumulated specialization.*
+
+[U] "yeah, so we have the orchestrator also responsible for assigning specific beads to specific workers and verifiers, to be clear. this is in opposition to a model where the workers and verifiers select the next item from a queue."
+
+### Worktrees at Pipeline Start + Verification as Beads
+
+[U] "wait, the worktree thing, let's also have each pipeline get a full worktree at the start. beads for the execution or verifiers to look at something must indicate which worktree they apply to. during breakdown, the pipeline agent must always create beads for the verification steps too. use dependencies to block steps 4 and 5 of verification, until ready. 1, 2, 3 are blocked on the 0th, etc.... the verifier can close that bead once it's passed that gate, or notify the orchestrator that it failed, and then the orchestrator a) opens up all six beads, b) creates a new work bead, c) blocks the 0th on the work bead, and d) notifies an executor to pick it up"
+
+### Corrections During Implementation
+
+[U] "you're done already?"
+
+*[T] Claude had declared done but left multiple inconsistencies. Sweep found: Section 3 diagram stale, Gate 3 text stale, Section 5 merge flow wrong, duplicate merge sections, stale "Design agents"/"Breakdown agents" terminology, missing MEMORY.md update.*
+
+[U] "for pipeline agents, isn't the FF rebase after a different phase than 3?"
+
+*[T] Claude had written "Post-Phase 3" for the FF rebase. Corrected to Post-Phase 4 — it happens after verification passes.*
+
+[U] "verification happens per pipeline, not per bead"
+
+*[T] Section 3 diagram said "(bead-based)" for verification. Fixed to "(per-pipeline)" — the beads are a tracking mechanism, not the unit of scope.*
+
+### Per-Bead Scope Check (Layer 0)
+
+[U] "layer 0 is per bead, sorry, i forgot to clarify that."
+
+[C] Proposed the dependency model:
+```
+Work bead A ──→ Scope-check A  ┐
+Work bead B ──→ Scope-check B  ├──→ Layers 1,2,3 ──→ Layers 4,5
+Work bead C ──→ Scope-check C  ┘
+```
+
+[U] "yeah, this was actually part of the original design, and you basically got it perfectly"
+
+---
+
+## Gate 3 Self-Review Flow (Session 4, Post-Compaction)
+
+[U] "when we get to gate 3, the self review, here's how it works, the agent says its done with the task, the orchestrator gives the agent a message to do the review, the agent performs the self review, and then the orchestrator checks it, and tells the agent whether it needs to keep working, or wait for the scope review"
+
+*[T] Established that self-review is orchestrator-mediated: worker signals done → orchestrator sends review prompt → worker performs review → orchestrator evaluates → sends back if gaps remain → when satisfied, worker sits idle for scope check.*
+
+### Scope Check Before Merge
+
+[U] "layer 0 scope check has to run before the agent gets to merge its work into the bead branch, 8 and 9 have that wrong"
+
+*[T] The scope check was incorrectly placed after merge. Final execution flow: self-review → scope check (on per-bead worktree) → merge into pipeline branch. Worker sits idle during scope check for immediate bounce-back if issues found.*
+
+### TeamCreate Emphasis
+
+[U] "the instructions must emphasize using TeamCreate"
+
+*[T] Added "Team Setup — CRITICAL" section to orchestrate.md: `TeamCreate(team_name: "tavern-pipeline")` on first session, concrete `Agent(team_name:...)` calls for spawning, `TaskCreate`/`TaskUpdate` for coordination, `SendMessage(type: "shutdown_request")` for shutdown. Also updated process.md Section 6.*
+
+[U] "are these team agents?"
+
+[C] "Yes — they're spawned via `Agent(team_name: "tavern-pipeline", name: "...")` which makes them team members under the team created by `TeamCreate`."
+
+[U] "just clarifying to be sure"
+
+---
+
+## Artifacts Modified (Sessions 3-4)
+
+| File | Action |
+|------|--------|
+| `docs/pipeline/process.md` | Major revision: Sections 2-9, 13-14 rewritten for two-tier agent model, per-bead scope check, orchestrator-mediated self-review, TeamCreate integration |
+| `.claude/commands/orchestrate.md` | Rewritten: team setup, agent naming conventions, TeamCreate workflow, per-bead scope check flow |
+| `scripts/pipeline/dashboard.sh` | Updated: worktree-aware (reads pipeline docs from worktree when available) |
+| `docs/reification.md` | Renamed from `docs/pipeline.md`, content updated |
+| `MEMORY.md` (auto-memory) | Updated: agent model, terminology, per-bead scope check |

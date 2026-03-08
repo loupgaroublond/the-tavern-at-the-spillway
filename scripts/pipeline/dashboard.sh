@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/opt/homebrew/bin/bash
 # Pipeline Dashboard Generator
 # Parses YAML frontmatter from active pipeline docs and computes state.
 # Output: JSON summary suitable for orchestrator consumption + dashboard.md generation.
@@ -15,6 +15,42 @@ ARCHIVE_DIR="$PROJECT_ROOT/docs/pipeline/archive"
 DASHBOARD_FILE="$PROJECT_ROOT/docs/pipeline/dashboard.md"
 
 OUTPUT_FORMAT="${1:---json}"
+
+# Build a map of branch -> worktree path from git worktree list
+declare -A WORKTREE_MAP
+build_worktree_map() {
+    while IFS= read -r line; do
+        local wt_path wt_branch
+        wt_path=$(echo "$line" | awk '{print $1}')
+        wt_branch=$(echo "$line" | sed -n 's/.*\[\(.*\)\].*/\1/p')
+        if [ -n "$wt_branch" ]; then
+            WORKTREE_MAP["$wt_branch"]="$wt_path"
+        fi
+    done < <(git -C "$PROJECT_ROOT" worktree list 2>/dev/null || true)
+}
+build_worktree_map
+
+# Resolve the best file to read for a pipeline doc.
+# If the pipeline has a worktree, prefer the worktree version.
+# Usage: resolve_pipeline_file <main_file>
+resolve_pipeline_file() {
+    local main_file="$1"
+    local rel_path="${main_file#$PROJECT_ROOT/}"
+
+    # Quick check: read pipeline-branch from the main copy
+    local branch
+    branch=$(sed -n '/^---$/,/^---$/p' "$main_file" | grep "^pipeline-branch:" | head -1 | sed 's/^pipeline-branch: *//' | sed 's/^"\(.*\)"$/\1/')
+
+    if [ -n "$branch" ] && [ "$branch" != "null" ]; then
+        local wt_path="${WORKTREE_MAP[$branch]:-}"
+        if [ -n "$wt_path" ] && [ -f "$wt_path/$rel_path" ]; then
+            echo "$wt_path/$rel_path"
+            return
+        fi
+    fi
+
+    echo "$main_file"
+}
 
 # Extract YAML frontmatter value from a pipeline doc
 # Usage: frontmatter_value <file> <key>
@@ -37,15 +73,18 @@ build_active_json() {
     local first=true
     echo "["
     if [ -d "$ACTIVE_DIR" ]; then
-        for file in "$ACTIVE_DIR"/p*.md; do
-            [ -f "$file" ] || continue
+        for main_file in "$ACTIVE_DIR"/p*.md; do
+            [ -f "$main_file" ] || continue
+            # Prefer worktree version if available
+            local file
+            file=$(resolve_pipeline_file "$main_file")
             if [ "$first" = true ]; then
                 first=false
             else
                 echo ","
             fi
 
-            local id phase gate priority title slug source_bead blocked_by assigned_agent created updated pipeline_branch
+            local id phase gate priority title slug source_bead blocked_by assigned_agent created updated pipeline_branch worktree_path
             id=$(frontmatter_value "$file" "id")
             phase=$(frontmatter_value "$file" "phase")
             gate=$(frontmatter_value "$file" "gate")
@@ -58,6 +97,7 @@ build_active_json() {
             created=$(frontmatter_value "$file" "created")
             updated=$(frontmatter_value "$file" "updated")
             pipeline_branch=$(frontmatter_value "$file" "pipeline-branch")
+            worktree_path=$(frontmatter_value "$file" "worktree-path")
 
             # Convert blocked-by to JSON array
             local blocked_json="[]"
@@ -90,6 +130,8 @@ build_active_json() {
     "created": $(echo "$created" | jq -R .),
     "updated": $(echo "$updated" | jq -R .),
     "pipeline_branch": $(echo "${pipeline_branch:-null}" | jq -R .),
+    "worktree_path": $(echo "${worktree_path:-null}" | jq -R .),
+    "from_worktree": $([ "$file" != "$main_file" ] && echo "true" || echo "false"),
     "days_in_phase": $days_in_phase,
     "file": $(echo "$file" | jq -R .)
   }
@@ -135,7 +177,7 @@ build_json() {
 
     # Needs attention (pending gates, high priority)
     local needs_attention
-    needs_attention=$(echo "$active_json" | jq '[.[] | select(.gate == "pending" or .gate == "blocked") | select(.blocked_by | length == 0)] | sort_by(.priority)')
+    needs_attention=$(echo "$active_json" | jq '[.[] | select(.gate == "pending" or .gate == "blocked" or .gate == "waiting-for-human") | select(.blocked_by | length == 0)] | sort_by(.priority)')
 
     jq -n \
         --argjson pipelines "$active_json" \
@@ -184,7 +226,7 @@ _Updated: ${timestamp}_
 |----------|-------|:--------:|---------------|
 HEADER
 
-    echo "$json" | jq -r '.needs_attention[] | "| \(.id) \(.title) | \(.phase) | \(.priority) | Gate: \(.gate) |"'
+    echo "$json" | jq -r '.needs_attention[] | "| \(.id) \(.title) | \(.phase) | \(.priority) | \(if .gate == "waiting-for-human" then "Waiting for human input" else "Gate: \(.gate)" end) |"'
 
     cat <<RUNNING
 
