@@ -148,6 +148,7 @@ struct MessageRowView: View {
         case .thinking: return .gray
         case .webSearch: return .cyan
         case .sessionBreak: return .secondary
+        case .notification: return .yellow
         }
     }
 
@@ -161,6 +162,7 @@ struct MessageRowView: View {
         case .thinking: return "brain"
         case .webSearch: return "globe"
         case .sessionBreak: return "arrow.clockwise"
+        case .notification: return "bell.fill"
         }
     }
 
