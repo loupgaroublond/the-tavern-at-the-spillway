@@ -2,8 +2,8 @@
 id: p0088
 slug: module-006-lifecycle-gaps-req-lcm
 title: "Module 006: Lifecycle Gaps (REQ-LCM)"
-phase: 1-design
-gate: pending
+phase: merged
+gate: n/a
 priority: 1
 source-bead: jake-3arz
 child-beads: []

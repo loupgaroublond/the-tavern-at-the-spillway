@@ -37,7 +37,7 @@ resolve_pipeline_file() {
     local main_file="$1"
     local rel_path="${main_file#$PROJECT_ROOT/}"
 
-    # Quick check: read pipeline-branch from the main copy
+    # Strategy 1: read pipeline-branch from the main copy
     local branch
     branch=$(sed -n '/^---$/,/^---$/p' "$main_file" | grep "^pipeline-branch:" | head -1 | sed 's/^pipeline-branch: *//' | sed 's/^"\(.*\)"$/\1/')
 
@@ -47,6 +47,21 @@ resolve_pipeline_file() {
             echo "$wt_path/$rel_path"
             return
         fi
+    fi
+
+    # Fallback: match by pipeline ID from filename against worktree branches
+    local pipeline_id
+    pipeline_id=$(basename "$main_file" | grep -o '^p[0-9]*')
+    if [ -n "$pipeline_id" ]; then
+        for wt_branch in "${!WORKTREE_MAP[@]}"; do
+            if [[ "$wt_branch" == pipeline/${pipeline_id}-* ]]; then
+                local wt_path="${WORKTREE_MAP[$wt_branch]}"
+                if [ -f "$wt_path/$rel_path" ]; then
+                    echo "$wt_path/$rel_path"
+                    return
+                fi
+            fi
+        done
     fi
 
     echo "$main_file"
@@ -159,49 +174,74 @@ build_json() {
     local timestamp
     timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-    # Compute phase counts using jq
-    local phase_counts
-    phase_counts=$(echo "$active_json" | jq '{
-        design: [.[] | select(.phase == "1-design")] | length,
-        breakdown: [.[] | select(.phase == "2-breakdown")] | length,
-        execution: [.[] | select(.phase == "3-execution")] | length,
-        verification: [.[] | select(.phase == "4-verification")] | length
-    }')
-
     local total_active
     total_active=$(echo "$active_json" | jq 'length')
 
-    # Blocked pipelines
-    local blocked
-    blocked=$(echo "$active_json" | jq '[.[] | select(.blocked_by | length > 0)]')
+    # Gate-based categorization:
+    # - gate1: phase 1-design (or "design"), gate ready-for-review — awaiting human G1 approval
+    # - gate2: phase 2-breakdown, gate ready-for-review — awaiting human G2 approval
+    # - gate3: phase 3-execution, gate ready-for-review — awaiting self-review + scope check
+    # - gate4: phase 4-verification — in verification
+    # - blocked: has blocked-by entries (regardless of phase)
+    # - inactive: no assigned agent, not blocked — backlog stubs
 
-    # Needs attention (waiting for human input, unblocked)
-    local needs_attention
-    needs_attention=$(echo "$active_json" | jq '[.[] | select(.gate == "waiting-for-human") | select(.blocked_by | length == 0)] | sort_by(.priority)')
+    local gate1 gate2 gate3 gate4 in_progress completed blocked inactive
 
-    # Pending (gate pending, unblocked — agent working or awaiting agent assignment)
-    local pending
-    pending=$(echo "$active_json" | jq '[.[] | select(.gate == "pending" or .gate == "blocked") | select(.blocked_by | length == 0)] | sort_by(.priority)')
+    blocked=$(echo "$active_json" | jq '[.[] | select(.blocked_by | length > 0)] | sort_by(.priority)')
+
+    # Exclude blocked pipelines from gate buckets
+    gate1=$(echo "$active_json" | jq '[.[] | select(.blocked_by | length == 0) | select(.phase == "1-design" or .phase == "design") | select(.gate == "ready-for-review")] | sort_by(.priority)')
+
+    gate2=$(echo "$active_json" | jq '[.[] | select(.blocked_by | length == 0) | select(.phase == "2-breakdown") | select(.gate == "ready-for-review")] | sort_by(.priority)')
+
+    gate3=$(echo "$active_json" | jq '[.[] | select(.blocked_by | length == 0) | select(.phase == "3-execution") | select(.gate == "ready-for-review")] | sort_by(.priority)')
+
+    gate4=$(echo "$active_json" | jq '[.[] | select(.blocked_by | length == 0) | select(.phase == "4-verification")] | sort_by(.priority)')
+
+    # In progress: has assigned agent, not at a gate review, not blocked, not completed
+    in_progress=$(echo "$active_json" | jq '[.[] | select(.blocked_by | length == 0) | select(.gate != "ready-for-review") | select(.phase != "4-verification") | select(.phase != "completed" and .phase != "archived" and .phase != "merged") | select(.assigned_agent != null and .assigned_agent != "null" and .assigned_agent != "")] | sort_by(.priority)')
+
+    # Completed: phase is completed, archived, or merged
+    completed=$(echo "$active_json" | jq '[.[] | select(.phase == "completed" or .phase == "archived" or .phase == "merged" or .gate == "completed")] | sort_by(.priority)')
+
+    # Inactive: no assigned agent, not blocked, not at a gate, not completed
+    inactive=$(echo "$active_json" | jq '[.[] | select(.blocked_by | length == 0) | select(.gate != "ready-for-review") | select(.phase != "4-verification") | select(.phase != "completed" and .phase != "archived" and .phase != "merged") | select(.gate != "completed") | select(.assigned_agent == null or .assigned_agent == "null" or .assigned_agent == "")] | sort_by(.priority)')
 
     jq -n \
         --argjson pipelines "$active_json" \
-        --argjson phase_counts "$phase_counts" \
         --arg timestamp "$timestamp" \
         --argjson archived "$archived_count" \
         --argjson total_active "$total_active" \
-        --argjson needs_attention "$needs_attention" \
-        --argjson pending "$pending" \
+        --argjson gate1 "$gate1" \
+        --argjson gate2 "$gate2" \
+        --argjson gate3 "$gate3" \
+        --argjson gate4 "$gate4" \
+        --argjson in_progress "$in_progress" \
+        --argjson completed "$completed" \
         --argjson blocked "$blocked" \
+        --argjson inactive "$inactive" \
         '{
             timestamp: $timestamp,
             summary: {
                 active: $total_active,
                 archived: $archived,
-                by_phase: $phase_counts
+                gate1: ($gate1 | length),
+                gate2: ($gate2 | length),
+                gate3: ($gate3 | length),
+                gate4: ($gate4 | length),
+                in_progress: ($in_progress | length),
+                completed: ($completed | length),
+                blocked: ($blocked | length),
+                inactive: ($inactive | length)
             },
-            needs_attention: $needs_attention,
-            pending: $pending,
+            gate1: $gate1,
+            gate2: $gate2,
+            gate3: $gate3,
+            gate4: $gate4,
+            in_progress: $in_progress,
+            completed: $completed,
             blocked: $blocked,
+            inactive: $inactive,
             pipelines: $pipelines
         }'
 }
@@ -218,39 +258,70 @@ build_markdown() {
 _Updated: ${timestamp}_
 
 ## Summary
-| Phase | Count |
-|-------|------:|
-| Design | $(echo "$json" | jq '.summary.by_phase.design') |
-| Breakdown | $(echo "$json" | jq '.summary.by_phase.breakdown') |
-| Execution | $(echo "$json" | jq '.summary.by_phase.execution') |
-| Verification | $(echo "$json" | jq '.summary.by_phase.verification') |
-| **Active** | **$(echo "$json" | jq '.summary.active')** |
+| Section | Count |
+|---------|------:|
+| Gate 1 (Design Review) | $(echo "$json" | jq '.summary.gate1') |
+| Gate 2 (Breakdown Review) | $(echo "$json" | jq '.summary.gate2') |
+| Gate 3 (Self-Review) | $(echo "$json" | jq '.summary.gate3') |
+| Gate 4 (Verification) | $(echo "$json" | jq '.summary.gate4') |
+| In Progress | $(echo "$json" | jq '.summary.in_progress') |
+| Completed | $(echo "$json" | jq '.summary.completed') |
+| Blocked | $(echo "$json" | jq '.summary.blocked') |
+| Inactive | $(echo "$json" | jq '.summary.inactive') |
+| **Total** | **$(echo "$json" | jq '.summary.active')** |
 | Archived | $(echo "$json" | jq '.summary.archived') |
 
-## Needs Your Attention
-| Pipeline | Phase | Priority | What's Needed |
-|----------|-------|:--------:|---------------|
+## Gate 1 — Design Review
+| Pipeline | Priority | Agent |
+|----------|:--------:|-------|
 HEADER
 
-    echo "$json" | jq -r '.needs_attention[] | "| \(.id) \(.title) | \(.phase) | \(.priority) | Waiting for human input |"'
+    echo "$json" | jq -r '.gate1[] | "| \(.id) \(.title) | \(.priority) | \(if .assigned_agent != "null" and .assigned_agent != null and .assigned_agent != "" then .assigned_agent else "—" end) |"'
 
-    cat <<PENDING
+    cat <<GATE2
 
-## Pending
-| Pipeline | Phase | Priority | Status |
-|----------|-------|:--------:|--------|
-PENDING
+## Gate 2 — Breakdown Review
+| Pipeline | Priority | Agent |
+|----------|:--------:|-------|
+GATE2
 
-    echo "$json" | jq -r '.pending[] | "| \(.id) \(.title) | \(.phase) | \(.priority) | \(if .assigned_agent != "null" and .assigned_agent != null then "Agent: \(.assigned_agent)" else "Unassigned" end) |"'
+    echo "$json" | jq -r '.gate2[] | "| \(.id) \(.title) | \(.priority) | \(if .assigned_agent != "null" and .assigned_agent != null and .assigned_agent != "" then .assigned_agent else "—" end) |"'
 
-    cat <<RUNNING
+    cat <<GATE3
 
-## Running
-| Pipeline | Phase | Priority | Agent | Days |
-|----------|-------|:--------:|-------|-----:|
-RUNNING
+## Gate 3 — Self-Review + Scope Check
+| Pipeline | Priority | Agent |
+|----------|:--------:|-------|
+GATE3
 
-    echo "$json" | jq -r '.pipelines[] | select(.assigned_agent != "null" and .assigned_agent != null) | "| \(.id) \(.title) | \(.phase) | \(.priority) | \(.assigned_agent) | \(.days_in_phase) |"'
+    echo "$json" | jq -r '.gate3[] | "| \(.id) \(.title) | \(.priority) | \(if .assigned_agent != "null" and .assigned_agent != null and .assigned_agent != "" then .assigned_agent else "—" end) |"'
+
+    cat <<GATE4
+
+## Gate 4 — Verification
+| Pipeline | Priority | Agent |
+|----------|:--------:|-------|
+GATE4
+
+    echo "$json" | jq -r '.gate4[] | "| \(.id) \(.title) | \(.priority) | \(if .assigned_agent != "null" and .assigned_agent != null and .assigned_agent != "" then .assigned_agent else "—" end) |"'
+
+    cat <<INPROGRESS
+
+## In Progress
+| Pipeline | Priority | Agent | Phase |
+|----------|:--------:|-------|-------|
+INPROGRESS
+
+    echo "$json" | jq -r '.in_progress[] | "| \(.id) \(.title) | \(.priority) | \(if .assigned_agent != "null" and .assigned_agent != null and .assigned_agent != "" then .assigned_agent else "—" end) | \(.phase) |"'
+
+    cat <<COMPLETED
+
+## Completed
+| Pipeline | Priority |
+|----------|:--------:|
+COMPLETED
+
+    echo "$json" | jq -r '.completed[] | "| \(.id) \(.title) | \(.priority) |"'
 
     cat <<BLOCKED
 
@@ -260,6 +331,15 @@ RUNNING
 BLOCKED
 
     echo "$json" | jq -r '.blocked[] | "| \(.id) \(.title) | \(.priority) | \(.blocked_by | join(", ")) |"'
+
+    cat <<INACTIVE
+
+## Inactive
+| Pipeline | Priority | Phase |
+|----------|:--------:|-------|
+INACTIVE
+
+    echo "$json" | jq -r '.inactive[] | "| \(.id) \(.title) | \(.priority) | \(.phase) |"'
 
     echo ""
 }

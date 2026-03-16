@@ -1,6 +1,10 @@
 # macOS
 .DS_Store
 
+# iCloud numbered copies (sync conflicts create "file 2.ext", "file 3.ext", etc.)
+*\ [0-9].*
+*\ [0-9][0-9].*
+
 # Screenshots (temp captures, not the README one)
 screenshot[- ]*.png
 !screenshot.png

@@ -41,6 +41,7 @@ Does NOT:
 - Review code for correctness
 - Run tests or verification
 - Mediate technical discussions (routes to agents instead)
+- Perform any work directly — no code, no builds, no tests, no file edits. The orchestrator is a manager, not a worker. If a task doesn't fit an existing agent, spawn a new team member to handle it.
 
 ### Pipeline Agents (Long-Lived, One Per Pipeline)
 
@@ -112,19 +113,37 @@ A pipeline in Phase 1 may loop — the pipeline agent researches, proposes, disc
 - Open questions are resolved or explicitly deferred
 - Human has reviewed the entire pipeline doc and explicitly approves
 
-### Gate 2: Ready for Execution (Human Approval — Summary)
+**All work through Gate 1 is draft.** The pipeline agent works in its worktree but does NOT commit until Gate 1 passes. Design Log, Design Statements, Agent Context — all of it is uncommitted work-in-progress until the human approves. On approval, the pipeline agent commits the pipeline doc to the pipeline branch.
 
-**Enforcer:** Human
+### Gate 2: Ready for Execution (Two-Stage: Agent Check, Then Human Approval)
+
+**Enforcer:** Orchestrator (stage 1: agent completeness check) + Human (stage 2: summary approval)
+
+**The plan must be bead-ready before Gate 2.** The human reviews a summary, but the underlying breakdown plan must be fully complete — every work item with full scope, acceptance criteria, context-source specifications, and verification bead definitions. The plan is not an outline waiting to be fleshed out; it is the finished blueprint that beads will be created from mechanically.
+
+#### Stage 1: Agent Completeness Check
+
+Before presenting anything to the human, the orchestrator spawns a **subagent** to verify the breakdown is complete. This agent reviews each work item and checks:
+
+- **Self-contained:** Could an agent with NO other context implement this from just what's in the bead? Every work item must stand alone — an agent reading only the bead content (plus common sections piped in via `cat`) must have everything it needs.
+- **Scope clarity:** Each item has specific enough scope to code from, not vague direction.
+- **Acceptance criteria:** Each item has a concrete checklist, not "make it work."
+- **Context-source specifications:** Each item declares which instructions, specs, ADR sections, code excerpts, and design statements to compile in. Items may reference common sections by name (e.g., `instructions: [core, agent-core]`) — these get assembled via `cat` at bead creation time and do not need to be inlined.
+- **Dependencies and ordering:** Clearly identified between items.
+- **Verification beads:** Defined with dependency chain.
+
+The subagent reports PASS or FAIL with specific gaps. If FAIL, the orchestrator sends the pipeline agent back to fix the gaps. This loop continues until the subagent passes. **The human never sees a breakdown that hasn't passed this check.**
+
+#### Stage 2: Human Summary Approval
 
 **Criteria:**
 - All work items are decomposed to a size one agent can implement and test in one worktree
-- Each item has clear scope, requirements, ADR constraints, acceptance criteria, and context-source specifications
-- Dependencies between items are identified and ordered
-- Parallelism opportunities are identified
+- Dependencies and parallelism opportunities are identified
 - Human has reviewed the summary (titles, scopes, ordering, complexity estimates) and explicitly approves
+- Human may spot-check individual work items but is not expected to review every detail
 - Human does NOT review compiled documentation bundles — those are for execution agents only
 
-**On approval:** The pipeline agent creates all beads (work + N scope-check + 5 verification) with compiled context and dependency chain. Each work bead gets a paired scope-check bead.
+**All work through Gate 2 is draft.** The pipeline agent's breakdown plan is uncommitted work-in-progress until the human approves. On approval, the pipeline agent commits the updated pipeline doc, THEN creates all beads mechanically from the plan. Common sections (distilled instructions, compiled context) are assembled into beads via the compile script (`scripts/pipeline/compile-bead-context.sh`) — the plan specifies *what* to include, the script does the `cat`. No further authoring happens at bead creation time. Each work bead gets a paired scope-check bead. Total beads: N work + N scope-check + 5 verification.
 
 ### Gate 3: Self-Review (Per-Bead, Orchestrator-Mediated)
 
@@ -280,16 +299,17 @@ At each level: punt back to Phase 1 for more design, or go deeper on decompositi
 
 ### The Breakdown Plan
 
-The pipeline agent creates a **complete plan first** in the pipeline doc's Work Breakdown Plan section. This plan includes:
+The pipeline agent creates a **complete, bead-ready plan** in the pipeline doc's Work Breakdown Plan section. "Bead-ready" means every work item is fully specified — when the human approves, bead creation is a mechanical step with no further authoring. The plan includes:
 
-- Every work item with full detail
-- Markers showing where to create beads
-- Context-source specifications per work item (see below)
+- Every work item with **full detail**: title, scope (specific enough to code from), requirements (REQ-* IDs), ADR constraints, acceptance criteria (checklist), complexity estimate (S/M/L)
+- Context-source specifications per work item (see below) — which instructions, specs, ADR sections, code excerpts, and design statements to compile into each bead
 - Dependencies and ordering
 - Parallelism opportunities
 - Verification beads with their dependency chain (see below)
 
-Only after the plan is written and approved (Gate 2) does the pipeline agent create beads — without re-reading source docs. The agent already made the control-plane decisions about what to include.
+The human reviews a **summary** (titles, scopes, ordering, estimates) — not the full bead content. But the full content must exist in the plan before Gate 2 is requested.
+
+The breakdown plan is **draft until Gate 2 passes**. The pipeline agent does not commit or create beads until the human approves. Only after approval does the pipeline agent commit the plan, then create beads mechanically — the compile script assembles common sections (distilled instructions, spec excerpts, design statements) via `cat`, and the plan's per-item content becomes each bead's scope and acceptance criteria. No re-reading of source docs, no further authoring.
 
 ### Verification Beads
 
@@ -324,7 +344,7 @@ context-sources:
   worktree: pipeline/p0000-jukebox
 ```
 
-The compile script (`scripts/pipeline/compile-bead-context.sh`) reads these references and produces a single compiled context document per bead. Execution agents burn tokens reading docs once — when they read the bead.
+The compile script (`scripts/pipeline/compile-bead-context.sh`) reads these references and `cat`s them into a single compiled context document per bead. This is mechanical assembly, not authoring — the pipeline agent made all the decisions about what to include during breakdown. Execution agents burn tokens reading docs once — when they read the bead.
 
 ### Design Statement Flow
 

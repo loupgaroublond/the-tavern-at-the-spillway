@@ -2,8 +2,8 @@
 id: p0020
 slug: perseverance-mode-and-agent-lifecycle-st
 title: "Perseverance mode and agent lifecycle states"
-phase: 1-design
-gate: pending
+phase: merged
+gate: n/a
 priority: 2
 source-bead: jake-pbt
 child-beads: []

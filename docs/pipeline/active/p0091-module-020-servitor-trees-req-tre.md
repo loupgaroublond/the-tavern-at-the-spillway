@@ -2,8 +2,8 @@
 id: p0091
 slug: module-020-servitor-trees-req-tre
 title: "Module 020: Servitor Trees (REQ-TRE)"
-phase: 1-design
-gate: pending
+phase: merged
+gate: n/a
 priority: 1
 source-bead: jake-ud7m
 child-beads: []

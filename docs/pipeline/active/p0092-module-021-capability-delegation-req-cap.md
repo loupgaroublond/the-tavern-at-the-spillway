@@ -2,8 +2,8 @@
 id: p0092
 slug: module-021-capability-delegation-req-cap
 title: "Module 021: Capability Delegation (REQ-CAP)"
-phase: 1-design
-gate: pending
+phase: merged
+gate: n/a
 priority: 1
 source-bead: jake-llxb
 child-beads: []

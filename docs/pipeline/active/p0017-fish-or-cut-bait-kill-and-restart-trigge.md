@@ -2,8 +2,8 @@
 id: p0017
 slug: fish-or-cut-bait-kill-and-restart-trigge
 title: "Fish-or-cut-bait — kill and restart triggers for agents"
-phase: 1-design
-gate: pending
+phase: merged
+gate: n/a
 priority: 3
 source-bead: jake-bly
 child-beads: []

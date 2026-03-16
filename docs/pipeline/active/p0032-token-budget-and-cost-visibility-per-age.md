@@ -2,8 +2,8 @@
 id: p0032
 slug: token-budget-and-cost-visibility-per-age
 title: "Token budget and cost visibility — per-agent budgets and spend tracking"
-phase: 1-design
-gate: pending
+phase: merged
+gate: n/a
 priority: 2
 source-bead: jake-yte
 child-beads: []

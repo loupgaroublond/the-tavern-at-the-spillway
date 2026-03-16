@@ -2,8 +2,8 @@
 id: p0090
 slug: module-019-states-modes-req-stm
 title: "Module 019: States & Modes (REQ-STM)"
-phase: 1-design
-gate: pending
+phase: merged
+gate: n/a
 priority: 1
 source-bead: jake-xaau
 child-beads: []
